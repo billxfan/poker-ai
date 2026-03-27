@@ -1,1 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="德扑AI">
+  <meta name="theme-color" content="#1a1a2e">
+  <title>🃏 德扑 AI 训练场</title>
+  <style>
+:root{--felt-green:#1a5c2a;--felt-dark:#0e3d1a;--felt-light:#2a7a3a;--rail-brown:#5c3a1a;--rail-light:#8b5e3a;--card-white:#f8f6f0;--card-shadow:rgba(0,0,0,0.4);--text-gold:#f1c40f;--text-light:#ecf0f1;--bg-dark:#1a1a2e;--bg-panel:#16213e;--accent:#e94560;--positive:#2ecc71;--negative:#e74c3c}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'SF Mono','Fira Code','Monaco',monospace;background:var(--bg-dark);color:var(--text-light);min-height:100vh;overflow-x:hidden}
+.top-bar{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:linear-gradient(135deg,var(--bg-panel),#1a1a40);border-bottom:2px solid var(--accent);gap:16px;flex-wrap:wrap}
+.top-bar h1{font-size:1.4rem;font-weight:700;color:var(--text-gold);display:flex;align-items:center;gap:8px}
+.top-bar-actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{padding:8px 18px;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-size:0.85rem;font-weight:600;transition:all 0.2s;white-space:nowrap}
+.btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.btn:active{transform:translateY(0);filter:brightness(0.95)}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-secondary{background:#34495e;color:#fff}
+.btn-check{background:#27ae60;color:#fff}
+.btn-call{background:#2980b9;color:#fff}
+.btn-raise{background:#e67e22;color:#fff}
+.btn-raise-big{background:#c0392b;color:#fff}
+.btn-allin{background:linear-gradient(135deg,#8e44ad,#c0392b);color:#fff;font-weight:700}
+.btn-fold{background:#7f8c8d;color:#fff}
+.main-layout{display:grid;grid-template-columns:1fr 320px;gap:16px;padding:16px;max-width:1400px;margin:0 auto;min-height:calc(100vh - 60px)}
+@media(max-width:900px){.main-layout{grid-template-columns:1fr}}
+.poker-table-container{display:flex;flex-direction:column;gap:12px}
+#poker-table{background:radial-gradient(ellipse at center,var(--felt-light) 0%,var(--felt-green) 40%,var(--felt-dark) 100%);border:16px solid var(--rail-brown);border-radius:50%;padding:40px;min-height:420px;position:relative;box-shadow:inset 0 0 60px rgba(0,0,0,0.3),0 8px 32px rgba(0,0,0,0.5);overflow:hidden}
+#poker-table::before{content:'';position:absolute;top:8px;left:8px;right:8px;bottom:8px;border:3px solid rgba(255,255,255,0.08);border-radius:50%;pointer-events:none}
+.table-layout{display:flex;flex-direction:column;height:100%;gap:20px}
+.community-area{display:flex;flex-direction:column;align-items:center;gap:16px;padding:8px 0}
+.community-cards{display:flex;gap:8px;justify-content:center}
+.players-area{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;align-items:flex-start;padding:8px 0}
+.community-card{width:52px;height:72px;background:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:700;box-shadow:0 4px 12px var(--card-shadow)}
+.card-hidden{background:#2c3e50;border:2px dashed #34495e;opacity:0.3}
+.card-red{color:#c0392b}
+.card-black{color:#1a1a1a}
+.pot-area{text-align:center;background:rgba(0,0,0,0.3);border-radius:12px;padding:8px 24px;border:1px solid rgba(255,255,255,0.1)}
+.pot-label{font-size:0.7rem;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:2px}
+.pot-amount{font-size:1.8rem;font-weight:800;color:var(--text-gold)}
+.street-label{font-size:0.8rem;color:rgba(255,255,255,0.5);margin-top:2px}
+.player-seat{display:flex;flex-direction:column;align-items:center;gap:4px;position:relative;background:rgba(0,0,0,0.35);border-radius:12px;padding:8px 12px;min-width:100px;border:2px solid transparent;transition:border-color 0.3s}
+.player-folded{opacity:0.5}
+.player-allin{border-color:var(--text-gold)}
+.player-current{border-color:var(--accent);box-shadow:0 0 16px rgba(233,69,96,0.4)}
+.player-you{border-color:var(--positive)}
+.dealer-btn{position:absolute;top:-8px;left:-8px;width:22px;height:22px;background:#fff;color:#1a1a1a;border-radius:50%;font-size:0.65rem;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid var(--rail-brown)}
+.call-badge{position:absolute;top:-6px;right:-6px;background:#e74c3c;color:#fff;font-size:0.65rem;padding:2px 5px;border-radius:8px;font-weight:700;z-index:5;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+.player-avatar{font-size:2rem;line-height:1}
+.player-info{text-align:center}
+.player-name{font-size:0.75rem;font-weight:600;color:#fff}
+.player-stack{font-size:0.8rem;font-weight:800;color:var(--text-gold)}
+.player-cards{display:flex;gap:3px}
+.bet-amount{font-size:0.7rem;color:#f39c12;font-weight:700;background:rgba(0,0,0,0.4);padding:1px 5px;border-radius:4px}
+.hand-label{font-size:0.6rem;color:rgba(255,255,255,0.6);text-align:center}
+.action-indicator,.thinking-indicator{font-size:1.1rem;animation:blink 0.8s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+.card-slot{width:36px;height:50px;border-radius:4px}
+.card{width:36px;height:50px;background:#fff;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:0.9rem;font-weight:700;box-shadow:0 2px 8px var(--card-shadow)}
+.card-back{background:linear-gradient(135deg,#1a3a6e,#0a1f4a);border:2px solid #2a5a9e}
+.card-folded{background:#555;color:#888;opacity:0.5}
+#controls{background:var(--bg-panel);border-radius:12px;padding:16px;border:1px solid rgba(255,255,255,0.08)}
+.controls-active{display:flex;flex-direction:column;gap:12px}
+.hand-strength{display:flex;flex-direction:column;gap:6px;font-size:0.8rem;color:rgba(255,255,255,0.7)}
+.strength-bar{height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden}
+.strength-fill{height:100%;background:linear-gradient(90deg,#e74c3c,#f39c12,#2ecc71);border-radius:3px;transition:width 0.5s}
+.action-buttons{display:flex;flex-wrap:wrap;gap:6px}
+.action-buttons .btn{flex:1;min-width:70px;padding:10px 8px;font-size:0.8rem}
+.controls-waiting{text-align:center;padding:20px 0}
+.waiting-text{color:rgba(255,255,255,0.5);font-size:0.85rem;margin-top:8px}
+.controls-folded,.controls-ended{text-align:center;padding:20px;display:flex;flex-direction:column;gap:12px;align-items:center}
+#game-log{background:var(--bg-panel);border-radius:12px;padding:12px;max-height:200px;overflow-y:auto;font-size:0.75rem;line-height:1.6;border:1px solid rgba(255,255,255,0.08)}
+.log-entry{padding:3px 6px;border-radius:4px;color:rgba(255,255,255,0.7)}
+.log-action{color:#3498db}
+.log-blind{color:#f39c12}
+.log-street{color:#9b59b6;font-weight:600}
+.log-showdown{color:#e67e22;font-weight:600}
+.log-result{color:var(--text-gold);font-weight:700}
+.log-award{color:var(--positive)}
+.log-info{color:rgba(255,255,255,0.5);font-style:italic}
+#game-log::-webkit-scrollbar{width:4px}
+#game-log::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.2);border-radius:2px}
+.stats-section{display:flex;flex-direction:column;gap:12px}
+#stats-panel{background:var(--bg-panel);border-radius:12px;padding:16px;border:1px solid rgba(255,255,255,0.08)}
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.stat-card{background:rgba(255,255,255,0.05);border-radius:8px;padding:10px 8px;text-align:center;border:1px solid rgba(255,255,255,0.06)}
+.stat-card.positive{border-color:rgba(46,204,113,0.3)}
+.stat-card.negative{border-color:rgba(231,76,60,0.3)}
+.stat-value{font-size:1.1rem;font-weight:800;color:var(--text-gold)}
+.stat-label{font-size:0.65rem;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+.pos{color:var(--positive)}
+.neg{color:var(--negative)}
+.profit-positive{color:var(--positive)!important}
+.profit-negative{color:var(--negative)!important}
+.bots-info{background:var(--bg-panel);border-radius:12px;padding:12px;border:1px solid rgba(255,255,255,0.08)}
+.bots-info-title{font-size:0.75rem;font-weight:600;color:rgba(255,255,255,0.6);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px}
+.bot-card{background:rgba(255,255,255,0.04);border-radius:8px;padding:8px;margin-bottom:6px;display:flex;align-items:center;gap:8px;font-size:0.75rem}
+.bot-emoji{font-size:1.4rem}
+.bot-name{font-weight:600;color:#fff;flex:1}
+.bot-desc{color:rgba(255,255,255,0.4);font-size:0.68rem}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:100}
+.hidden{display:none!important}
+.modal{background:var(--bg-panel);border-radius:16px;padding:24px;max-width:420px;width:90%;border:1px solid rgba(255,255,255,0.1)}
+.modal h2{font-size:1.2rem;margin-bottom:16px;color:var(--text-gold)}
+.modal-actions{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
+#hand-result{position:fixed;top:0;left:0;right:0;bottom:0;z-index:200}
+.hand-result-overlay{width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center}
+.hand-result-card{background:var(--bg-panel);border-radius:20px;padding:32px;max-width:400px;width:90%;text-align:center;border:2px solid rgba(255,255,255,0.1)}
+.result-emoji{font-size:4rem;margin-bottom:8px}
+.result-title{font-size:1.5rem;font-weight:700;color:#fff;margin-bottom:8px}
+.result-profit{font-size:2rem;font-weight:800;margin-bottom:8px}
+.result-winner{font-size:0.85rem;color:rgba(255,255,255,0.5);margin-bottom:4px}
+.result-community{font-size:0.8rem;color:rgba(255,255,255,0.4);margin-bottom:16px}
+.result-hands{display:flex;flex-direction:column;gap:4px;margin-bottom:16px;text-align:left;font-size:0.8rem}
+.result-player{display:flex;gap:8px;padding:6px 8px;border-radius:6px;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.7)}
+.result-player.winner{background:rgba(46,204,113,0.15);border:1px solid rgba(46,204,113,0.3);color:var(--positive)}
+.hand-result-card .btn{width:100%;padding:12px;font-size:1rem}
+#ios-install-hint{display:none}
+  </style>
+</head>
+<body>
 
+<header class="top-bar">
+  <h1>🃏 德扑 AI</h1>
+  <div class="top-bar-actions">
+    <button class="btn btn-primary" id="startHandBtn">🎴 开始</button>
+    <button class="btn btn-secondary" id="autoPlayBtn">▶ 自动</button>
+    <button class="btn btn-secondary" id="settingsBtn">⚙️</button>
+  </div>
+</header>
+
+<div id="ios-install-hint" style="display:none;background:linear-gradient(135deg,#e94560,#0f3460);padding:12px 16px;text-align:center;font-size:0.8rem;color:#fff">
+  📱 长按 Safari 地址栏 → <strong>添加到主屏幕</strong> → 安装 App
+</div>
+
+<main class="main-layout">
+  <div class="poker-table-container">
+    <div id="poker-table">
+      <div style="text-align:center;padding:40px;color:rgba(255,255,255,0.3)">点击「开始手牌」开始游戏</div>
+    </div>
+    <div id="controls">
+      <div style="text-align:center;padding:20px;color:rgba(255,255,255,0.4);font-size:0.85rem">开始手牌后，控制按钮会出现在这里</div>
+    </div>
+    <div id="game-log"><div class="log-entry log-info">🎉 欢迎来到德扑 AI 训练场！</div></div>
+  </div>
+  <aside class="stats-section">
+    <div class="bots-info">
+      <div class="bots-info-title">🤖 对手 Bot</div>
+      <div class="bot-card"><span class="bot-emoji">🐍</span><div><div class="bot-name">Oscar</div><div class="bot-desc">紧凶型 · 只玩好牌，下注凶狠</div></div></div>
+      <div class="bot-card"><span class="bot-emoji">🦊</span><div><div class="bot-name">Felix</div><div class="bot-desc">松凶型 · 什么都玩，最爱诈唬</div></div></div>
+      <div class="bot-card"><span class="bot-emoji">🐻</span><div><div class="bot-name">Bruno</div><div class="bot-desc">跟注站 · 被跟就怂</div></div></div>
+    </div>
+    <div id="stats-panel">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-value">0</div><div class="stat-label">本局手牌</div></div>
+        <div class="stat-card"><div class="stat-value">0</div><div class="stat-label">历史手牌</div></div>
+        <div class="stat-card"><div class="stat-value">¥0</div><div class="stat-label">本局盈亏</div></div>
+        <div class="stat-card"><div class="stat-value">¥0</div><div class="stat-label">历史盈亏</div></div>
+        <div class="stat-card"><div class="stat-value">0%</div><div class="stat-label">胜率</div></div>
+        <div class="stat-card"><div class="stat-value">0</div><div class="stat-label">BB/100</div></div>
+      </div>
+    </div>
+    <div style="background:var(--bg-panel);border-radius:12px;padding:14px;border:1px solid rgba(255,255,255,0.08);font-size:0.72rem;color:rgba(255,255,255,0.5)">
+      <div style="font-weight:700;color:rgba(255,255,255,0.7);margin-bottom:8px">📖 游戏规则</div>
+      <div style="line-height:1.7">
+        <div>🃏 Texas Hold'em 德州扑克</div>
+        <div>💰 大盲 ¥2 · 小盲 ¥1 · 起始 100BB</div>
+        <div>🤖 Bot 会根据历史牌局迭代策略</div>
+        <div>📊 数据保存在浏览器本地</div>
+        <div>⚡ 数据越多，Bot 越"聪明"</div>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<div id="settings-modal" class="modal-overlay hidden">
+  <div class="modal">
+    <h2>⚙️ 设置</h2>
+    <div style="display:flex;flex-direction:column;gap:12px;font-size:0.85rem">
+      <div><label style="color:rgba(255,255,255,0.7)">🤖 Bot 数量</label><div style="color:rgba(255,255,255,0.4);font-size:0.75rem;margin-top:2px">当前：3（Oscar / Felix / Bruno）</div></div>
+      <div><label style="color:rgba(255,255,255,0.7)">💰 起始筹码</label><div style="color:rgba(255,255,255,0.4);font-size:0.75rem;margin-top:2px">当前：100 BB</div></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="resetAllDataBtn">🗑️ 清除数据</button>
+      <button class="btn btn-secondary" id="closeSettingsBtn">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div id="hand-result"></div>
