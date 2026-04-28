@@ -1,0 +1,31 @@
+# macOS
+.DS_Store
+
+# Xcode / SwiftPM build artifacts
+.build/
+DerivedData/
+*.swiftpm/
+Packages/
+
+# Xcode user-specific files
+xcuserdata/
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint
+*.moved-aside
+
+# Project workspace user data
+PokerAI.xcodeproj/project.xcworkspace/xcuserdata/
+PokerAI.xcodeproj/xcuserdata/
+
+# Local tooling state
+.claude/
+.claudian/
+
+# Obsidian local workspace state
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+
+# Temporary files
+*.log
+*.tmp
