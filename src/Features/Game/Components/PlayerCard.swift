@@ -14,7 +14,7 @@ struct PlayerCard: View {
     let totalBet: Int
 
     private var isHuman: Bool {
-        player.id == 0
+        player.id == Player.humanPlayerId
     }
 
     private var chipFontSize: CGFloat {
@@ -191,7 +191,7 @@ struct PlayerCard: View {
         case .out:
             return .black.opacity(0.3)
         case .active:
-            return player.id == 0 ? Color.primary.opacity(0.5) : Color.black.opacity(0.3)
+            return player.id == Player.humanPlayerId ? Color.primary.opacity(0.5) : Color.black.opacity(0.3)
         }
     }
 }

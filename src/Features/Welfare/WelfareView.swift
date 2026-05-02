@@ -169,35 +169,51 @@ struct WelfareView: View {
             HStack {
                 Image(systemName: "play.rectangle")
                     .foregroundColor(.warning)
-                Text("看广告 (即将上线)")
+                Text("看广告")
                     .font(.headline)
                 Spacer()
             }
 
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("更多筹码奖励")
+                    Text("观看广告获取 \(GameConstants.rewardAdChips) 筹码")
                         .font(.subheadline)
-                    Text("观看广告获取额外筹码")
+                    Text("每次观看后自动到账")
                         .font(.caption)
                         .foregroundColor(.textSecondary)
                 }
 
                 Spacer()
 
-                Text("敬请期待")
-                    .font(.caption)
-                    .foregroundColor(.textSecondary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color.gray.opacity(0.2))
-                    .cornerRadius(6)
+                Button {
+                    showAd()
+                } label: {
+                    if viewModel.isAdLoading {
+                        ProgressView()
+                            .frame(width: 80, height: 32)
+                    } else {
+                        Text("领取 +\(GameConstants.rewardAdChips)")
+                            .font(.subheadline)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(Color.warning)
+                            .cornerRadius(8)
+                    }
+                }
+                .disabled(viewModel.isAdLoading)
             }
         }
         .padding(16)
         .background(Color.cardBackground)
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
+    }
+
+    private func showAd() {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let rootVC = windowScene.windows.first?.rootViewController else { return }
+        viewModel.showRewardedAd(from: rootVC)
     }
 
     private func claimAndDismiss(action: @escaping () -> Void) {

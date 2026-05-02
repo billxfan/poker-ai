@@ -8,6 +8,7 @@ final class StatisticsViewModel {
 
     var isLoading: Bool = false
     var selectedTab: Int = 0
+    var selectedAIProfileId: Int?
     var statistics: GameStatistics?
     var recentHands: [HandRecord] = []
     var aiProfiles: [AIProfileSummary] = []
@@ -33,6 +34,9 @@ final class StatisticsViewModel {
             statistics = try await recordRepository.getStatistics()
             recentHands = try await recordRepository.getRecentHands(limit: 30)
             aiProfiles = try await loadAIProfiles()
+            if selectedAIProfileId == nil {
+                selectedAIProfileId = aiProfiles.first?.id
+            }
             chips = chipStorage.getChips()
         } catch {
             self.error = "加载失败: \(error.localizedDescription)"
@@ -58,10 +62,43 @@ final class StatisticsViewModel {
                     vpip: pattern.vpip,
                     pfr: pattern.pfr,
                     threeBet: pattern.threeBet,
-                    af: pattern.af
+                    af: pattern.af,
+                    totalProfit: pattern.totalProfit,
+                    learningRate: pattern.currentLearningRate(for: info.style),
+                    explorationRate: pattern.explorationRate(for: info.style),
+                    aggressionBias: pattern.learnedAggressionBias * info.style.learningProfile.adjustmentCap * pattern.sampleConfidence(for: info.style),
+                    tightnessBias: pattern.learnedTightnessBias * info.style.learningProfile.adjustmentCap * pattern.sampleConfidence(for: info.style),
+                    learningSnapshots: pattern.recentLearningSnapshots(limit: 60),
+                    observedHumanProfile: pattern.observedProfile(for: 0).map { profile in
+                        ObservedOpponentSummary(
+                            handsObserved: profile.handsObserved,
+                            vpip: profile.vpip,
+                            pfr: profile.pfr,
+                            aggressionRate: profile.aggressionRate,
+                            foldToAggressionRate: profile.foldToAggressionRate,
+                            bluffRate: profile.bluffRate,
+                            defaultWinCount: profile.defaultWinCount,
+                            perceivedTightness: profile.perceivedTightness,
+                            readSummaryText: profile.readSummaryText,
+                            counterStrategyText: profile.counterStrategyText
+                        )
+                    }
                 )
             }
     }
+}
+
+struct ObservedOpponentSummary {
+    let handsObserved: Int
+    let vpip: Double
+    let pfr: Double
+    let aggressionRate: Double
+    let foldToAggressionRate: Double
+    let bluffRate: Double
+    let defaultWinCount: Int
+    let perceivedTightness: Double
+    let readSummaryText: String
+    let counterStrategyText: String
 }
 
 struct AIProfileSummary: Identifiable {
@@ -74,6 +111,13 @@ struct AIProfileSummary: Identifiable {
     let pfr: Double
     let threeBet: Double
     let af: Double
+    let totalProfit: Int
+    let learningRate: Double
+    let explorationRate: Double
+    let aggressionBias: Double
+    let tightnessBias: Double
+    let learningSnapshots: [AILearningSnapshot]
+    let observedHumanProfile: ObservedOpponentSummary?
 
     var learningStatusText: String {
         switch handsPlayed {
@@ -81,10 +125,24 @@ struct AIProfileSummary: Identifiable {
             return "暂无样本"
         case 1..<10:
             return "样本较少"
-        case 10..<30:
+        case 10..<100:
             return "学习中"
         default:
-            return "画像已成型"
+            return "充足样本"
+        }
+    }
+
+    var learningSummaryText: String {
+        let aggressionText = String(format: "%+.1f%%", aggressionBias * 100)
+        let tightnessText = String(format: "%+.1f%%", tightnessBias * 100)
+        let epsilonText = String(format: "%.0f%%", explorationRate * 100)
+        let rateText = String(format: "%.2f", learningRate)
+        return "探索 \(epsilonText) · 学习率 \(rateText) · 进攻偏移 \(aggressionText) · 紧度偏移 \(tightnessText)"
+    }
+
+    var hasHumanTrendData: Bool {
+        learningSnapshots.contains {
+            $0.observedHumanVPIP != nil || $0.observedHumanFoldToAggression != nil
         }
     }
 }

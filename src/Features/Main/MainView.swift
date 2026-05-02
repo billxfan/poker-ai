@@ -27,14 +27,6 @@ struct MainView: View {
             .background(Color.background)
             .navigationTitle("德扑AI训练器")
             .navigationBarTitleDisplayMode(.large)
-            .alert("💸 提示", isPresented: $viewModel.showNoChipsAlert) {
-                Button("取消", role: .cancel) { }
-                Button("🎁 去福利中心") {
-                    navigateToWelfare = true
-                }
-            } message: {
-                Text("当前筹码不足，开新局至少需要 \(viewModel.minimumChipsForNewGame) 筹码")
-            }
             .alert("⚠️ 确认重置", isPresented: $viewModel.showNewGameConfirmation) {
                 Button("取消", role: .cancel) { }
                 Button("确认") {
@@ -48,8 +40,9 @@ struct MainView: View {
             }
             .navigationDestination(isPresented: $navigateToGame) {
                 GameView(
-                    initialChips: loadedArchive?.gameState.players.first { $0.id == 0 }?.chips ?? viewModel.getChipsForNewGame(),
+                    initialChips: loadedArchive?.gameState.players.first { $0.id == Player.humanPlayerId }?.chips ?? viewModel.getChipsForNewGame(),
                     restoredGameState: loadedArchive?.gameState,
+                    restoredRemainingDeck: loadedArchive?.remainingDeck,
                     restoredResumeMode: loadedArchive?.resumeMode ?? .currentHand,
                     onGameEnd: { profit in
                         viewModel.addChipsToPlayer(profit)
@@ -140,11 +133,10 @@ struct MainView: View {
                 icon: "🔄",
                 title: "新开始",
                 color: .accent,
-                isEnabled: viewModel.chips >= viewModel.minimumChipsForNewGame
+                isEnabled: true
             ) {
                 viewModel.showNewGameConfirmation = true
             }
-            .disabled(viewModel.chips < viewModel.minimumChipsForNewGame)
 
             actionButton(
                 icon: "🎁",

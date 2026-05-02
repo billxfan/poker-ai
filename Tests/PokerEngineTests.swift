@@ -163,6 +163,80 @@ final class PokerEngineTests: XCTestCase {
         XCTAssertEqual(restored.currentBet, 0)
     }
 
+    func testRestoredHandCanStillDealMissingFutureCommunityCards() async {
+        let sourceEngine = PokerEngine()
+
+        await sourceEngine.setupGame(humanChips: 2000)
+        await sourceEngine.startNewHand()
+        await sourceEngine.dealCommunityCards()
+        let flopState = await sourceEngine.getState()
+
+        XCTAssertEqual(flopState.currentStreet, .flop)
+        XCTAssertEqual(flopState.communityCards.count, 3)
+
+        let restoredEngine = PokerEngine()
+        await restoredEngine.restoreState(flopState)
+        await restoredEngine.dealCommunityCards()
+        let turnState = await restoredEngine.getState()
+
+        XCTAssertEqual(turnState.currentStreet, .turn)
+        XCTAssertEqual(turnState.communityCards.count, 4, "恢复中的牌局继续发转牌时，不应该出现 street 前进了但公共牌没补上的情况")
+    }
+
+    func testRestoreStateRepairsBrokenBoardToMatchStreet() async {
+        let engine = PokerEngine()
+        let brokenState = GameState(
+            players: [
+                Player(
+                    id: 0,
+                    name: "你",
+                    avatar: "🧑",
+                    position: .utg,
+                    chips: 1747,
+                    holeCards: HoleCards(
+                        Card(suit: .hearts, rank: 9),
+                        Card(suit: .spades, rank: 2)
+                    ),
+                    status: .active
+                ),
+                Player(
+                    id: 1,
+                    name: "老K",
+                    avatar: "👴",
+                    position: .mp,
+                    chips: 2000,
+                    holeCards: HoleCards(
+                        Card(suit: .clubs, rank: 13),
+                        Card(suit: .diamonds, rank: 13)
+                    ),
+                    status: .folded
+                )
+            ],
+            communityCards: [
+                Card(suit: .spades, rank: 6),
+                Card(suit: .clubs, rank: 7)
+            ],
+            currentStreet: .river,
+            pot: 547,
+            sidePots: [],
+            currentBet: 0,
+            playerBets: [:],
+            buttonPosition: .btn,
+            actionLog: [],
+            currentActorIndex: 0,
+            handNumber: 2,
+            playerBetsAtLastAction: [:],
+            playersActedThisStreet: [],
+            handBets: [0: 233]
+        )
+
+        await engine.restoreState(brokenState)
+        let repairedState = await engine.getState()
+
+        XCTAssertEqual(repairedState.currentStreet, .river)
+        XCTAssertEqual(repairedState.communityCards.count, 5, "恢复坏存档时，公共牌应该自动补齐到当前 street 应有的张数")
+    }
+
     func testBigBlindStillGetsActionAfterEarlierPlayersFold() async {
         let engine = PokerEngine()
         let players = [
@@ -389,8 +463,110 @@ final class PokerEngineTests: XCTestCase {
         XCTAssertEqual(firstHandState.handNumber, 1)
         XCTAssertEqual(secondHandState.handNumber, 2)
         XCTAssertEqual(firstHandState.players.first { $0.id == 0 }?.position, .bb)
+        // 顺时针轮转：SB → BB → UTG → MP → CO → BTN
         XCTAssertEqual(secondHandState.players.first { $0.id == 0 }?.position, .utg)
         XCTAssertEqual(secondHandState.players.first { $0.id == 4 }?.position, .sb)
         XCTAssertEqual(secondHandState.players.first { $0.id == 5 }?.position, .bb)
+    }
+
+    func testPreFlopBettingOrderStartsFromUTGAfterBlindsPosted() async {
+        let engine = PokerEngine()
+
+        await engine.setupGame(humanChips: 2000)
+        await engine.startNewHand()
+
+        let firstActorId = await engine.getNextActor()
+        let state = await engine.getState()
+        let utgId = state.players.first { $0.position == .utg }?.id
+        let mpId = state.players.first { $0.position == .mp }?.id
+
+        XCTAssertEqual(firstActorId, utgId)
+
+        _ = await engine.processAction(
+            playerId: utgId ?? -1,
+            action: Action(playerId: utgId ?? -1, street: .preFlop, type: .fold)
+        )
+
+        let secondActorId = await engine.getNextActor()
+        XCTAssertEqual(secondActorId, mpId)
+    }
+
+    func testPreFlopRaiseContinuesClockwiseThenWrapsToEarlierCallers() async {
+        let engine = PokerEngine()
+
+        await engine.setupGame(humanChips: 2000)
+        await engine.startNewHand()
+
+        let state = await engine.getState()
+        let playerByPosition = Dictionary(uniqueKeysWithValues: state.players.map { ($0.position, $0.id) })
+
+        var nextActor = await engine.getNextActor()
+        XCTAssertEqual(nextActor, playerByPosition[.utg])
+
+        _ = await engine.processAction(
+            playerId: playerByPosition[.utg] ?? -1,
+            action: Action(playerId: playerByPosition[.utg] ?? -1, street: .preFlop, type: .call)
+        )
+        nextActor = await engine.getNextActor()
+        XCTAssertEqual(nextActor, playerByPosition[.mp])
+
+        _ = await engine.processAction(
+            playerId: playerByPosition[.mp] ?? -1,
+            action: Action(playerId: playerByPosition[.mp] ?? -1, street: .preFlop, type: .raise, amount: 60)
+        )
+        nextActor = await engine.getNextActor()
+        XCTAssertEqual(nextActor, playerByPosition[.co])
+
+        for position in [Position.co, .btn, .sb, .bb, .utg] {
+            let playerId = playerByPosition[position] ?? -1
+            _ = await engine.processAction(
+                playerId: playerId,
+                action: Action(playerId: playerId, street: .preFlop, type: .call)
+            )
+
+            let expectedNextByPosition: [Position: Position] = [
+                .co: .btn,
+                .btn: .sb,
+                .sb: .bb,
+                .bb: .utg
+            ]
+            let expectedNext = expectedNextByPosition[position]
+
+            nextActor = await engine.getNextActor()
+            XCTAssertEqual(nextActor, expectedNext.flatMap { playerByPosition[$0] })
+        }
+    }
+
+    func testPostFlopBettingOrderStartsFromSmallBlind() async {
+        let engine = PokerEngine()
+
+        await engine.setupGame(humanChips: 2000)
+        await engine.startNewHand()
+        await engine.dealCommunityCards()
+
+        let firstActorId = await engine.getNextActor()
+        let state = await engine.getState()
+        let smallBlindId = state.players.first { $0.position == .sb }?.id
+
+        XCTAssertEqual(firstActorId, smallBlindId)
+    }
+
+    func testBlindPositionsRotateSequentiallyAcrossHands() async {
+        let engine = PokerEngine()
+
+        await engine.setupGame(humanChips: 2000)
+        await engine.startNewHand()
+        let firstHand = await engine.getState()
+
+        await engine.startNewHand(advanceTable: true)
+        let secondHand = await engine.getState()
+
+        await engine.startNewHand(advanceTable: true)
+        let thirdHand = await engine.getState()
+
+        XCTAssertNotEqual(firstHand.players.first { $0.position == .sb }?.id, secondHand.players.first { $0.position == .sb }?.id)
+        XCTAssertNotEqual(secondHand.players.first { $0.position == .sb }?.id, thirdHand.players.first { $0.position == .sb }?.id)
+        XCTAssertEqual(secondHand.players.first { $0.position == .bb }?.id, firstHand.players.first { $0.position == .sb }?.id)
+        XCTAssertEqual(thirdHand.players.first { $0.position == .bb }?.id, secondHand.players.first { $0.position == .sb }?.id)
     }
 }

@@ -56,15 +56,15 @@ enum HandEvaluator {
 
     private static func evaluateFiveCards(_ cards: [Card]) -> (bestFive: [Card], handType: HandType, kickers: [Int]) {
         let sortedCards = cards.sorted { $0.rank > $1.rank }
+        let sortedRanks = sortedCards.map { $0.rank }
 
-        let isFlush = isFlush(cards)
-        let (isStraight, straightHighCard) = isStraight(cards)
-        let ranks = cards.map { $0.rank }
-        let rankCounts = Dictionary(grouping: ranks, by: { $0 }).mapValues { $0.count }
+        let flushSuit = detectFlushSuit(cards)
+        let (isStraight, straightHighCard) = isStraightFromSortedRanks(sortedRanks)
+        let rankCounts = Dictionary(grouping: sortedRanks, by: { $0 }).mapValues { $0.count }
         let counts = rankCounts.values.sorted(by: >)
 
-        if isFlush && isStraight {
-            if Set(ranks) == Set([14, 13, 12, 11, 10]) {
+        if flushSuit != nil && isStraight {
+            if straightHighCard == 14 {
                 return (sortedCards, .royalFlush, [])
             }
             return (sortedCards, .straightFlush, [straightHighCard])
@@ -72,7 +72,7 @@ enum HandEvaluator {
 
         if counts.first == 4 {
             let quadRank = findRankForCount(rankCounts, count: 4) ?? 0
-            let kicker = ranks.filter { $0 != quadRank }.max() ?? 0
+            let kicker = sortedRanks.first { $0 != quadRank } ?? 0
             return (sortedCards, .fourOfAKind, [quadRank, kicker])
         }
 
@@ -82,8 +82,8 @@ enum HandEvaluator {
             return (sortedCards, .fullHouse, [tripRank, pairRank])
         }
 
-        if isFlush {
-            return (sortedCards, .flush, Array(ranks.sorted(by: >).prefix(5)))
+        if flushSuit != nil {
+            return (sortedCards, .flush, Array(sortedRanks.prefix(5)))
         }
 
         if isStraight {
@@ -92,59 +92,57 @@ enum HandEvaluator {
 
         if counts.first == 3 {
             let tripRank = findRankForCount(rankCounts, count: 3) ?? 0
-            let kickers = ranks.filter { $0 != tripRank }.sorted(by: >).prefix(2)
-            return (sortedCards, .threeOfAKind, [tripRank] + Array(kickers))
+            var kickers: [Int] = []
+            for rank in sortedRanks where rank != tripRank {
+                kickers.append(rank)
+                if kickers.count == 2 { break }
+            }
+            return (sortedCards, .threeOfAKind, [tripRank] + kickers)
         }
 
         let pairCount = counts.filter { $0 == 2 }.count
         if pairCount == 2 {
             let pairs = rankCounts.filter { $0.value == 2 }.keys.sorted(by: >)
-            let kicker = ranks.filter { !pairs.contains($0) }.max() ?? 0
+            let kicker = sortedRanks.first { !pairs.contains($0) } ?? 0
             return (sortedCards, .twoPair, [pairs[0], pairs[1], kicker])
         }
 
         if counts.first == 2 {
             let pairRank = findRankForCount(rankCounts, count: 2) ?? 0
-            let kickers = ranks.filter { $0 != pairRank }.sorted(by: >).prefix(3)
-            return (sortedCards, .onePair, [pairRank] + Array(kickers))
+            var kickers: [Int] = []
+            for rank in sortedRanks where rank != pairRank {
+                kickers.append(rank)
+                if kickers.count == 3 { break }
+            }
+            return (sortedCards, .onePair, [pairRank] + kickers)
         }
 
-        return (sortedCards, .highCard, Array(ranks.sorted(by: >).prefix(5)))
+        return (sortedCards, .highCard, Array(sortedRanks.prefix(5)))
     }
 
-    private static func isFlush(_ cards: [Card]) -> Bool {
-        guard cards.count >= 5 else { return false }
+    private static func detectFlushSuit(_ cards: [Card]) -> Suit? {
+        guard cards.count >= 5 else { return nil }
         let suits = cards.map { $0.suit }
-        return suits.allSatisfy { $0 == suits[0] }
+        return suits.allSatisfy { $0 == suits[0] } ? suits[0] : nil
     }
 
-    /// 返回 (是否为顺子, 顺子最大牌 rank)
-    private static func isStraight(_ cards: [Card]) -> (Bool, Int) {
-        guard cards.count >= 5 else { return (false, 0) }
-        let ranks = Set(cards.map { $0.rank })
-        guard ranks.count >= 5 else { return (false, 0) }
-
-        let sortedRanks = ranks.sorted(by: >)
+    /// 从已排序的 ranks 判断是否为顺子，返回 (是否为顺子, 顺子最大牌 rank)
+    private static func isStraightFromSortedRanks(_ sortedRanks: [Int]) -> (Bool, Int) {
+        guard sortedRanks.count >= 5 else { return (false, 0) }
+        let uniqueRanks = Array(Set(sortedRanks)).sorted(by: >)
+        guard uniqueRanks.count >= 5 else { return (false, 0) }
 
         // 普通顺子：连续5张
-        var isConsecutive = true
-        for i in 0..<(sortedRanks.count - 1) {
-            if sortedRanks[i] - sortedRanks[i + 1] != 1 {
-                isConsecutive = false
-                break
+        for i in 0...(uniqueRanks.count - 5) {
+            if uniqueRanks[i] - uniqueRanks[i + 4] == 4 {
+                return (true, uniqueRanks[i])
             }
-        }
-        if isConsecutive {
-            return (true, sortedRanks[0])
         }
 
         // A-2-3-4-5 轮子顺子（wheel）
-        let aceLowRanks = Set(ranks.filter { $0 != 14 })
-        if aceLowRanks.count >= 4 {
-            let lowSorted = aceLowRanks.sorted(by: >)
-            if lowSorted == [5, 4, 3, 2] {
-                return (true, 5)  // wheel 的高牌是 5
-            }
+        if uniqueRanks.first == 14 && uniqueRanks.count >= 5
+            && uniqueRanks[1] == 5 && uniqueRanks[4] == 2 {
+            return (true, 5)
         }
 
         return (false, 0)

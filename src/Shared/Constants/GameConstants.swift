@@ -11,6 +11,7 @@ enum GameConstants {
     // MARK: - Welfare
     static let dailyFreeChips: Int = 2000
     static let dailySignInBonus: Int = 1000
+    static let rewardAdChips: Int = 1000
 
     // MARK: - AI Thinking Delay
     static let aiThinkingDelayMin: Double = 1.0

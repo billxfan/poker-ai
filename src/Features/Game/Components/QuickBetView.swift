@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct QuickBetView: View {
+    let potSize: Int
     let referenceAmount: Int
     let minimumAmount: Int
     let currentRoundBet: Int
@@ -8,12 +9,15 @@ struct QuickBetView: View {
     let onSelect: (Int) -> Void
     let onCancel: () -> Void
 
-    private let multipliers: [(label: String, value: Double)] = [
+    private let potMultipliers: [(label: String, value: Double)] = [
         ("1/3", 0.33),
         ("1/2", 0.5),
         ("2/3", 0.67),
+    ]
+
+    private let raiseMultipliers: [(label: String, value: Double)] = [
         ("1x", 1.0),
-        ("1.2x", 1.2)
+        ("1.2x", 1.2),
     ]
 
     var body: some View {
@@ -23,8 +27,11 @@ struct QuickBetView: View {
                 .foregroundColor(.textOnDark.opacity(0.7))
 
             HStack(spacing: 8) {
-                ForEach(multipliers, id: \.label) { option in
-                    let amount = calculateAmount(multiplier: option.value)
+                ForEach(potMultipliers + raiseMultipliers, id: \.label) { option in
+                    let amount = calculateAmount(
+                        multiplier: option.value,
+                        usePot: option.value < 1.0
+                    )
 
                     Button {
                         onSelect(amount)
@@ -64,8 +71,9 @@ struct QuickBetView: View {
         currentRoundBet + playerChips
     }
 
-    private func calculateAmount(multiplier: Double) -> Int {
-        let amount = Int(Double(referenceAmount) * multiplier)
+    private func calculateAmount(multiplier: Double, usePot: Bool) -> Int {
+        let base = usePot ? Double(potSize) : Double(referenceAmount)
+        let amount = Int(base * multiplier)
         let legalAmount = max(minimumAmount, amount)
         return min(legalAmount, maxTotalBet)
     }
@@ -77,7 +85,8 @@ struct QuickBetView: View {
             .ignoresSafeArea()
 
         QuickBetView(
-            referenceAmount: 790,
+            potSize: 790,
+            referenceAmount: 200,
             minimumAmount: 200,
             currentRoundBet: 20,
             playerChips: 2500,

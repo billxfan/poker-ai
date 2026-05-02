@@ -29,7 +29,7 @@ struct Player: Identifiable, Codable {
     }
 
     var isOut: Bool {
-        status == .out || chips <= 0
+        status == .out
     }
 
     var canAct: Bool {
@@ -51,9 +51,11 @@ struct Player: Identifiable, Codable {
 }
 
 extension Player {
+    static let humanPlayerId = 0
+
     static func createHuman(position: Position, chips: Int) -> Player {
         Player(
-            id: 0,
+            id: humanPlayerId,
             name: "你",
             avatar: "🧑",
             position: position,

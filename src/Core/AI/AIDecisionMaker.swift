@@ -1,8 +1,6 @@
 import Foundation
 
 actor AIDecisionMaker {
-    private let epsilon: Double = 0.1
-
     func makeDecision(
         playerId: Int,
         gameState: GameState,
@@ -28,7 +26,8 @@ actor AIDecisionMaker {
             minimumRaiseIncrement: gameState.minimumRaiseIncrement
         )
 
-        if Double.random(in: 0...1) < epsilon {
+        let explorationRate = patterns?.explorationRate(for: style) ?? style.learningProfile.initialEpsilon
+        if Double.random(in: 0...1) < explorationRate {
             return makeRandomAction(
                 playerId: playerId,
                 street: gameState.currentStreet,
@@ -52,7 +51,9 @@ actor AIDecisionMaker {
             patterns: patterns,
             currentPot: gameState.pot,
             playerPosition: player.position,
-            playersToAct: gameState.activePlayers.count - 1
+            playersToAct: gameState.activePlayers.count - 1,
+            players: gameState.players,
+            actionLog: gameState.actionLog
         )
     }
 
@@ -122,7 +123,9 @@ actor AIDecisionMaker {
         patterns: AIPattern?,
         currentPot: Int,
         playerPosition: Position,
-        playersToAct: Int
+        playersToAct: Int,
+        players: [Player],
+        actionLog: [Action]
     ) -> Action {
         guard let holeCards = holeCards else {
             return Action(playerId: playerId, street: street, type: .fold)
@@ -138,62 +141,29 @@ actor AIDecisionMaker {
             street: street
         )
 
-        switch style {
-        case .tightAggressive:
-            return tightAggressiveDecision(
-                playerId: playerId,
-                street: street,
-                handStrength: handStrength,
-                callAmount: callAmount,
-                minRaise: minRaise,
-                playerChips: playerChips,
-                currentPlayerBet: currentPlayerBet,
-                currentPot: currentPot
-            )
-
-        case .looseAggressive:
-            return looseAggressiveDecision(
-                playerId: playerId,
-                street: street,
-                handStrength: handStrength,
-                callAmount: callAmount,
-                minRaise: minRaise,
-                playerChips: playerChips,
-                currentPlayerBet: currentPlayerBet,
-                currentPot: currentPot
-            )
-
-        case .tightWeak:
-            return tightWeakDecision(
-                playerId: playerId,
-                street: street,
-                handStrength: handStrength,
-                callAmount: callAmount,
-                playerChips: playerChips
-            )
-
-        case .looseWeak:
-            return looseWeakDecision(
-                playerId: playerId,
-                street: street,
-                handStrength: handStrength,
-                callAmount: callAmount,
-                playerChips: playerChips
-            )
-
-        case .balanced:
-            return balancedDecision(
-                playerId: playerId,
-                street: street,
-                handStrength: handStrength,
-                callAmount: callAmount,
-                minRaise: minRaise,
-                playerChips: playerChips,
-                currentPlayerBet: currentPlayerBet,
-                patterns: patterns,
-                currentPot: currentPot
-            )
+        let observableOpponents = players.filter {
+            $0.id != playerId && !$0.isFolded && !$0.isOut
         }
+        let tuning = (patterns ?? AIPattern()).decisionTuning(
+            for: style,
+            against: observableOpponents,
+            actionLog: actionLog,
+            street: street,
+            selfPlayerId: playerId,
+            communityCards: communityCards,
+            playerPosition: playerPosition
+        )
+        return adaptiveDecision(
+            playerId: playerId,
+            street: street,
+            handStrength: handStrength,
+            tuning: tuning,
+            callAmount: callAmount,
+            minRaise: minRaise,
+            playerChips: playerChips,
+            currentPlayerBet: currentPlayerBet,
+            currentPot: currentPot
+        )
     }
 
     private func evaluateHandStrength(
@@ -205,46 +175,71 @@ actor AIDecisionMaker {
         playersToAct: Int,
         street: Street
     ) -> Double {
-        let isPaired = holeCards.card1.rank == holeCards.card2.rank
-
-        var strength = 0.0
-
         if communityCards.isEmpty {
             return PreFlopHandTable.lookup(holeCards: holeCards)
         }
 
-        let allCards = [holeCards.card1, holeCards.card2] + communityCards
+        let evaluatedHand = HandEvaluator.evaluate(holeCards: holeCards, communityCards: communityCards)
+        var strength = evaluatedHand.handType.aiStrengthScore
 
-        let matchedRanks = Dictionary(grouping: allCards, by: { $0.rank }).filter { $0.value.count >= 2 }
-        strength += Double(matchedRanks.count) * 0.18
-
-        let suitedCards = allCards.filter { $0.suit == holeCards.card1.suit }
-        if suitedCards.count >= 4 && !isPaired {
-            strength += 0.12
+        if let primaryKicker = evaluatedHand.kickers.first {
+            strength += Double(primaryKicker - 2) / 12.0 * 0.08
         }
 
-        let uniqueRanks = Set(allCards.map { $0.rank })
-        let sortedRanks = uniqueRanks.sorted(by: >)
-        var straightOuts = 0
-        for i in 0..<(sortedRanks.count - 1) {
-            if sortedRanks[i] - sortedRanks[i + 1] == 1 {
-                straightOuts += 1
-            }
-        }
-        if straightOuts >= 3 {
-            strength += 0.08
+        if communityCards.count < 5 {
+            strength += calculateDrawPotential(
+                holeCards: holeCards,
+                communityCards: communityCards,
+                madeHandType: evaluatedHand.handType
+            )
         }
 
         if callAmount > 0 && currentPot > 0 {
             let potOdds = Double(callAmount) / Double(currentPot + callAmount)
-            let impliedOdds = strength * 1.5
-            if impliedOdds > potOdds {
-                strength += 0.1
+            if strength > potOdds {
+                strength += 0.06
+            } else {
+                strength -= min(0.10, (potOdds - strength) * 0.18)
             }
         }
 
         let positionMultiplier = calculatePositionMultiplier(position: position, playersToAct: playersToAct, street: street)
-        return min(1.0, max(0.0, strength * positionMultiplier))
+        return clamp(strength * positionMultiplier, min: 0.0, max: 1.0)
+    }
+
+    private func calculateDrawPotential(
+        holeCards: HoleCards,
+        communityCards: [Card],
+        madeHandType: HandType
+    ) -> Double {
+        let allCards = [holeCards.card1, holeCards.card2] + communityCards
+        var bonus = 0.0
+
+        if madeHandType < .flush {
+            let suitCounts = Dictionary(grouping: allCards, by: { $0.suit }).mapValues(\.count)
+            if suitCounts.values.max() == 4 {
+                bonus += 0.08
+            }
+        }
+
+        if madeHandType < .straight {
+            var ranks = Set(allCards.map(\.rank))
+            if ranks.contains(14) {
+                ranks.insert(1)
+            }
+
+            let sortedRanks = ranks.sorted()
+            for start in 1...10 {
+                let needed = Set(start...(start + 4))
+                let matched = needed.intersection(sortedRanks).sorted()
+                guard matched.count == 4 else { continue }
+
+                let isOpenEnded = (matched.last ?? 0) - (matched.first ?? 0) == 3
+                bonus = max(bonus, isOpenEnded ? 0.08 : 0.05)
+            }
+        }
+
+        return bonus
     }
 
     /// 计算本次激进行动后的目标总下注额。
@@ -267,8 +262,7 @@ actor AIDecisionMaker {
 
         let referencePot = max(currentPot, GameConstants.bigBlind)
         let targetAmount = Int(Double(referencePot) * potFraction)
-        let actualAmount = max(minRaise, min(targetAmount, availableTotalBet))
-        return actualAmount
+        return max(minRaise, min(targetAmount, availableTotalBet))
     }
 
     private func passiveAction(playerId: Int, street: Street, callAmount: Int, playerChips: Int) -> Action {
@@ -311,117 +305,38 @@ actor AIDecisionMaker {
         return Action(playerId: playerId, street: street, type: actionType, amount: max(minRaise, betSize))
     }
 
-    private func tightAggressiveDecision(
+    private func adaptiveDecision(
         playerId: Int,
         street: Street,
         handStrength: Double,
+        tuning: AIDecisionTuning,
         callAmount: Int,
         minRaise: Int,
         playerChips: Int,
         currentPlayerBet: Int,
         currentPot: Int
     ) -> Action {
-        if handStrength > 0.6 {
-            return aggressiveAction(
-                playerId: playerId,
-                street: street,
-                callAmount: callAmount,
-                minRaise: minRaise,
-                playerChips: playerChips,
-                currentPlayerBet: currentPlayerBet,
-                currentPot: currentPot,
-                handStrength: handStrength
-            )
-        }
+        let canCheck = callAmount == 0
+        let potPressure = (callAmount > 0 && currentPot > 0)
+            ? Double(callAmount) / Double(currentPot + callAmount)
+            : 0.0
 
-        if handStrength > 0.3 {
-            return passiveAction(playerId: playerId, street: street, callAmount: callAmount, playerChips: playerChips)
-        }
+        let adjustedPassiveThreshold = clamp(
+            tuning.passiveThreshold + potPressure * 0.18,
+            min: 0.05,
+            max: 0.95
+        )
+        let adjustedContinueChance = clamp(
+            tuning.continueChance - potPressure * 0.40,
+            min: 0.05,
+            max: 0.98
+        )
 
-        return callAmount == 0
-            ? Action(playerId: playerId, street: street, type: .check)
-            : Action(playerId: playerId, street: street, type: .fold)
-    }
+        if handStrength >= tuning.aggressiveThreshold {
+            let shouldAggress = Double.random(in: 0...1) < tuning.aggressionChance
+                || (canCheck && handStrength > tuning.aggressiveThreshold + 0.12)
 
-    private func looseAggressiveDecision(
-        playerId: Int,
-        street: Street,
-        handStrength: Double,
-        callAmount: Int,
-        minRaise: Int,
-        playerChips: Int,
-        currentPlayerBet: Int,
-        currentPot: Int
-    ) -> Action {
-        if handStrength > 0.4 {
-            return aggressiveAction(
-                playerId: playerId,
-                street: street,
-                callAmount: callAmount,
-                minRaise: minRaise,
-                playerChips: playerChips,
-                currentPlayerBet: currentPlayerBet,
-                currentPot: currentPot,
-                handStrength: handStrength
-            )
-        }
-
-        if handStrength > 0.2 {
-            return passiveAction(playerId: playerId, street: street, callAmount: callAmount, playerChips: playerChips)
-        }
-
-        return callAmount == 0
-            ? Action(playerId: playerId, street: street, type: .check)
-            : Action(playerId: playerId, street: street, type: .fold)
-    }
-
-    private func tightWeakDecision(
-        playerId: Int,
-        street: Street,
-        handStrength: Double,
-        callAmount: Int,
-        playerChips: Int
-    ) -> Action {
-        if handStrength > 0.7 {
-            return passiveAction(playerId: playerId, street: street, callAmount: callAmount, playerChips: playerChips)
-        }
-
-        return callAmount == 0
-            ? Action(playerId: playerId, street: street, type: .check)
-            : Action(playerId: playerId, street: street, type: .fold)
-    }
-
-    private func looseWeakDecision(
-        playerId: Int,
-        street: Street,
-        handStrength: Double,
-        callAmount: Int,
-        playerChips: Int
-    ) -> Action {
-        if handStrength > 0.3 {
-            return passiveAction(playerId: playerId, street: street, callAmount: callAmount, playerChips: playerChips)
-        }
-
-        return callAmount == 0
-            ? Action(playerId: playerId, street: street, type: .check)
-            : Action(playerId: playerId, street: street, type: .fold)
-    }
-
-    private func balancedDecision(
-        playerId: Int,
-        street: Street,
-        handStrength: Double,
-        callAmount: Int,
-        minRaise: Int,
-        playerChips: Int,
-        currentPlayerBet: Int,
-        patterns: AIPattern?,
-        currentPot: Int
-    ) -> Action {
-        let threshold = patterns?.aggressionFactor ?? 0.5
-
-        if handStrength > 0.5 {
-            if Double.random(in: 0...1) < threshold {
+            if shouldAggress {
                 return aggressiveAction(
                     playerId: playerId,
                     street: street,
@@ -437,57 +352,47 @@ actor AIDecisionMaker {
             return passiveAction(playerId: playerId, street: street, callAmount: callAmount, playerChips: playerChips)
         }
 
-        if handStrength > 0.25 && Double.random(in: 0...1) < 0.7 {
-            return passiveAction(playerId: playerId, street: street, callAmount: callAmount, playerChips: playerChips)
+        if handStrength >= adjustedPassiveThreshold {
+            if canCheck || Double.random(in: 0...1) < adjustedContinueChance {
+                return passiveAction(playerId: playerId, street: street, callAmount: callAmount, playerChips: playerChips)
+            }
+
+            if canCheck && handStrength >= tuning.bluffThreshold && Double.random(in: 0...1) < tuning.bluffChance * 0.65 {
+                return aggressiveAction(
+                    playerId: playerId,
+                    street: street,
+                    callAmount: callAmount,
+                    minRaise: minRaise,
+                    playerChips: playerChips,
+                    currentPlayerBet: currentPlayerBet,
+                    currentPot: currentPot,
+                    handStrength: handStrength
+                )
+            }
+
+            return canCheck
+                ? Action(playerId: playerId, street: street, type: .check)
+                : Action(playerId: playerId, street: street, type: .fold)
         }
 
-        return callAmount == 0
+        if handStrength >= tuning.bluffThreshold {
+            let hasFoldEquity = canCheck || potPressure < 0.18
+            if hasFoldEquity && Double.random(in: 0...1) < tuning.bluffChance {
+                return aggressiveAction(
+                    playerId: playerId,
+                    street: street,
+                    callAmount: callAmount,
+                    minRaise: minRaise,
+                    playerChips: playerChips,
+                    currentPlayerBet: currentPlayerBet,
+                    currentPot: currentPot,
+                    handStrength: handStrength
+                )
+            }
+        }
+
+        return canCheck
             ? Action(playerId: playerId, street: street, type: .check)
             : Action(playerId: playerId, street: street, type: .fold)
-    }
-}
-
-struct AIPattern: Codable {
-    /// 入池次数（用于计算 VPIP = vpipCount / handsPlayed）
-    var vpipCount: Int = 0
-    /// 翻牌前加注次数（用于计算 PFR = pfrCount / handsPlayed）
-    var pfrCount: Int = 0
-    /// 3-bet 次数
-    var threeBetCount: Int = 0
-    /// 激进动作次数（用于计算 AF = afCount / handsPlayed）
-    var afCount: Int = 0
-    /// 总参与手数
-    var handsPlayed: Int = 0
-    var lastUpdated: Date = Date()
-
-    var vpip: Double { handsPlayed > 0 ? Double(vpipCount) / Double(handsPlayed) : 0 }
-    var pfr: Double { handsPlayed > 0 ? Double(pfrCount) / Double(handsPlayed) : 0 }
-    var threeBet: Double { pfrCount > 0 ? Double(threeBetCount) / Double(pfrCount) : 0 }
-    /// 激进频率：激进动作占比
-    var af: Double { handsPlayed > 0 ? Double(afCount) / Double(handsPlayed) : 0 }
-    var aggressionFactor: Double { af }
-
-    mutating func updateAfterHand(playerId: Int, playerActions: [Action], allActions: [Action]) {
-        handsPlayed += 1
-
-        let preFlopActions = playerActions.filter { $0.street == .preFlop }
-        let aggressiveTypes: Set<ActionType> = [.raise, .bet, .allIn]
-        let voluntaryTypes: Set<ActionType> = [.call, .raise, .bet, .allIn]
-
-        if preFlopActions.contains(where: { voluntaryTypes.contains($0.type) }) {
-            vpipCount += 1
-        }
-
-        if preFlopActions.contains(where: { aggressiveTypes.contains($0.type) }) {
-            pfrCount += 1
-        }
-
-        let preFlopAggressions = allActions.filter { $0.street == .preFlop && aggressiveTypes.contains($0.type) }
-        if let firstAggressionIndex = preFlopAggressions.firstIndex(where: { $0.playerId == playerId }), firstAggressionIndex > 0 {
-            threeBetCount += 1
-        }
-
-        afCount += playerActions.filter { aggressiveTypes.contains($0.type) }.count
-        lastUpdated = Date()
     }
 }

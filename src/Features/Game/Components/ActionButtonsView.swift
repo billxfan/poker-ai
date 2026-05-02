@@ -3,6 +3,7 @@ import SwiftUI
 struct ActionButtonsView: View {
     let callAmount: Int
     let minRaiseAmount: Int
+    let potSize: Int
     let playerChips: Int
     let currentRoundBet: Int
     let canCall: Bool
@@ -33,6 +34,7 @@ struct ActionButtonsView: View {
 
             if showQuickBet {
                 QuickBetView(
+                    potSize: potSize,
                     referenceAmount: minRaiseAmount,
                     minimumAmount: minRaiseAmount,
                     currentRoundBet: currentRoundBet,
@@ -47,7 +49,8 @@ struct ActionButtonsView: View {
                 )
             }
         }
-        .padding(16)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
         .background(Color.black.opacity(0.8))
     }
 
@@ -145,6 +148,7 @@ struct ActionButtonsView: View {
         ActionButtonsView(
             callAmount: 100,
             minRaiseAmount: 200,
+            potSize: 500,
             playerChips: 500,
             currentRoundBet: 20,
             canCall: true,

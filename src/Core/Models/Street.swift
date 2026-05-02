@@ -24,7 +24,7 @@ enum Street: String, Codable, CaseIterable {
         }
     }
 
-    func actionOrder(btnPosition: Position) -> [Position] {
+    var actionOrder: [Position] {
         switch self {
         case .preFlop:
             return Position.preFlopOrder

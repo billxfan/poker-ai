@@ -41,6 +41,27 @@ final class ArchiveManagerTests: XCTestCase {
         XCTAssertTrue(userDefaults.bool(forKey: GameArchive.archivePresenceKey))
     }
 
+    func testSaveAndLoadArchivePreservesRemainingDeck() throws {
+        let remainingDeck = [
+            Card(suit: .spades, rank: 14),
+            Card(suit: .hearts, rank: 10)
+        ]
+        let archive = GameArchive(
+            gameState: GameState(
+                players: [Player.createHuman(position: .bb, chips: 2000)],
+                handNumber: 3
+            ),
+            remainingDeck: remainingDeck,
+            savedAt: Date(),
+            version: GameArchive.currentVersion
+        )
+
+        try manager.saveArchive(archive)
+        let loadedArchive = manager.loadArchive()
+
+        XCTAssertEqual(loadedArchive?.remainingDeck, remainingDeck)
+    }
+
     func testLoadArchiveWithoutDataClearsPresenceFlag() {
         userDefaults.set(true, forKey: GameArchive.archivePresenceKey)
 
@@ -92,6 +113,35 @@ final class ArchiveManagerTests: XCTestCase {
 
         XCTAssertEqual(archive?.resumeMode, .currentHand)
         XCTAssertEqual(archive?.gameState.handNumber, 5)
+        XCTAssertNil(archive?.remainingDeck)
         XCTAssertTrue(manager.hasArchive())
+    }
+
+    func testArchiveAllowsCurrentHandResumeWhenHumanIsAllInButNotOut() {
+        var human = Player.createHuman(position: .bb, chips: 0)
+        human.status = .allIn
+
+        let archive = GameArchive(
+            gameState: GameState(players: [human]),
+            savedAt: Date(),
+            version: GameArchive.currentVersion,
+            resumeMode: .currentHand
+        )
+
+        XCTAssertTrue(archive.isResumableFromMainMenu)
+    }
+
+    func testArchiveDisallowsResumeWhenHumanIsOut() {
+        var human = Player.createHuman(position: .bb, chips: 0)
+        human.status = .out
+
+        let archive = GameArchive(
+            gameState: GameState(players: [human]),
+            savedAt: Date(),
+            version: GameArchive.currentVersion,
+            resumeMode: .nextHand
+        )
+
+        XCTAssertFalse(archive.isResumableFromMainMenu)
     }
 }

@@ -9,11 +9,8 @@ final class MainViewModel {
 
     var chips: Int = 0
     var hasArchive: Bool = false
-    var showNoChipsAlert: Bool = false
-    var showNoChipsToWelfare: Bool = false
     var showNewGameConfirmation: Bool = false
     var isLoading: Bool = false
-    var minimumChipsForNewGame: Int { GameConstants.startingChips }
 
     var hasClaimedDailyFree: Bool {
         welfareStorage.hasClaimedDailyFree()
@@ -39,7 +36,7 @@ final class MainViewModel {
 
     func loadState() {
         chips = chipStorage.getChips()
-        hasArchive = archiveManager.hasArchive()
+        hasArchive = refreshArchiveAvailability()
 
         if chips == 0 && !hasClaimedDailyFree {
             claimDailyFreeChips()
@@ -62,7 +59,7 @@ final class MainViewModel {
 
     func continueGame() -> GameArchive? {
         let archive = archiveManager.loadArchive()
-        if let archive, !archive.gameState.players.isEmpty {
+        if let archive, archive.isResumableFromMainMenu {
             hasArchive = true
             return archive
         }
@@ -71,16 +68,11 @@ final class MainViewModel {
             archiveManager.clearArchive()
         }
 
-        hasArchive = archiveManager.hasArchive()
+        hasArchive = false
         return nil
     }
 
     func startNewGame() {
-        guard chips >= minimumChipsForNewGame else {
-            showNoChipsAlert = true
-            return
-        }
-
         archiveManager.clearArchive()
         databaseManager.clearAIPatterns()
         databaseManager.clearHandRecords()
@@ -88,7 +80,8 @@ final class MainViewModel {
     }
 
     func getChipsForNewGame() -> Int {
-        return minimumChipsForNewGame
+        let stored = chipStorage.getChips()
+        return stored > 0 ? stored : GameConstants.startingChips
     }
 
     func deductChipsForGame(_ amount: Int) -> Bool {
@@ -98,5 +91,18 @@ final class MainViewModel {
     func addChipsToPlayer(_ amount: Int) {
         chipStorage.addChips(amount)
         chips = chipStorage.getChips()
+    }
+
+    private func refreshArchiveAvailability() -> Bool {
+        guard let archive = archiveManager.loadArchive() else {
+            return false
+        }
+
+        guard archive.isResumableFromMainMenu else {
+            archiveManager.clearArchive()
+            return false
+        }
+
+        return true
     }
 }

@@ -29,3 +29,6 @@ PokerAI.xcodeproj/xcuserdata/
 # Temporary files
 *.log
 *.tmp
+
+# Firebase configuration (contains API keys)
+GoogleService-Info.plist

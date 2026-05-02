@@ -7,17 +7,20 @@ struct GameArchive: Codable {
     }
 
     let gameState: GameState
+    let remainingDeck: [Card]?
     let savedAt: Date
     let version: Int
     let resumeMode: ResumeMode
 
     init(
         gameState: GameState,
+        remainingDeck: [Card]? = nil,
         savedAt: Date,
         version: Int,
         resumeMode: ResumeMode = .currentHand
     ) {
         self.gameState = gameState
+        self.remainingDeck = remainingDeck
         self.savedAt = savedAt
         self.version = version
         self.resumeMode = resumeMode
@@ -25,6 +28,7 @@ struct GameArchive: Codable {
 
     private enum CodingKeys: String, CodingKey {
         case gameState
+        case remainingDeck
         case savedAt
         case version
         case resumeMode
@@ -33,6 +37,7 @@ struct GameArchive: Codable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         gameState = try container.decode(GameState.self, forKey: .gameState)
+        remainingDeck = try container.decodeIfPresent([Card].self, forKey: .remainingDeck)
         savedAt = try container.decode(Date.self, forKey: .savedAt)
         version = try container.decode(Int.self, forKey: .version)
         resumeMode = try container.decodeIfPresent(ResumeMode.self, forKey: .resumeMode) ?? .currentHand
@@ -41,6 +46,7 @@ struct GameArchive: Codable {
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(gameState, forKey: .gameState)
+        try container.encodeIfPresent(remainingDeck, forKey: .remainingDeck)
         try container.encode(savedAt, forKey: .savedAt)
         try container.encode(version, forKey: .version)
         try container.encode(resumeMode, forKey: .resumeMode)
@@ -49,6 +55,20 @@ struct GameArchive: Codable {
     static let currentVersion = 1
     static let archiveKey = "poker_ai_game_archive"
     static let archivePresenceKey = "poker_ai_game_archive_exists"
+}
+
+extension GameArchive {
+    var humanPlayer: Player? {
+        gameState.players.first { $0.id == Player.humanPlayerId }
+    }
+
+    var isResumableFromMainMenu: Bool {
+        guard !gameState.players.isEmpty, let humanPlayer else {
+            return false
+        }
+
+        return humanPlayer.status != .out
+    }
 }
 
 protocol IGameArchiveManager {

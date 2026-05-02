@@ -32,24 +32,60 @@
 		8D84E46DC948B5E14FF14A97 /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B00F95E8E8DFCD10A0CF933 /* MainView.swift */; };
 		98F3BBBBBCC1540E27CAA798 /* Color+Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35E7C9248EDD3E73E290C09A /* Color+Theme.swift */; };
 		A1F18356253768040A20345B /* HandEvaluatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B67668697B87763B8FE8F7A1 /* HandEvaluatorTests.swift */; };
+		A9C1C0DE0000000000000001 /* AIStyleProfiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9D1C0DE0000000000000001 /* AIStyleProfiles.swift */; };
+		A9C1C0DE0000000000000002 /* AIStrategicContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9D1C0DE0000000000000002 /* AIStrategicContext.swift */; };
+		A9C1C0DE0000000000000003 /* AIOpponentModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9D1C0DE0000000000000003 /* AIOpponentModel.swift */; };
+		A9C1C0DE0000000000000004 /* AIPattern.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9D1C0DE0000000000000004 /* AIPattern.swift */; };
+		AA0000000000000000000001 /* PokerAI/Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000002 /* PokerAI/Assets.xcassets */; };
+		AA0000000000000000000010 /* AnalyticsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000011 /* AnalyticsService.swift */; };
+		AA0000000000000000000012 /* AnalyticsEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000013 /* AnalyticsEvent.swift */; };
+		AA0000000000000000000014 /* MockAnalyticsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000015 /* MockAnalyticsService.swift */; };
+		AA0000000000000000000040 /* PokerAI/PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000041 /* PokerAI/PrivacyInfo.xcprivacy */; };
+		AA0000000000000000000050 /* AdMobConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000052 /* AdMobConfig.swift */; };
+		AA0000000000000000000051 /* AdMobService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000053 /* AdMobService.swift */; };
 		AC9F780B5B5610C40F9FD8E6 /* Street.swift in Sources */ = {isa = PBXBuildFile; fileRef = C96A3EDD743B1E6EF634AF25 /* Street.swift */; };
 		AF87F80BD5FD6B77687BDD5B /* Position.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94BE2A516204DC6429819030 /* Position.swift */; };
-		E1A5B4C3D2F109876543210A /* PokerEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A5B4C3D2F109876543210B /* PokerEngineTests.swift */; };
-		F1A2B3C4D5E6F70809101112 /* ArchiveManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E6F70809101113 /* ArchiveManagerTests.swift */; };
-		F2A3B4C5D6E7F80910111213 /* GameFlowRegressionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2A3B4C5D6E7F80910111214 /* GameFlowRegressionTests.swift */; };
-		F3A4B5C6D7E8F90101112131 /* GameRecordRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3A4B5C6D7E8F90101112132 /* GameRecordRepositoryTests.swift */; };
 		B1737251F85D2BED64FF064B /* PokerAIApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A52967FFB99FEC66776E187 /* PokerAIApp.swift */; };
+		B7E100000000000000000001 /* PokerEngine+Setup.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7F100000000000000000001 /* PokerEngine+Setup.swift */; };
+		B7E100000000000000000002 /* PokerEngine+Actions.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7F100000000000000000002 /* PokerEngine+Actions.swift */; };
+		B7E100000000000000000003 /* PokerEngine+RoundFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7F100000000000000000003 /* PokerEngine+RoundFlow.swift */; };
+		B7E100000000000000000004 /* PokerEngine+State.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7F100000000000000000004 /* PokerEngine+State.swift */; };
+		B7E100000000000000000005 /* PokerEngine+Settlement.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7F100000000000000000005 /* PokerEngine+Settlement.swift */; };
+		B7E100000000000000000006 /* GameViewModel+Lifecycle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7F100000000000000000006 /* GameViewModel+Lifecycle.swift */; };
+		B7E100000000000000000007 /* GameViewModel+AITurn.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7F100000000000000000007 /* GameViewModel+AITurn.swift */; };
+		B7E100000000000000000008 /* GameViewModel+PlayerActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7F100000000000000000008 /* GameViewModel+PlayerActions.swift */; };
+		B7E100000000000000000009 /* GameViewModel+Settlement.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7F100000000000000000009 /* GameViewModel+Settlement.swift */; };
+		B7E10000000000000000000A /* GameViewModel+Training.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7F10000000000000000000A /* GameViewModel+Training.swift */; };
+		B7E10000000000000000000B /* GameViewModel+Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7F10000000000000000000B /* GameViewModel+Persistence.swift */; };
 		B8F6BB79BAED94E36EE3DD9C /* AIDecisionMaker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D872E96A0852C0D4C41EAD0 /* AIDecisionMaker.swift */; };
 		BAAB5FCB39753828451FD294 /* HandType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A9895692B7CC8BD1A14E96F /* HandType.swift */; };
 		BB8D42AA38C22AFC2FB390F3 /* CardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A89FC65242C268E9F912BF /* CardView.swift */; };
 		BD4F08D98EE42C8A6B71CADB /* ChipLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3829E3CE2E5712EDA2C6C52D /* ChipLabel.swift */; };
 		C0C8A9CDFFD35FA988D73043 /* AIEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EE739CF30B31566D593B6F6 /* AIEngine.swift */; };
 		C14884D1D49B6BEB67093FC3 /* GameArchiveManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E938E9F65A78F81C2528931A /* GameArchiveManager.swift */; };
+		C1A100000000000000000001 /* GameCommunitySection.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1B100000000000000000001 /* GameCommunitySection.swift */; };
+		C1A100000000000000000002 /* GamePlayerSeatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1B100000000000000000002 /* GamePlayerSeatView.swift */; };
+		C1A100000000000000000003 /* GameOpponentsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1B100000000000000000003 /* GameOpponentsSection.swift */; };
+		C1A100000000000000000004 /* GameBottomDock.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1B100000000000000000004 /* GameBottomDock.swift */; };
+		C1A100000000000000000005 /* RoundEndModal.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1B100000000000000000005 /* RoundEndModal.swift */; };
+		C1A100000000000000000006 /* StatisticsTabSelectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1B100000000000000000006 /* StatisticsTabSelectorView.swift */; };
+		C1A100000000000000000007 /* StatisticsOverviewTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1B100000000000000000007 /* StatisticsOverviewTabView.swift */; };
+		C1A100000000000000000008 /* StatisticsAIProfileCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1B100000000000000000008 /* StatisticsAIProfileCardView.swift */; };
+		C1A100000000000000000009 /* StatisticsRecentHandsTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1B100000000000000000009 /* StatisticsRecentHandsTabView.swift */; };
+		C1A10000000000000000000A /* StatisticsHandRecordCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1B10000000000000000000A /* StatisticsHandRecordCard.swift */; };
 		C550CBBBB24FF04CF34A12ED /* Player.swift in Sources */ = {isa = PBXBuildFile; fileRef = 842F687D9CB382280336CD76 /* Player.swift */; };
 		C6AD7F6E9F1DE0D6143F2290 /* StatisticsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2EEBC082AD1FE0F3AC670E5 /* StatisticsViewModel.swift */; };
+		CD3222DA2FA5B6B7008F37B3 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = CD2DAA442FA5AE9800C82FE1 /* FirebaseAnalytics */; };
+		CD3222DB2FA5B6B7008F37B3 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = CD2DAA452FA5AE9800C82FE1 /* FirebaseCore */; };
+		CD3222DC2FA5B6B7008F37B3 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = CD2DAA472FA5AEB300C82FE1 /* GoogleMobileAds */; };
+		CD6CFE9A2FA5106100C1B48E /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = CD6CFE992FA5106100C1B48E /* GoogleService-Info.plist */; };
 		CF6ED67D8AF1CC1B980E7D40 /* GameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74EECA09C25E73B6235A1964 /* GameView.swift */; };
 		D6C60BB155A0781297226BF0 /* PokerEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC3E61AE9BDA6C7D05CD339F /* PokerEngine.swift */; };
 		DB85292C8856B47672D3C399 /* PreFlopHandTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B3EB6C2C558AF7E772408B5 /* PreFlopHandTable.swift */; };
+		E1A5B4C3D2F109876543210A /* PokerEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A5B4C3D2F109876543210B /* PokerEngineTests.swift */; };
+		F1A2B3C4D5E6F70809101112 /* ArchiveManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E6F70809101113 /* ArchiveManagerTests.swift */; };
+		F2A3B4C5D6E7F80910111213 /* GameFlowRegressionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2A3B4C5D6E7F80910111214 /* GameFlowRegressionTests.swift */; };
+		F3A4B5C6D7E8F90101112131 /* GameRecordRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3A4B5C6D7E8F90101112132 /* GameRecordRepositoryTests.swift */; };
 		F43852DD584C0274E9884085 /* CommunityCardsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23425377DFD539DACFA05B8F /* CommunityCardsView.swift */; };
 /* End PBXBuildFile section */
 
@@ -94,29 +130,79 @@
 		8B3EB6C2C558AF7E772408B5 /* PreFlopHandTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreFlopHandTable.swift; sourceTree = "<group>"; };
 		94BE2A516204DC6429819030 /* Position.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Position.swift; sourceTree = "<group>"; };
 		A2EEBC082AD1FE0F3AC670E5 /* StatisticsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatisticsViewModel.swift; sourceTree = "<group>"; };
+		A9D1C0DE0000000000000001 /* AIStyleProfiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIStyleProfiles.swift; sourceTree = "<group>"; };
+		A9D1C0DE0000000000000002 /* AIStrategicContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIStrategicContext.swift; sourceTree = "<group>"; };
+		A9D1C0DE0000000000000003 /* AIOpponentModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIOpponentModel.swift; sourceTree = "<group>"; };
+		A9D1C0DE0000000000000004 /* AIPattern.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIPattern.swift; sourceTree = "<group>"; };
+		AA0000000000000000000002 /* PokerAI/Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = PokerAI/Assets.xcassets; sourceTree = SOURCE_ROOT; };
+		AA0000000000000000000011 /* AnalyticsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsService.swift; sourceTree = "<group>"; };
+		AA0000000000000000000013 /* AnalyticsEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsEvent.swift; sourceTree = "<group>"; };
+		AA0000000000000000000015 /* MockAnalyticsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockAnalyticsService.swift; sourceTree = "<group>"; };
+		AA0000000000000000000041 /* PokerAI/PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PokerAI/PrivacyInfo.xcprivacy; sourceTree = SOURCE_ROOT; };
+		AA0000000000000000000052 /* AdMobConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdMobConfig.swift; sourceTree = "<group>"; };
+		AA0000000000000000000053 /* AdMobService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdMobService.swift; sourceTree = "<group>"; };
 		B03D2D6EB44C302FCE8C2009 /* Action.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Action.swift; sourceTree = "<group>"; };
 		B0FBC21FB78D2DAC76701397 /* HandEvaluator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandEvaluator.swift; sourceTree = "<group>"; };
 		B2A89FC65242C268E9F912BF /* CardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardView.swift; sourceTree = "<group>"; };
 		B67668697B87763B8FE8F7A1 /* HandEvaluatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandEvaluatorTests.swift; sourceTree = "<group>"; };
 		B7D0ABC3ADC8E4F67F3EE15B /* WelfareView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelfareView.swift; sourceTree = "<group>"; };
+		B7F100000000000000000001 /* PokerEngine+Setup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PokerEngine+Setup.swift"; sourceTree = "<group>"; };
+		B7F100000000000000000002 /* PokerEngine+Actions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PokerEngine+Actions.swift"; sourceTree = "<group>"; };
+		B7F100000000000000000003 /* PokerEngine+RoundFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PokerEngine+RoundFlow.swift"; sourceTree = "<group>"; };
+		B7F100000000000000000004 /* PokerEngine+State.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PokerEngine+State.swift"; sourceTree = "<group>"; };
+		B7F100000000000000000005 /* PokerEngine+Settlement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PokerEngine+Settlement.swift"; sourceTree = "<group>"; };
+		B7F100000000000000000006 /* GameViewModel+Lifecycle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GameViewModel+Lifecycle.swift"; sourceTree = "<group>"; };
+		B7F100000000000000000007 /* GameViewModel+AITurn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GameViewModel+AITurn.swift"; sourceTree = "<group>"; };
+		B7F100000000000000000008 /* GameViewModel+PlayerActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GameViewModel+PlayerActions.swift"; sourceTree = "<group>"; };
+		B7F100000000000000000009 /* GameViewModel+Settlement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GameViewModel+Settlement.swift"; sourceTree = "<group>"; };
+		B7F10000000000000000000A /* GameViewModel+Training.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GameViewModel+Training.swift"; sourceTree = "<group>"; };
+		B7F10000000000000000000B /* GameViewModel+Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GameViewModel+Persistence.swift"; sourceTree = "<group>"; };
+		C1B100000000000000000001 /* GameCommunitySection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameCommunitySection.swift; sourceTree = "<group>"; };
+		C1B100000000000000000002 /* GamePlayerSeatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GamePlayerSeatView.swift; sourceTree = "<group>"; };
+		C1B100000000000000000003 /* GameOpponentsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameOpponentsSection.swift; sourceTree = "<group>"; };
+		C1B100000000000000000004 /* GameBottomDock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameBottomDock.swift; sourceTree = "<group>"; };
+		C1B100000000000000000005 /* RoundEndModal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundEndModal.swift; sourceTree = "<group>"; };
+		C1B100000000000000000006 /* StatisticsTabSelectorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatisticsTabSelectorView.swift; sourceTree = "<group>"; };
+		C1B100000000000000000007 /* StatisticsOverviewTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatisticsOverviewTabView.swift; sourceTree = "<group>"; };
+		C1B100000000000000000008 /* StatisticsAIProfileCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatisticsAIProfileCardView.swift; sourceTree = "<group>"; };
+		C1B100000000000000000009 /* StatisticsRecentHandsTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatisticsRecentHandsTabView.swift; sourceTree = "<group>"; };
+		C1B10000000000000000000A /* StatisticsHandRecordCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatisticsHandRecordCard.swift; sourceTree = "<group>"; };
 		C96A3EDD743B1E6EF634AF25 /* Street.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Street.swift; sourceTree = "<group>"; };
 		CD1C98850B7A4ED2330E1A6B /* ActionButtonsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionButtonsView.swift; sourceTree = "<group>"; };
+		CD6CFE992FA5106100C1B48E /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		D959BB465C39A29AB2EEAF53 /* AIAvatars.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIAvatars.swift; sourceTree = "<group>"; };
+		E1A5B4C3D2F109876543210B /* PokerEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PokerEngineTests.swift; sourceTree = "<group>"; };
 		E28A63EAE43B5AACB33D31F0 /* PotCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PotCalculator.swift; sourceTree = "<group>"; };
 		E7A75C874061F132783DE04D /* DatabaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseManager.swift; sourceTree = "<group>"; };
-		E1A5B4C3D2F109876543210B /* PokerEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PokerEngineTests.swift; sourceTree = "<group>"; };
+		E938E9F65A78F81C2528931A /* GameArchiveManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameArchiveManager.swift; sourceTree = "<group>"; };
 		F1A2B3C4D5E6F70809101113 /* ArchiveManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveManagerTests.swift; sourceTree = "<group>"; };
 		F2A3B4C5D6E7F80910111214 /* GameFlowRegressionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameFlowRegressionTests.swift; sourceTree = "<group>"; };
 		F3A4B5C6D7E8F90101112132 /* GameRecordRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameRecordRepositoryTests.swift; sourceTree = "<group>"; };
-		E938E9F65A78F81C2528931A /* GameArchiveManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameArchiveManager.swift; sourceTree = "<group>"; };
 		FC3E61AE9BDA6C7D05CD339F /* PokerEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PokerEngine.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		CDA6CD0D2FA5B60E00B8C6A2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CD3222DC2FA5B6B7008F37B3 /* GoogleMobileAds in Frameworks */,
+				CD3222DB2FA5B6B7008F37B3 /* FirebaseCore in Frameworks */,
+				CD3222DA2FA5B6B7008F37B3 /* FirebaseAnalytics in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		0EB3465A155C43109D838DEF /* AI */ = {
 			isa = PBXGroup;
 			children = (
 				D959BB465C39A29AB2EEAF53 /* AIAvatars.swift */,
+				A9D1C0DE0000000000000001 /* AIStyleProfiles.swift */,
+				A9D1C0DE0000000000000002 /* AIStrategicContext.swift */,
+				A9D1C0DE0000000000000003 /* AIOpponentModel.swift */,
+				A9D1C0DE0000000000000004 /* AIPattern.swift */,
 				5D872E96A0852C0D4C41EAD0 /* AIDecisionMaker.swift */,
 				5EE739CF30B31566D593B6F6 /* AIEngine.swift */,
 				8B3EB6C2C558AF7E772408B5 /* PreFlopHandTable.swift */,
@@ -130,6 +216,10 @@
 				2C941058B6B11EF300E2BE1F /* src */,
 				F5377F1BAF89563D261DA04D /* Tests */,
 				FD12D14D9403840A92038EB7 /* Products */,
+				AA0000000000000000000002 /* PokerAI/Assets.xcassets */,
+				CD6CFE992FA5106100C1B48E /* GoogleService-Info.plist */,
+				AA0000000000000000000041 /* PokerAI/PrivacyInfo.xcprivacy */,
+				CDA36EEC2FA5B1D80041370A /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -177,6 +267,11 @@
 			children = (
 				B0FBC21FB78D2DAC76701397 /* HandEvaluator.swift */,
 				FC3E61AE9BDA6C7D05CD339F /* PokerEngine.swift */,
+				B7F100000000000000000001 /* PokerEngine+Setup.swift */,
+				B7F100000000000000000002 /* PokerEngine+Actions.swift */,
+				B7F100000000000000000003 /* PokerEngine+RoundFlow.swift */,
+				B7F100000000000000000004 /* PokerEngine+State.swift */,
+				B7F100000000000000000005 /* PokerEngine+Settlement.swift */,
 				E28A63EAE43B5AACB33D31F0 /* PotCalculator.swift */,
 			);
 			path = Engine;
@@ -214,8 +309,13 @@
 				CD1C98850B7A4ED2330E1A6B /* ActionButtonsView.swift */,
 				5C616BABA49F411EC197018E /* ActionLogView.swift */,
 				23425377DFD539DACFA05B8F /* CommunityCardsView.swift */,
+				C1B100000000000000000004 /* GameBottomDock.swift */,
+				C1B100000000000000000001 /* GameCommunitySection.swift */,
+				C1B100000000000000000003 /* GameOpponentsSection.swift */,
+				C1B100000000000000000002 /* GamePlayerSeatView.swift */,
 				5EB10370240BA30FE4802E6F /* PlayerCard.swift */,
 				1E45E9E0F0BEB9C4DC99EE64 /* QuickBetView.swift */,
+				C1B100000000000000000005 /* RoundEndModal.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -225,6 +325,12 @@
 			children = (
 				74EECA09C25E73B6235A1964 /* GameView.swift */,
 				76916C5A1170EB7752120BF3 /* GameViewModel.swift */,
+				B7F100000000000000000006 /* GameViewModel+Lifecycle.swift */,
+				B7F100000000000000000007 /* GameViewModel+AITurn.swift */,
+				B7F100000000000000000008 /* GameViewModel+PlayerActions.swift */,
+				B7F100000000000000000009 /* GameViewModel+Settlement.swift */,
+				B7F10000000000000000000A /* GameViewModel+Training.swift */,
+				B7F10000000000000000000B /* GameViewModel+Persistence.swift */,
 				56BAF8958A150D7B920B41B8 /* Components */,
 			);
 			path = Game;
@@ -267,6 +373,25 @@
 			path = Archive;
 			sourceTree = "<group>";
 		};
+		AA0000000000000000000020 /* Analytics */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000011 /* AnalyticsService.swift */,
+				AA0000000000000000000013 /* AnalyticsEvent.swift */,
+				AA0000000000000000000015 /* MockAnalyticsService.swift */,
+			);
+			path = Analytics;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000054 /* AdMob */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000052 /* AdMobConfig.swift */,
+				AA0000000000000000000053 /* AdMobService.swift */,
+			);
+			path = AdMob;
+			sourceTree = "<group>";
+		};
 		AD442147FF432373626CAA94 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
@@ -279,8 +404,21 @@
 			children = (
 				8ABAA32BC2D0FEF119CA4CDC /* StatisticsView.swift */,
 				A2EEBC082AD1FE0F3AC670E5 /* StatisticsViewModel.swift */,
+				C1C100000000000000000001 /* Components */,
 			);
 			path = Statistics;
+			sourceTree = "<group>";
+		};
+		C1C100000000000000000001 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				C1B100000000000000000008 /* StatisticsAIProfileCardView.swift */,
+				C1B10000000000000000000A /* StatisticsHandRecordCard.swift */,
+				C1B100000000000000000007 /* StatisticsOverviewTabView.swift */,
+				C1B100000000000000000009 /* StatisticsRecentHandsTabView.swift */,
+				C1B100000000000000000006 /* StatisticsTabSelectorView.swift */,
+			);
+			path = Components;
 			sourceTree = "<group>";
 		};
 		C501B36BE6792C8C5EF2FC63 /* Models */ = {
@@ -306,6 +444,13 @@
 			path = Components;
 			sourceTree = "<group>";
 		};
+		CDA36EEC2FA5B1D80041370A /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		D224A856D6992A795643DA81 /* Core */ = {
 			isa = PBXGroup;
 			children = (
@@ -319,6 +464,8 @@
 		D31E840BAE0834E02FCDE9CB /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				AA0000000000000000000054 /* AdMob */,
+				AA0000000000000000000020 /* Analytics */,
 				9F523547FC5910E3AD06ACBF /* Archive */,
 				3D826967D4676E74A2FAADAF /* Database */,
 				47270C18D677C78F9A482260 /* Storage */,
@@ -375,6 +522,8 @@
 			buildConfigurationList = 20E8AC7CECD2768098E886FD /* Build configuration list for PBXNativeTarget "PokerAI" */;
 			buildPhases = (
 				DF183B4ADE8E03BF8F4E0171 /* Sources */,
+				AA0000000000000000000003 /* Resources */,
+				CDA6CD0D2FA5B60E00B8C6A2 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -382,6 +531,9 @@
 			);
 			name = PokerAI;
 			packageProductDependencies = (
+				CD2DAA442FA5AE9800C82FE1 /* FirebaseAnalytics */,
+				CD2DAA452FA5AE9800C82FE1 /* FirebaseCore */,
+				CD2DAA472FA5AEB300C82FE1 /* GoogleMobileAds */,
 			);
 			productName = PokerAI;
 			productReference = 4D969E959A47D0D27973E54B /* PokerAI.app */;
@@ -413,6 +565,10 @@
 			);
 			mainGroup = 1BD9DD63E674A94F31B9A496;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				CD2DAA432FA5AE9800C82FE1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				CD2DAA462FA5AEB300C82FE1 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = FD12D14D9403840A92038EB7 /* Products */;
 			projectDirPath = "";
@@ -423,6 +579,19 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AA0000000000000000000003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA0000000000000000000001 /* PokerAI/Assets.xcassets in Resources */,
+				AA0000000000000000000040 /* PokerAI/PrivacyInfo.xcprivacy in Resources */,
+				CD6CFE9A2FA5106100C1B48E /* GoogleService-Info.plist in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		624088A30B9CAE45F416B28E /* Sources */ = {
@@ -444,6 +613,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				57171F21CFB4A0373DD2850B /* AIAvatars.swift in Sources */,
+				A9C1C0DE0000000000000001 /* AIStyleProfiles.swift in Sources */,
+				A9C1C0DE0000000000000002 /* AIStrategicContext.swift in Sources */,
+				A9C1C0DE0000000000000003 /* AIOpponentModel.swift in Sources */,
+				A9C1C0DE0000000000000004 /* AIPattern.swift in Sources */,
 				B8F6BB79BAED94E36EE3DD9C /* AIDecisionMaker.swift in Sources */,
 				C0C8A9CDFFD35FA988D73043 /* AIEngine.swift in Sources */,
 				71DBEC3EF570AA30EB8D26BC /* AIPatternRepository.swift in Sources */,
@@ -456,12 +629,25 @@
 				1DAAC06F64B8B88F8DDE7D9B /* ChipStorage.swift in Sources */,
 				98F3BBBBBCC1540E27CAA798 /* Color+Theme.swift in Sources */,
 				F43852DD584C0274E9884085 /* CommunityCardsView.swift in Sources */,
+				C1A100000000000000000004 /* GameBottomDock.swift in Sources */,
+				C1A100000000000000000001 /* GameCommunitySection.swift in Sources */,
 				12F35AD9B8E871BBFFCA5641 /* DatabaseManager.swift in Sources */,
 				C14884D1D49B6BEB67093FC3 /* GameArchiveManager.swift in Sources */,
 				01CE1EC3E1B4BC474CD6BE1A /* GameConstants.swift in Sources */,
+				C1A100000000000000000003 /* GameOpponentsSection.swift in Sources */,
 				4435D730B32829CA7FD6EFA5 /* GameRecordRepository.swift in Sources */,
+				C1A100000000000000000002 /* GamePlayerSeatView.swift in Sources */,
 				CF6ED67D8AF1CC1B980E7D40 /* GameView.swift in Sources */,
 				10F2E0D93110F3233B43A513 /* GameViewModel.swift in Sources */,
+				B7E100000000000000000006 /* GameViewModel+Lifecycle.swift in Sources */,
+				B7E100000000000000000007 /* GameViewModel+AITurn.swift in Sources */,
+				B7E100000000000000000008 /* GameViewModel+PlayerActions.swift in Sources */,
+				B7E100000000000000000009 /* GameViewModel+Settlement.swift in Sources */,
+				B7E10000000000000000000A /* GameViewModel+Training.swift in Sources */,
+				B7E10000000000000000000B /* GameViewModel+Persistence.swift in Sources */,
+				AA0000000000000000000010 /* AnalyticsService.swift in Sources */,
+				AA0000000000000000000012 /* AnalyticsEvent.swift in Sources */,
+				AA0000000000000000000014 /* MockAnalyticsService.swift in Sources */,
 				1FF267A6F8AA420E40050DF8 /* Hand.swift in Sources */,
 				1240696DEF7AA55846D98010 /* HandEvaluator.swift in Sources */,
 				BAAB5FCB39753828451FD294 /* HandType.swift in Sources */,
@@ -471,15 +657,28 @@
 				4D50C0C76982E6DB9C9956FE /* PlayerCard.swift in Sources */,
 				B1737251F85D2BED64FF064B /* PokerAIApp.swift in Sources */,
 				D6C60BB155A0781297226BF0 /* PokerEngine.swift in Sources */,
+				B7E100000000000000000001 /* PokerEngine+Setup.swift in Sources */,
+				B7E100000000000000000002 /* PokerEngine+Actions.swift in Sources */,
+				B7E100000000000000000003 /* PokerEngine+RoundFlow.swift in Sources */,
+				B7E100000000000000000004 /* PokerEngine+State.swift in Sources */,
+				B7E100000000000000000005 /* PokerEngine+Settlement.swift in Sources */,
 				AF87F80BD5FD6B77687BDD5B /* Position.swift in Sources */,
 				7203F26F3965BB1A96F5976D /* PotCalculator.swift in Sources */,
 				DB85292C8856B47672D3C399 /* PreFlopHandTable.swift in Sources */,
 				391873418900CFF17B7C94B7 /* QuickBetView.swift in Sources */,
+				C1A100000000000000000005 /* RoundEndModal.swift in Sources */,
+				C1A100000000000000000008 /* StatisticsAIProfileCardView.swift in Sources */,
+				C1A10000000000000000000A /* StatisticsHandRecordCard.swift in Sources */,
+				C1A100000000000000000007 /* StatisticsOverviewTabView.swift in Sources */,
+				C1A100000000000000000009 /* StatisticsRecentHandsTabView.swift in Sources */,
+				C1A100000000000000000006 /* StatisticsTabSelectorView.swift in Sources */,
 				516DBC76002FBEA6D885ECBE /* StatisticsView.swift in Sources */,
 				C6AD7F6E9F1DE0D6143F2290 /* StatisticsViewModel.swift in Sources */,
 				AC9F780B5B5610C40F9FD8E6 /* Street.swift in Sources */,
 				49B411D3E10B56F767180973 /* WelfareView.swift in Sources */,
 				20FC613E11F24172F1B7583E /* WelfareViewModel.swift in Sources */,
+				AA0000000000000000000050 /* AdMobConfig.swift in Sources */,
+				AA0000000000000000000051 /* AdMobService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -734,6 +933,43 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		CD2DAA432FA5AE9800C82FE1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.12.1;
+			};
+		};
+		CD2DAA462FA5AEB300C82FE1 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/googleads/swift-package-manager-google-mobile-ads.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 13.3.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		CD2DAA442FA5AE9800C82FE1 /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CD2DAA432FA5AE9800C82FE1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		CD2DAA452FA5AE9800C82FE1 /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CD2DAA432FA5AE9800C82FE1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		CD2DAA472FA5AEB300C82FE1 /* GoogleMobileAds */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CD2DAA462FA5AEB300C82FE1 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */;
+			productName = GoogleMobileAds;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 12A83FFE730899BCBF5FCB54 /* Project object */;
 }
