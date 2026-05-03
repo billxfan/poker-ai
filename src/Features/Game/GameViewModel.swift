@@ -37,7 +37,9 @@ final class GameViewModel {
     var lastIsSplitPot: Bool = false
     var lastProfit: Int = 0
     var lastPayouts: [Int: Int] = [:]
+    var lastWasShowdown: Bool = false
     var remainingDeckSnapshot: [Card] = []
+    var aiDecisionPointsByPlayer: [Int: [AILearningDecisionPoint]] = [:]
 
     let initialChips: Int
     let onGameEnd: (Int) -> Void

@@ -9,8 +9,14 @@ struct RoundEndModal: View {
     let communityCards: [Card]
     let payouts: [Int: Int]
     let handBets: [Int: Int]
+    let showdown: Bool
     let onNextHand: () -> Void
     let onReturnToMain: () -> Void
+
+    var playersWithRevealedHands: [Player] {
+        guard showdown else { return [] }
+        return players.filter { !$0.isFolded && $0.holeCards != nil }
+    }
 
     var body: some View {
         GeometryReader { geometry in
@@ -80,35 +86,47 @@ struct RoundEndModal: View {
                                 }
                             }
 
-                            VStack(spacing: 8) {
-                                Text(L10n.t("round_end.all_hole_cards"))
-                                    .font(.headline)
+                            if showdown {
+                                VStack(spacing: 8) {
+                                    Text(L10n.t("round_end.all_hole_cards"))
+                                        .font(.headline)
 
-                                ForEach(players.filter { !$0.isFolded && $0.holeCards != nil }) { player in
-                                    HStack {
-                                        Text(player.avatar)
-                                            .font(.title2)
-                                        Text(player.id == Player.humanPlayerId ? L10n.t("player.you") : player.name)
-                                            .font(.subheadline)
-                                        if winningPlayerIds.contains(player.id) {
-                                            Text(L10n.t("common.win_badge"))
-                                                .font(.caption)
-                                                .foregroundColor(.white)
-                                                .padding(.horizontal, 6)
-                                                .padding(.vertical, 2)
-                                                .background(Color.success)
-                                                .cornerRadius(4)
+                                    ForEach(playersWithRevealedHands) { player in
+                                        HStack {
+                                            Text(player.avatar)
+                                                .font(.title2)
+                                            Text(player.id == Player.humanPlayerId ? L10n.t("player.you") : player.name)
+                                                .font(.subheadline)
+                                            if winningPlayerIds.contains(player.id) {
+                                                Text(L10n.t("common.win_badge"))
+                                                    .font(.caption)
+                                                    .foregroundColor(.white)
+                                                    .padding(.horizontal, 6)
+                                                    .padding(.vertical, 2)
+                                                    .background(Color.success)
+                                                    .cornerRadius(4)
+                                            }
+                                            Spacer()
+                                            if let holeCards = player.holeCards {
+                                                CardView(card: holeCards.card1, width: 32, height: 44)
+                                                CardView(card: holeCards.card2, width: 32, height: 44)
+                                            }
                                         }
-                                        Spacer()
-                                        if let holeCards = player.holeCards {
-                                            CardView(card: holeCards.card1, width: 32, height: 44)
-                                            CardView(card: holeCards.card2, width: 32, height: 44)
-                                        }
+                                        .padding(8)
+                                        .background(Color.black.opacity(0.2))
+                                        .cornerRadius(8)
                                     }
-                                    .padding(8)
-                                    .background(Color.black.opacity(0.2))
-                                    .cornerRadius(8)
                                 }
+                            } else {
+                                Text(L10n.t("round_end.no_showdown_hidden"))
+                                    .font(.footnote)
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 10)
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color.black.opacity(0.06))
+                                    .cornerRadius(10)
                             }
                         }
                         .padding(.horizontal, 24)

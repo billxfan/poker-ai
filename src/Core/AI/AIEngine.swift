@@ -3,13 +3,13 @@ import Foundation
 actor AIEngine {
     private let decisionMaker = AIDecisionMaker()
 
-    func requestDecision(
+    func requestDecisionPlan(
         playerId: Int,
         gameState: GameState,
         style: AIStyle,
         patterns: AIPattern?
-    ) async -> Action {
-        return await decisionMaker.makeDecision(
+    ) async -> AIDecisionPlan {
+        return await decisionMaker.makeDecisionPlan(
             playerId: playerId,
             gameState: gameState,
             style: style,

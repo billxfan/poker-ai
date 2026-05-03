@@ -79,6 +79,7 @@ struct GameView: View {
                     communityCards: viewModel.communityCards,
                     payouts: viewModel.lastPayouts,
                     handBets: viewModel.gameState.handBets,
+                    showdown: viewModel.lastWasShowdown,
                     onNextHand: handleNextHand,
                     onReturnToMain: handleReturnToMain
                 )

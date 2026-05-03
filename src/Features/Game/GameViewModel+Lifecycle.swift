@@ -16,6 +16,7 @@ extension GameViewModel {
     @MainActor
     func startGame() async {
         viewState = .dealing
+        aiDecisionPointsByPlayer = [:]
 
         if isRestoredGame {
             await pokerEngine.restoreState(gameState, remainingDeck: restoredRemainingDeck)

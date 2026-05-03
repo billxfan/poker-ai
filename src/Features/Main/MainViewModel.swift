@@ -81,7 +81,13 @@ final class MainViewModel {
 
     func getChipsForNewGame() -> Int {
         let stored = chipStorage.getChips()
-        return stored > 0 ? stored : GameConstants.startingChips
+        if stored > 0 {
+            return stored
+        }
+
+        chipStorage.setChips(GameConstants.startingChips)
+        chips = GameConstants.startingChips
+        return GameConstants.startingChips
     }
 
     func deductChipsForGame(_ amount: Int) -> Bool {

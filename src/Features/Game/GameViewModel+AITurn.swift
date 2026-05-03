@@ -12,12 +12,14 @@ extension GameViewModel {
         let aiInfo = AIAvatars.getAvatar(for: playerId)
         let patterns = try? await patternRepository.getPattern(for: playerId)
 
-        let action = await aiEngine.requestDecision(
+        let plan = await aiEngine.requestDecisionPlan(
             playerId: playerId,
             gameState: gameState,
             style: aiInfo.style,
             patterns: patterns
         )
+        aiDecisionPointsByPlayer[playerId, default: []].append(plan.learningPoint)
+        let action = plan.action
 
         thinkingPlayerId = nil
         _ = await pokerEngine.processAction(playerId: playerId, action: action)

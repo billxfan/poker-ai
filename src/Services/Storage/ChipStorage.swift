@@ -20,7 +20,7 @@ final class ChipStorage: IChipStorage {
     }
 
     func setChips(_ amount: Int) {
-        userDefaults.set(amount, forKey: key)
+        userDefaults.set(max(0, amount), forKey: key)
     }
 
     func addChips(_ amount: Int) {
@@ -55,7 +55,7 @@ final class WelfareStorage: IChipStorage {
     }
 
     func setChips(_ amount: Int) {
-        userDefaults.set(amount, forKey: chipsKey)
+        userDefaults.set(max(0, amount), forKey: chipsKey)
     }
 
     func addChips(_ amount: Int) {

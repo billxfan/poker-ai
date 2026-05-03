@@ -59,14 +59,14 @@ struct StatisticsAIProfileCardView: View {
                 StatisticsHumanTrendChart(profile: profile)
             }
 
-            if let humanRead = profile.observedHumanProfile {
-                Divider()
+            Divider()
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(L10n.f("ai_profile.read_on_you", humanRead.handsObserved))
-                        .font(.caption)
-                        .foregroundColor(.textSecondary)
+            VStack(alignment: .leading, spacing: 8) {
+                Text(L10n.f("ai_profile.read_on_you", profile.observedHumanProfile?.handsObserved ?? 0))
+                    .font(.caption)
+                    .foregroundColor(.textSecondary)
 
+                if let humanRead = profile.observedHumanProfile {
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                         StatisticsMiniValueTile(label: L10n.t("metric.human_vpip"), value: String(format: "%.1f%%", humanRead.vpip * 100), explanation: .humanVpip, selection: $humanExplanation)
                         StatisticsMiniValueTile(label: L10n.t("metric.human_pfr"), value: String(format: "%.1f%%", humanRead.pfr * 100), explanation: .humanPfr, selection: $humanExplanation)
@@ -91,6 +91,17 @@ struct StatisticsAIProfileCardView: View {
                     Text(L10n.f("ai_profile.counter_strategy", humanRead.counterStrategyText))
                         .font(.caption2)
                         .foregroundColor(.secondary)
+                } else {
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                        StatisticsStaticMiniValueTile(label: L10n.t("metric.human_vpip"), value: "0.0%")
+                        StatisticsStaticMiniValueTile(label: L10n.t("metric.human_pfr"), value: "0.0%")
+                        StatisticsStaticMiniValueTile(label: L10n.t("metric.fold_to_pressure"), value: "0.0%")
+                        StatisticsStaticMiniValueTile(label: L10n.t("metric.bluff_success"), value: "0.0%")
+                    }
+
+                    Text(L10n.t("common.no_data"))
+                        .font(.caption2)
+                        .foregroundColor(.textSecondary)
                 }
             }
         }

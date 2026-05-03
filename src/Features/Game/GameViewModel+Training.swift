@@ -12,6 +12,7 @@ extension GameViewModel {
             let profit = settlement.profit(for: player.id, contributions: gameState.handBets)
             let didWin = settlement.winningPlayerIds.contains(player.id)
             let shownHandType = settlement.handsByPlayer[player.id]?.handType
+            let decisionPoints = aiDecisionPointsByPlayer[player.id] ?? []
 
             pattern.updateAfterHand(
                 playerId: player.id,
@@ -25,10 +26,12 @@ extension GameViewModel {
                 shownHandType: shownHandType,
                 winningPlayerIds: Set(settlement.winningPlayerIds),
                 shownHandTypes: settlement.handsByPlayer.mapValues(\.handType),
-                potSize: settlement.totalPot
+                potSize: settlement.totalPot,
+                decisionPoints: decisionPoints
             )
             try? await patternRepository.savePattern(pattern, for: player.id)
         }
+        aiDecisionPointsByPlayer = [:]
     }
 
     func saveHandRecord(settlement: HandSettlement, showdown: Bool) async {

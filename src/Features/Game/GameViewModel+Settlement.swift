@@ -62,6 +62,7 @@ extension GameViewModel {
         lastWinningPlayerIds = settlement.winningPlayerIds
         lastIsSplitPot = settlement.isSplitPot
         lastPayouts = settlement.payouts
+        lastWasShowdown = showdown
         if settlement.winningPlayerIds.count == 1, let winnerId = settlement.winningPlayerIds.first {
             lastWinner = gameState.players.first { $0.id == winnerId }
         } else {

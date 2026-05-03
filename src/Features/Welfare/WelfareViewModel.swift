@@ -59,31 +59,43 @@ final class WelfareViewModel {
                         if AdMobService.shared.isRewardedAdReady {
                             self.presentRewardedAd(from: viewController)
                         } else {
-                            self.isAdLoading = false
-                            self.showToast(L10n.t("welfare.toast.ad_unavailable"))
+                            self.handleUnavailableRewardAd()
                         }
                     }
                 }
             }
         }
 
-        // Safety timeout: reset loading state after 10s if ad never loads or consent blocks requests.
+        // Safety timeout: reset loading state if ad never loads or consent/network blocks requests.
         DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in
             if self?.isAdLoading == true {
-                self?.isAdLoading = false
+                self?.handleUnavailableRewardAd()
             }
         }
     }
 
     private func presentRewardedAd(from viewController: UIViewController) {
-        AdMobService.shared.showRewardedAd(from: viewController) { [weak self] reward in
-            DispatchQueue.main.async {
-                self?.welfareStorage.addChips(GameConstants.rewardAdChips)
-                self?.loadState()
-                self?.isAdLoading = false
-                self?.showToast(L10n.f("welfare.toast.reward_ad_claimed", GameConstants.rewardAdChips))
+        AdMobService.shared.showRewardedAd(
+            from: viewController,
+            onReward: { [weak self] reward in
+                DispatchQueue.main.async {
+                    let creditedAmount = max(reward, GameConstants.rewardAdChips)
+                    self?.welfareStorage.addChips(creditedAmount)
+                    self?.loadState()
+                    self?.showToast(L10n.f("welfare.toast.reward_ad_claimed", creditedAmount))
+                }
+            },
+            onDismiss: { [weak self] in
+                DispatchQueue.main.async {
+                    self?.isAdLoading = false
+                }
             }
-        }
+        )
+    }
+
+    private func handleUnavailableRewardAd() {
+        isAdLoading = false
+        showToast(L10n.t("welfare.toast.ad_unavailable"))
     }
 
     private func showToast(_ message: String) {

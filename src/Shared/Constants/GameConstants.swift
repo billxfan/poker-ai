@@ -21,7 +21,7 @@ enum GameConstants {
     static let playerCount: Int = 6
 
     // MARK: - Quick Bet Multipliers
-    static let quickBetMultipliers: [Double] = [0.33, 0.5, 0.67, 1.0, 1.2]
+    static let quickBetMultipliers: [Double] = [0.33, 0.5, 1.0, 2.0, 3.0]
 
     // MARK: - Card Display
     static let cardWidth: CGFloat = 44

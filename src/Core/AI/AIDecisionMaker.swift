@@ -1,15 +1,33 @@
 import Foundation
 
 actor AIDecisionMaker {
-    func makeDecision(
+    func makeDecisionPlan(
         playerId: Int,
         gameState: GameState,
         style: AIStyle,
         patterns: AIPattern?
-    ) -> Action {
+    ) -> AIDecisionPlan {
         let currentPlayer = gameState.players.first { $0.id == playerId }
         guard let player = currentPlayer, player.canAct else {
-            return Action(playerId: playerId, street: gameState.currentStreet, type: .fold)
+            let fallbackAction = Action(playerId: playerId, street: gameState.currentStreet, type: .fold)
+            let fallbackContext = AILearningContext(
+                street: gameState.currentStreet,
+                position: currentPlayer?.position ?? .utg,
+                pressure: .unopened,
+                strengthBucket: .weak,
+                isHeadsUp: gameState.activePlayers.count <= 2
+            )
+            return AIDecisionPlan(
+                action: fallbackAction,
+                learningPoint: AILearningDecisionPoint(
+                    context: fallbackContext,
+                    actionKind: .fold,
+                    handStrength: 0,
+                    committedAmount: 0,
+                    usedExploration: false,
+                    createdAt: Date()
+                )
+            )
         }
 
         let callAmount = PotCalculator.calculateCallAmount(
@@ -26,9 +44,27 @@ actor AIDecisionMaker {
             minimumRaiseIncrement: gameState.minimumRaiseIncrement
         )
 
+        let handStrength = evaluateHandStrength(
+            holeCards: player.holeCards,
+            communityCards: gameState.communityCards,
+            callAmount: callAmount,
+            currentPot: gameState.pot,
+            position: player.position,
+            playersToAct: gameState.activePlayers.count - 1,
+            street: gameState.currentStreet
+        )
+        let learningContext = makeLearningContext(
+            handStrength: handStrength,
+            street: gameState.currentStreet,
+            position: player.position,
+            callAmount: callAmount,
+            actionLog: gameState.actionLog,
+            activeOpponentCount: max(1, gameState.activePlayers.count - 1)
+        )
+
         let explorationRate = patterns?.explorationRate(for: style) ?? style.learningProfile.initialEpsilon
         if Double.random(in: 0...1) < explorationRate {
-            return makeRandomAction(
+            let action = makeRandomAction(
                 playerId: playerId,
                 street: gameState.currentStreet,
                 callAmount: callAmount,
@@ -36,9 +72,18 @@ actor AIDecisionMaker {
                 playerChips: player.chips,
                 currentPlayerBet: currentPlayerBet
             )
+            return AIDecisionPlan(
+                action: action,
+                learningPoint: makeLearningPoint(
+                    context: learningContext,
+                    action: action,
+                    handStrength: handStrength,
+                    usedExploration: true
+                )
+            )
         }
 
-        return makeStyledAction(
+        let action = makeStyledAction(
             playerId: playerId,
             street: gameState.currentStreet,
             style: style,
@@ -53,7 +98,17 @@ actor AIDecisionMaker {
             playerPosition: player.position,
             playersToAct: gameState.activePlayers.count - 1,
             players: gameState.players,
-            actionLog: gameState.actionLog
+            actionLog: gameState.actionLog,
+            learningContext: learningContext
+        )
+        return AIDecisionPlan(
+            action: action,
+            learningPoint: makeLearningPoint(
+                context: learningContext,
+                action: action,
+                handStrength: handStrength,
+                usedExploration: false
+            )
         )
     }
 
@@ -125,13 +180,13 @@ actor AIDecisionMaker {
         playerPosition: Position,
         playersToAct: Int,
         players: [Player],
-        actionLog: [Action]
+        actionLog: [Action],
+        learningContext: AILearningContext
     ) -> Action {
-        guard let holeCards = holeCards else {
+        guard let holeCards else {
             return Action(playerId: playerId, street: street, type: .fold)
         }
-
-        let handStrength = evaluateHandStrength(
+        let handStrength = learningContext.strengthBucket == .weak ? 0 : evaluateHandStrength(
             holeCards: holeCards,
             communityCards: communityCards,
             callAmount: callAmount,
@@ -151,7 +206,8 @@ actor AIDecisionMaker {
             street: street,
             selfPlayerId: playerId,
             communityCards: communityCards,
-            playerPosition: playerPosition
+            playerPosition: playerPosition,
+            learningContext: learningContext
         )
         return adaptiveDecision(
             playerId: playerId,
@@ -167,7 +223,7 @@ actor AIDecisionMaker {
     }
 
     private func evaluateHandStrength(
-        holeCards: HoleCards,
+        holeCards: HoleCards?,
         communityCards: [Card],
         callAmount: Int,
         currentPot: Int,
@@ -175,6 +231,7 @@ actor AIDecisionMaker {
         playersToAct: Int,
         street: Street
     ) -> Double {
+        guard let holeCards else { return 0 }
         if communityCards.isEmpty {
             return PreFlopHandTable.lookup(holeCards: holeCards)
         }
@@ -394,5 +451,49 @@ actor AIDecisionMaker {
         return canCheck
             ? Action(playerId: playerId, street: street, type: .check)
             : Action(playerId: playerId, street: street, type: .fold)
+    }
+
+    private func makeLearningContext(
+        handStrength: Double,
+        street: Street,
+        position: Position,
+        callAmount: Int,
+        actionLog: [Action],
+        activeOpponentCount: Int
+    ) -> AILearningContext {
+        let aggressiveTypes: Set<ActionType> = [.bet, .raise, .allIn]
+        let aggressionsOnStreet = actionLog.filter { $0.street == street && aggressiveTypes.contains($0.type) }
+        let pressure: AIPressureState
+        if callAmount == 0 {
+            pressure = .unopened
+        } else if aggressionsOnStreet.count <= 1 {
+            pressure = .facingBet
+        } else {
+            pressure = .facingRaise
+        }
+
+        return AILearningContext(
+            street: street,
+            position: position,
+            pressure: pressure,
+            strengthBucket: AIHandStrengthBucket.from(strength: handStrength),
+            isHeadsUp: activeOpponentCount == 1
+        )
+    }
+
+    private func makeLearningPoint(
+        context: AILearningContext,
+        action: Action,
+        handStrength: Double,
+        usedExploration: Bool
+    ) -> AILearningDecisionPoint {
+        AILearningDecisionPoint(
+            context: context,
+            actionKind: AILearningActionKind.from(action: action),
+            handStrength: handStrength,
+            committedAmount: action.amount ?? 0,
+            usedExploration: usedExploration,
+            createdAt: Date()
+        )
     }
 }

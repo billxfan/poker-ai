@@ -17,10 +17,17 @@ extension IAnalyticsService {
 final class AnalyticsService: IAnalyticsService {
     static let shared = AnalyticsService()
 
+    private var isFirebaseEnabled = false
+
     private init() {}
+
+    func setFirebaseEnabled(_ enabled: Bool) {
+        isFirebaseEnabled = enabled
+    }
 
     func log(_ event: String, parameters: [String: Any] = [:]) {
         #if canImport(FirebaseAnalytics)
+        guard isFirebaseEnabled else { return }
         Analytics.logEvent(event, parameters: parameters)
         #else
         // Fallback: print in debug, no-op in release
@@ -32,6 +39,7 @@ final class AnalyticsService: IAnalyticsService {
 
     func setUserID(_ id: String?) {
         #if canImport(FirebaseAnalytics)
+        guard isFirebaseEnabled else { return }
         Analytics.setUserID(id)
         #endif
     }

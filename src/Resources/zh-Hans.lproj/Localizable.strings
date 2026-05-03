@@ -106,6 +106,7 @@
 "round_end.you_win" = "你获胜!";
 "round_end.player_wins" = "%@ 获胜";
 "round_end.all_hole_cards" = "各方手牌";
+"round_end.no_showdown_hidden" = "未进入摊牌，其他玩家手牌不会公开";
 "round_end.next_hand" = "下一局";
 "round_end.return_home" = "返回主页";
 

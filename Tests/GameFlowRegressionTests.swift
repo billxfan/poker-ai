@@ -278,7 +278,7 @@ final class GameFlowRegressionTests: XCTestCase {
         XCTAssertEqual(humanProfile.foldToAggressionRate, 1.0, accuracy: 0.0001)
     }
 
-    func testAIStylesObserveHumanThroughDifferentLenses() {
+    func testAIStylesAllRecordVisibleHumanSignals() {
         let players = [
             Player.createAI(id: 3, name: "大叔", avatar: "🧔", position: .co, chips: 2000),
             Player.createAI(id: 4, name: "小鱼", avatar: "👧", position: .btn, chips: 2000),
@@ -322,8 +322,42 @@ final class GameFlowRegressionTests: XCTestCase {
             potSize: 60
         )
 
-        XCTAssertNil(tightWeakPattern.observedProfile(for: 0))
+        XCTAssertEqual(tightWeakPattern.observedProfile(for: 0)?.vpipCount, 1)
         XCTAssertEqual(looseWeakPattern.observedProfile(for: 0)?.vpipCount, 1)
+    }
+
+    func testTightWeakAIRecordsHumanAfterShowdownWin() {
+        var pattern = AIPattern()
+        let players = [
+            Player.createAI(id: 3, name: "大叔", avatar: "🧔", position: .co, chips: 2000),
+            Player.createHuman(position: .bb, chips: 2000)
+        ]
+        let actions = [
+            Action(playerId: 0, street: .preFlop, type: .call, amount: 20),
+            Action(playerId: 3, street: .preFlop, type: .call, amount: 20),
+            Action(playerId: 0, street: .flop, type: .check, amount: 0),
+            Action(playerId: 3, street: .flop, type: .check, amount: 0),
+            Action(playerId: 0, street: .river, type: .bet, amount: 40),
+            Action(playerId: 3, street: .river, type: .call, amount: 40)
+        ]
+
+        pattern.updateAfterHand(
+            playerId: 3,
+            style: .tightWeak,
+            playerActions: actions.filter { $0.playerId == 3 },
+            allActions: actions,
+            players: players,
+            profit: -60,
+            didWin: false,
+            showdown: true,
+            shownHandType: .onePair,
+            winningPlayerIds: [0],
+            shownHandTypes: [0: .twoPair, 3: .onePair],
+            potSize: 120
+        )
+
+        XCTAssertEqual(pattern.observedProfile(for: 0)?.handsObserved, 1)
+        XCTAssertEqual(pattern.observedProfile(for: 0)?.vpipCount, 1)
     }
 
     func testQuickBetTargetsUsePotAfterCallAndTotalStreetBet() {
@@ -359,6 +393,113 @@ final class GameFlowRegressionTests: XCTestCase {
 
         XCTAssertEqual(minimumCappedTarget, 40)
         XCTAssertEqual(allInCappedTarget, 130)
+    }
+
+    func testNewGameSeedsStartingChipsWhenStoredBankrollIsZero() {
+        let suiteName = "MainViewModelSeedStartingChips-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defaults.set(0, forKey: "poker_ai_chips")
+        defaults.set(true, forKey: "poker_ai_daily_free")
+
+        let chipStorage = ChipStorage(userDefaults: defaults)
+        let welfareStorage = WelfareStorage(userDefaults: defaults)
+        let viewModel = MainViewModel(
+            chipStorage: chipStorage,
+            welfareStorage: welfareStorage,
+            archiveManager: MockArchiveManager(),
+            databaseManager: .shared
+        )
+
+        let entryChips = viewModel.getChipsForNewGame()
+
+        XCTAssertEqual(entryChips, GameConstants.startingChips)
+        XCTAssertEqual(chipStorage.getChips(), GameConstants.startingChips)
+        XCTAssertEqual(viewModel.chips, GameConstants.startingChips)
+
+        defaults.removePersistentDomain(forName: suiteName)
+    }
+
+    func testChipStorageNeverPersistsNegativeBalance() {
+        let suiteName = "ChipStorageNoNegative-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let chipStorage = ChipStorage(userDefaults: defaults)
+        chipStorage.setChips(100)
+        chipStorage.addChips(-300)
+
+        XCTAssertEqual(chipStorage.getChips(), 0)
+
+        defaults.removePersistentDomain(forName: suiteName)
+    }
+
+    func testRoundEndModalKeepsOpponentCardsHiddenWithoutShowdown() {
+        var human = Player.createHuman(position: .bb, chips: 1_954)
+        human.status = .folded
+        human.holeCards = HoleCards(
+            Card(suit: .hearts, rank: 5),
+            Card(suit: .clubs, rank: 7)
+        )
+
+        var winner = Player.createAI(id: 1, name: "小马", avatar: "🧑", position: .sb, chips: 2_046)
+        winner.holeCards = HoleCards(
+            Card(suit: .hearts, rank: 6),
+            Card(suit: .diamonds, rank: 13)
+        )
+
+        let modal = RoundEndModal(
+            winner: winner,
+            winningPlayerIds: [winner.id],
+            isSplitPot: false,
+            profit: -46,
+            players: [human, winner],
+            communityCards: [],
+            payouts: [winner.id: 46],
+            handBets: [human.id: 46],
+            showdown: false,
+            onNextHand: {},
+            onReturnToMain: {}
+        )
+
+        XCTAssertTrue(modal.playersWithRevealedHands.isEmpty)
+    }
+
+    func testRoundEndModalRevealsEligibleCardsAtShowdown() {
+        var human = Player.createHuman(position: .bb, chips: 2_100)
+        human.holeCards = HoleCards(
+            Card(suit: .spades, rank: 14),
+            Card(suit: .clubs, rank: 14)
+        )
+
+        var foldedOpponent = Player.createAI(id: 1, name: "老K", avatar: "👴", position: .sb, chips: 1_980)
+        foldedOpponent.status = .folded
+        foldedOpponent.holeCards = HoleCards(
+            Card(suit: .hearts, rank: 2),
+            Card(suit: .diamonds, rank: 7)
+        )
+
+        var showdownOpponent = Player.createAI(id: 2, name: "小马", avatar: "🧑", position: .utg, chips: 1_920)
+        showdownOpponent.holeCards = HoleCards(
+            Card(suit: .hearts, rank: 13),
+            Card(suit: .diamonds, rank: 13)
+        )
+
+        let modal = RoundEndModal(
+            winner: human,
+            winningPlayerIds: [human.id],
+            isSplitPot: false,
+            profit: 120,
+            players: [human, foldedOpponent, showdownOpponent],
+            communityCards: [],
+            payouts: [human.id: 240],
+            handBets: [human.id: 120, showdownOpponent.id: 120],
+            showdown: true,
+            onNextHand: {},
+            onReturnToMain: {}
+        )
+
+        XCTAssertEqual(modal.playersWithRevealedHands.map(\.id), [human.id, showdownOpponent.id])
     }
 
     func testOpponentProfileCanShiftTowardMoreBluffingAgainstFoldyHuman() {
@@ -512,6 +653,224 @@ final class GameFlowRegressionTests: XCTestCase {
 
         XCTAssertGreaterThan(adjusted.aggressionChance, base.aggressionChance)
         XCTAssertGreaterThan(adjusted.bluffChance, base.bluffChance)
+    }
+
+    func testContextLearningWeightsMatchingSpotMoreThanUnrelatedSpot() {
+        var pattern = AIPattern()
+        let players = [
+            Player.createAI(id: 5, name: "狐狸", avatar: "🦊", position: .btn, chips: 2000),
+            Player.createHuman(position: .bb, chips: 2000)
+        ]
+        let actions = [
+            Action(playerId: 5, street: .flop, type: .bet, amount: 60)
+        ]
+        let learnedContext = AILearningContext(
+            street: .flop,
+            position: .btn,
+            pressure: .unopened,
+            strengthBucket: .weak,
+            isHeadsUp: true
+        )
+        let matchingPoint = AILearningDecisionPoint(
+            context: learnedContext,
+            actionKind: .aggressive,
+            handStrength: 0.22,
+            committedAmount: 60,
+            usedExploration: false,
+            createdAt: Date()
+        )
+
+        pattern.updateAfterHand(
+            playerId: 5,
+            style: .balanced,
+            playerActions: actions,
+            allActions: actions,
+            players: players,
+            profit: 120,
+            didWin: true,
+            showdown: false,
+            shownHandType: nil,
+            winningPlayerIds: [5],
+            shownHandTypes: [:],
+            potSize: 180,
+            decisionPoints: [matchingPoint]
+        )
+
+        let unrelatedContext = AILearningContext(
+            street: .preFlop,
+            position: .utg,
+            pressure: .facingRaise,
+            strengthBucket: .premium,
+            isHeadsUp: false
+        )
+
+        let base = AIPattern().decisionTuning(
+            for: .balanced,
+            against: [Player.createHuman(position: .bb, chips: 2000)],
+            actionLog: [],
+            street: .flop,
+            selfPlayerId: 5,
+            communityCards: [],
+            playerPosition: .btn,
+            learningContext: learnedContext
+        )
+        let matching = pattern.decisionTuning(
+            for: .balanced,
+            against: [Player.createHuman(position: .bb, chips: 2000)],
+            actionLog: [],
+            street: .flop,
+            selfPlayerId: 5,
+            communityCards: [],
+            playerPosition: .btn,
+            learningContext: learnedContext
+        )
+        let unrelated = pattern.decisionTuning(
+            for: .balanced,
+            against: [Player.createHuman(position: .bb, chips: 2000)],
+            actionLog: [],
+            street: .preFlop,
+            selfPlayerId: 5,
+            communityCards: [],
+            playerPosition: .utg,
+            learningContext: unrelatedContext
+        )
+
+        XCTAssertGreaterThan(matching.bluffChance, base.bluffChance)
+        XCTAssertLessThan(matching.bluffThreshold, base.bluffThreshold)
+        XCTAssertGreaterThan(matching.bluffChance - unrelated.bluffChance, 0.005)
+    }
+
+    func testBigCommitmentMistakeLearnsMoreThanSmallCommitmentMistake() {
+        let context = AILearningContext(
+            street: .river,
+            position: .btn,
+            pressure: .facingRaise,
+            strengthBucket: .marginal,
+            isHeadsUp: true
+        )
+
+        let lowCommitPoint = AILearningDecisionPoint(
+            context: context,
+            actionKind: .aggressive,
+            handStrength: 0.46,
+            committedAmount: 40,
+            usedExploration: false,
+            createdAt: Date()
+        )
+        let highCommitPoint = AILearningDecisionPoint(
+            context: context,
+            actionKind: .aggressive,
+            handStrength: 0.46,
+            committedAmount: 220,
+            usedExploration: false,
+            createdAt: Date()
+        )
+
+        let players = [
+            Player.createAI(id: 5, name: "狐狸", avatar: "🦊", position: .btn, chips: 2000),
+            Player.createHuman(position: .bb, chips: 2000)
+        ]
+
+        var lowCommitPattern = AIPattern()
+        lowCommitPattern.updateAfterHand(
+            playerId: 5,
+            style: .balanced,
+            playerActions: [Action(playerId: 5, street: .river, type: .raise, amount: 40)],
+            allActions: [Action(playerId: 5, street: .river, type: .raise, amount: 40)],
+            players: players,
+            profit: -90,
+            didWin: false,
+            showdown: true,
+            shownHandType: .onePair,
+            winningPlayerIds: [0],
+            shownHandTypes: [5: .onePair, 0: .twoPair],
+            potSize: 260,
+            decisionPoints: [lowCommitPoint]
+        )
+
+        var highCommitPattern = AIPattern()
+        highCommitPattern.updateAfterHand(
+            playerId: 5,
+            style: .balanced,
+            playerActions: [Action(playerId: 5, street: .river, type: .raise, amount: 220)],
+            allActions: [Action(playerId: 5, street: .river, type: .raise, amount: 220)],
+            players: players,
+            profit: -90,
+            didWin: false,
+            showdown: true,
+            shownHandType: .onePair,
+            winningPlayerIds: [0],
+            shownHandTypes: [5: .onePair, 0: .twoPair],
+            potSize: 260,
+            decisionPoints: [highCommitPoint]
+        )
+
+        let lowScore = lowCommitPattern.contextPolicy(for: context)?.aggressiveScore ?? 0
+        let highScore = highCommitPattern.contextPolicy(for: context)?.aggressiveScore ?? 0
+
+        XCTAssertLessThan(highScore, lowScore)
+    }
+
+    func testStyleSpecificLearningWeightsCreateDifferentAggressionUpdates() {
+        let context = AILearningContext(
+            street: .flop,
+            position: .co,
+            pressure: .unopened,
+            strengthBucket: .weak,
+            isHeadsUp: true
+        )
+        let point = AILearningDecisionPoint(
+            context: context,
+            actionKind: .aggressive,
+            handStrength: 0.24,
+            committedAmount: 90,
+            usedExploration: false,
+            createdAt: Date()
+        )
+        let actions = [Action(playerId: 2, street: .flop, type: .bet, amount: 90)]
+        let players = [
+            Player.createAI(id: 2, name: "小马", avatar: "🧑", position: .co, chips: 2000),
+            Player.createHuman(position: .bb, chips: 2000)
+        ]
+
+        var looseAggressivePattern = AIPattern()
+        looseAggressivePattern.updateAfterHand(
+            playerId: 2,
+            style: .looseAggressive,
+            playerActions: actions,
+            allActions: actions,
+            players: players,
+            profit: 120,
+            didWin: true,
+            showdown: false,
+            shownHandType: nil,
+            winningPlayerIds: [2],
+            shownHandTypes: [:],
+            potSize: 180,
+            decisionPoints: [point]
+        )
+
+        var tightWeakPattern = AIPattern()
+        tightWeakPattern.updateAfterHand(
+            playerId: 2,
+            style: .tightWeak,
+            playerActions: actions,
+            allActions: actions,
+            players: players,
+            profit: 120,
+            didWin: true,
+            showdown: false,
+            shownHandType: nil,
+            winningPlayerIds: [2],
+            shownHandTypes: [:],
+            potSize: 180,
+            decisionPoints: [point]
+        )
+
+        let lagScore = looseAggressivePattern.contextPolicy(for: context)?.aggressiveScore ?? 0
+        let twScore = tightWeakPattern.contextPolicy(for: context)?.aggressiveScore ?? 0
+
+        XCTAssertGreaterThan(lagScore, twScore)
     }
 
     func testLearningSnapshotsCaptureHumanTrendSignals() {

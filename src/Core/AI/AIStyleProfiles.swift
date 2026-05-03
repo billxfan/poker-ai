@@ -17,6 +17,10 @@ struct AIStyleLearningProfile {
     let initialEpsilon: Double
     let minimumEpsilon: Double
     let explorationDecayMultiplier: Double
+    let aggressiveLearningWeight: Double
+    let passiveLearningWeight: Double
+    let foldLearningWeight: Double
+    let explorationFeedbackDiscount: Double
 }
 
 struct AIDecisionTuning: Equatable {
@@ -68,7 +72,11 @@ extension AIStyle: CaseIterable {
                 adjustmentCap: 0.15,
                 initialEpsilon: 0.30,
                 minimumEpsilon: 0.05,
-                explorationDecayMultiplier: 0.80
+                explorationDecayMultiplier: 0.80,
+                aggressiveLearningWeight: 1.10,
+                passiveLearningWeight: 0.90,
+                foldLearningWeight: 1.00,
+                explorationFeedbackDiscount: 0.92
             )
         case .looseAggressive:
             return AIStyleLearningProfile(
@@ -83,7 +91,11 @@ extension AIStyle: CaseIterable {
                 adjustmentCap: 0.30,
                 initialEpsilon: 0.40,
                 minimumEpsilon: 0.10,
-                explorationDecayMultiplier: 0.85
+                explorationDecayMultiplier: 0.85,
+                aggressiveLearningWeight: 1.28,
+                passiveLearningWeight: 0.88,
+                foldLearningWeight: 0.86,
+                explorationFeedbackDiscount: 0.95
             )
         case .tightWeak:
             return AIStyleLearningProfile(
@@ -98,7 +110,11 @@ extension AIStyle: CaseIterable {
                 adjustmentCap: 0.05,
                 initialEpsilon: 0.20,
                 minimumEpsilon: 0.05,
-                explorationDecayMultiplier: 0.90
+                explorationDecayMultiplier: 0.90,
+                aggressiveLearningWeight: 0.72,
+                passiveLearningWeight: 1.05,
+                foldLearningWeight: 1.18,
+                explorationFeedbackDiscount: 0.82
             )
         case .looseWeak:
             return AIStyleLearningProfile(
@@ -113,7 +129,11 @@ extension AIStyle: CaseIterable {
                 adjustmentCap: 0.03,
                 initialEpsilon: 0.35,
                 minimumEpsilon: 0.15,
-                explorationDecayMultiplier: 0.90
+                explorationDecayMultiplier: 0.90,
+                aggressiveLearningWeight: 0.62,
+                passiveLearningWeight: 1.00,
+                foldLearningWeight: 0.92,
+                explorationFeedbackDiscount: 0.78
             )
         case .balanced:
             return AIStyleLearningProfile(
@@ -128,7 +148,11 @@ extension AIStyle: CaseIterable {
                 adjustmentCap: 0.25,
                 initialEpsilon: 0.30,
                 minimumEpsilon: 0.08,
-                explorationDecayMultiplier: 0.82
+                explorationDecayMultiplier: 0.82,
+                aggressiveLearningWeight: 1.00,
+                passiveLearningWeight: 1.00,
+                foldLearningWeight: 1.00,
+                explorationFeedbackDiscount: 0.90
             )
         }
     }

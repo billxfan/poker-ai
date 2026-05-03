@@ -12,7 +12,11 @@ import UserMessagingPlatform
 protocol IAdMobService {
     func prepareForAds(from viewController: UIViewController, completion: (() -> Void)?)
     func loadRewardedAd(completion: (() -> Void)?)
-    func showRewardedAd(from viewController: UIViewController, onReward: @escaping (Int) -> Void)
+    func showRewardedAd(
+        from viewController: UIViewController,
+        onReward: @escaping (Int) -> Void,
+        onDismiss: (() -> Void)?
+    )
     var isRewardedAdReady: Bool { get }
 }
 
@@ -23,6 +27,7 @@ final class AdMobService: NSObject, IAdMobService {
     private var rewardedAd: RewardedAd?
     #endif
     private var rewardCallback: ((Int) -> Void)?
+    private var dismissCallback: (() -> Void)?
     private var hasStartedMobileAds = false
     private var isPreparingAds = false
     private var prepareCompletions: [() -> Void] = []
@@ -160,10 +165,15 @@ final class AdMobService: NSObject, IAdMobService {
         #endif
     }
 
-    func showRewardedAd(from viewController: UIViewController, onReward: @escaping (Int) -> Void) {
+    func showRewardedAd(
+        from viewController: UIViewController,
+        onReward: @escaping (Int) -> Void,
+        onDismiss: (() -> Void)? = nil
+    ) {
         #if canImport(GoogleMobileAds)
         guard hasStartedMobileAds else {
             prepareForAds(from: viewController)
+            onDismiss?()
             return
         }
 
@@ -172,10 +182,12 @@ final class AdMobService: NSObject, IAdMobService {
             print("[AdMob] Rewarded ad not ready, reloading...")
             #endif
             loadRewardedAd()
+            onDismiss?()
             return
         }
 
         rewardCallback = onReward
+        dismissCallback = onDismiss
         ad.present(from: viewController) { [weak self] in
             let reward = ad.adReward
             let points = Int(truncating: reward.amount)
@@ -193,6 +205,9 @@ final class AdMobService: NSObject, IAdMobService {
 extension AdMobService: FullScreenContentDelegate {
     func adDidDismissFullScreenContent(_ ad: FullScreenPresentingAd) {
         rewardedAd = nil
+        dismissCallback?()
+        dismissCallback = nil
+        rewardCallback = nil
         if hasStartedMobileAds {
             loadRewardedAd()
         }
@@ -203,6 +218,9 @@ extension AdMobService: FullScreenContentDelegate {
         print("[AdMob] Failed to present ad: \(error.localizedDescription)")
         #endif
         rewardedAd = nil
+        dismissCallback?()
+        dismissCallback = nil
+        rewardCallback = nil
         if hasStartedMobileAds {
             loadRewardedAd()
         }
