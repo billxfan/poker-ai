@@ -20,17 +20,17 @@
 
 "welfare.title" = "Welfare";
 "welfare.daily_free.title" = "Daily Free";
-"welfare.daily_free.reward" = "2,000 chips daily";
-"welfare.daily_free.subtitle" = "Automatically credited at midnight";
+"welfare.daily_free.reward" = "2,000 points daily";
+"welfare.daily_free.subtitle" = "Automatically credited at 10:00 AM every day";
 "welfare.claimed" = "Claimed ✓";
 "welfare.claim_2000" = "Claim +2000";
 "welfare.sign_in.title" = "Daily Check-in";
-"welfare.sign_in.reward" = "Check in +1000 chips";
+"welfare.sign_in.reward" = "Check in +1000 points";
 "welfare.sign_in.subtitle" = "Available once per day";
 "welfare.signed_in" = "Checked in ✓";
 "welfare.sign_in_1000" = "Check in +1000";
 "welfare.reward_ad.title" = "Watch Ad";
-"welfare.reward_ad.subtitle" = "Watch an ad to get %d chips";
+"welfare.reward_ad.subtitle" = "Watch an ad to get %d points";
 "welfare.reward_ad.note" = "Rewards are credited automatically after viewing";
 "welfare.claim_amount" = "Claim +%d";
 "welfare.toast.daily_free_claimed" = "+%d chips credited";

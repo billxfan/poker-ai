@@ -434,6 +434,55 @@ final class GameFlowRegressionTests: XCTestCase {
         defaults.removePersistentDomain(forName: suiteName)
     }
 
+
+    func testWelfareDailyFreeDoesNotCreditBeforeTenAM() {
+        let suiteName = "WelfareBeforeTen-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+
+        var components = DateComponents()
+        components.year = 2026
+        components.month = 5
+        components.day = 4
+        components.hour = 9
+        components.minute = 30
+        let calendar = Calendar(identifier: .gregorian)
+        let now = calendar.date(from: components)!
+
+        let storage = WelfareStorage(userDefaults: defaults, nowProvider: { now })
+
+        XCTAssertEqual(storage.getChips(), 0)
+        XCTAssertFalse(storage.hasClaimedDailyFree())
+
+        defaults.removePersistentDomain(forName: suiteName)
+    }
+
+    func testWelfareDailyFreeCreditsOnceAfterTenAM() {
+        let suiteName = "WelfareAfterTen-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+
+        var components = DateComponents()
+        components.year = 2026
+        components.month = 5
+        components.day = 4
+        components.hour = 10
+        components.minute = 1
+        let calendar = Calendar(identifier: .gregorian)
+        let now = calendar.date(from: components)!
+
+        let storage = WelfareStorage(userDefaults: defaults, nowProvider: { now })
+
+        XCTAssertEqual(storage.getChips(), GameConstants.dailyFreeChips)
+        XCTAssertTrue(storage.hasClaimedDailyFree())
+
+        storage.refreshBenefits()
+
+        XCTAssertEqual(storage.getChips(), GameConstants.dailyFreeChips)
+
+        defaults.removePersistentDomain(forName: suiteName)
+    }
+
     func testRoundEndModalKeepsOpponentCardsHiddenWithoutShowdown() {
         var human = Player.createHuman(position: .bb, chips: 1_954)
         human.status = .folded

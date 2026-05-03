@@ -29,6 +29,7 @@ struct WelfareView: View {
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.light, for: .navigationBar)
         .tint(Color.textPrimary)
+        .environment(\.colorScheme, .light)
         .overlay(alignment: .bottom) {
             if let toastMessage = viewModel.toastMessage {
                 WelfareToastView(message: toastMessage)
@@ -44,19 +45,25 @@ struct WelfareView: View {
         VStack(spacing: 12) {
             Image(systemName: "gift.fill")
                 .font(.system(size: 48))
-                .foregroundColor(.welfare)
+                .foregroundColor(.white)
 
-            Text(L10n.t("common.current_chips"))
+            Text(L10n.t("chip.virtual_training_points"))
                 .font(.caption)
-                .foregroundColor(.textSecondary)
+                .foregroundColor(.white.opacity(0.8))
 
             Text("\(viewModel.chips)")
                 .font(.system(size: 36, weight: .bold, design: .rounded))
-                .foregroundColor(.chipGold)
+                .foregroundColor(.white)
         }
         .padding(24)
         .frame(maxWidth: .infinity)
-        .background(Color.cardBackground)
+        .background(
+            LinearGradient(
+                colors: [Color.statistics, Color.primary],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
         .foregroundColor(.textPrimary)
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
@@ -85,37 +92,18 @@ struct WelfareView: View {
 
                 Spacer()
 
-                if viewModel.hasClaimedDailyFree {
-                    Button {
-                        claimAndDismiss {
-                            viewModel.claimDailyFree()
-                            onClaimed()
-                        }
-                    } label: {
-                        Text(L10n.t("welfare.claimed"))
-                            .font(.subheadline)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(Color.success)
-                            .cornerRadius(8)
-                    }
-                } else {
-                    Button {
-                        claimAndDismiss {
-                            viewModel.claimDailyFree()
-                            onClaimed()
-                        }
-                    } label: {
-                        Text(L10n.t("welfare.claim_2000"))
-                            .font(.subheadline)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(Color.secondary)
-                            .cornerRadius(8)
-                    }
-                }
+                Text(viewModel.hasClaimedDailyFree ? L10n.t("main.daily_free.claimed") : L10n.t("main.daily_free.pending"))
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(viewModel.hasClaimedDailyFree ? .white : .textPrimary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(viewModel.hasClaimedDailyFree ? Color.success : Color.background)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(viewModel.hasClaimedDailyFree ? Color.success.opacity(0.25) : Color.textSecondary.opacity(0.18), lineWidth: 1)
+                    )
+                    .cornerRadius(8)
             }
         }
         .padding(16)
@@ -239,6 +227,7 @@ struct WelfareView: View {
               let rootVC = windowScene.windows.first?.rootViewController else { return }
         viewModel.showRewardedAd(from: rootVC)
     }
+
 
     private func claimAndDismiss(action: @escaping () -> Void) {
         action()

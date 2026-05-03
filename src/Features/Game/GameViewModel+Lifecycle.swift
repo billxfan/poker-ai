@@ -18,8 +18,29 @@ extension GameViewModel {
         viewState = .dealing
         aiDecisionPointsByPlayer = [:]
 
+        let shouldRecoverIntoFreshTable =
+            !isRestoredGame &&
+            !gameState.players.isEmpty &&
+            ((humanPlayer?.status == .out) || ((humanPlayer?.chips ?? 0) <= 0)) &&
+            initialChips > 0
+
         if isRestoredGame {
             await pokerEngine.restoreState(gameState, remainingDeck: restoredRemainingDeck)
+            if (humanPlayer?.status == .out || (humanPlayer?.chips ?? 0) <= 0), initialChips > 0 {
+                await pokerEngine.setupGame(humanChips: initialChips)
+                await pokerEngine.startNewHand()
+                await refreshFromEngine()
+                _isRestoredFromArchive = false
+                restoredRemainingDeck = nil
+                restoredResumeMode = .currentHand
+                analytics.logGameStart(chips: initialChips, source: "recovered_new_game")
+                updateBettingInfo()
+                viewState = .waitingForAction
+                triggerNewHand = false
+                syncArchiveForInProgressGame()
+                await proceedToNextActor()
+                return
+            }
             if restoredResumeMode == .nextHand {
                 await pokerEngine.startNewHand(advanceTable: true)
             }
@@ -28,6 +49,12 @@ extension GameViewModel {
             restoredRemainingDeck = nil
             restoredResumeMode = .currentHand
             analytics.logGameStart(chips: humanPlayer?.chips ?? 0, source: "restored")
+        } else if shouldRecoverIntoFreshTable {
+            gameState = GameState()
+            await pokerEngine.setupGame(humanChips: initialChips)
+            await pokerEngine.startNewHand()
+            await refreshFromEngine()
+            analytics.logGameStart(chips: initialChips, source: "recovered_new_game")
         } else if gameState.players.isEmpty {
             await pokerEngine.setupGame(humanChips: initialChips)
             await pokerEngine.startNewHand()

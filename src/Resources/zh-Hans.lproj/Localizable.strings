@@ -20,17 +20,17 @@
 
 "welfare.title" = "福利中心";
 "welfare.daily_free.title" = "每日免费领";
-"welfare.daily_free.reward" = "每日 2,000 筹码";
-"welfare.daily_free.subtitle" = "每日凌晨自动到账";
+"welfare.daily_free.reward" = "每日 2,000 积分";
+"welfare.daily_free.subtitle" = "每天 10:00 自动到账";
 "welfare.claimed" = "已领取 ✓";
 "welfare.claim_2000" = "领取 +2000";
 "welfare.sign_in.title" = "每日签到";
-"welfare.sign_in.reward" = "签到 +1000 筹码";
+"welfare.sign_in.reward" = "签到 +1000 积分";
 "welfare.sign_in.subtitle" = "每日可领取一次";
 "welfare.signed_in" = "已签到 ✓";
 "welfare.sign_in_1000" = "签到 +1000";
 "welfare.reward_ad.title" = "看广告";
-"welfare.reward_ad.subtitle" = "观看广告获取 %d 筹码";
+"welfare.reward_ad.subtitle" = "观看广告获取 %d 积分";
 "welfare.reward_ad.note" = "每次观看后自动到账";
 "welfare.claim_amount" = "领取 +%d";
 "welfare.toast.daily_free_claimed" = "+%d 筹码已到账";

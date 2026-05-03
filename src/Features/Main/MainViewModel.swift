@@ -35,18 +35,12 @@ final class MainViewModel {
     }
 
     func loadState() {
+        welfareStorage.refreshBenefits()
         chips = chipStorage.getChips()
         hasArchive = refreshArchiveAvailability()
-
-        if chips == 0 && !hasClaimedDailyFree {
-            claimDailyFreeChips()
-        }
     }
 
     func claimDailyFreeChips() {
-        guard !hasClaimedDailyFree else { return }
-        chipStorage.addChips(GameConstants.dailyFreeChips)
-        welfareStorage.markDailyFreeClaimed()
         chips = chipStorage.getChips()
     }
 

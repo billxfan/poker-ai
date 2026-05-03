@@ -40,18 +40,22 @@ final class ChipStorage: IChipStorage {
 
 final class WelfareStorage: IChipStorage {
     private let userDefaults: UserDefaults
+    private let nowProvider: () -> Date
     private let chipsKey = "poker_ai_chips"
     private let dailyFreeKey = "poker_ai_daily_free"
     private let signInKey = "poker_ai_sign_in"
     private let lastResetKey = "poker_ai_last_reset"
+    private let lastDailyFreeGrantAnchorKey = "poker_ai_daily_free_grant_anchor"
 
-    init(userDefaults: UserDefaults = .standard) {
+    init(userDefaults: UserDefaults = .standard, nowProvider: @escaping () -> Date = Date.init) {
         self.userDefaults = userDefaults
-        checkDailyReset()
+        self.nowProvider = nowProvider
+        refreshBenefits()
     }
 
     func getChips() -> Int {
-        return userDefaults.integer(forKey: chipsKey)
+        refreshBenefits()
+        return rawChips()
     }
 
     func setChips(_ amount: Int) {
@@ -59,28 +63,36 @@ final class WelfareStorage: IChipStorage {
     }
 
     func addChips(_ amount: Int) {
-        let current = getChips()
-        setChips(current + amount)
+        refreshBenefits()
+        setRawChips(rawChips() + amount)
     }
 
     func deductChips(_ amount: Int) -> Bool {
-        let current = getChips()
+        refreshBenefits()
+        let current = rawChips()
         if current >= amount {
-            setChips(current - amount)
+            setRawChips(current - amount)
             return true
         }
         return false
     }
 
     func hasClaimedDailyFree() -> Bool {
+        refreshBenefits()
         return userDefaults.bool(forKey: dailyFreeKey)
     }
 
     func markDailyFreeClaimed() {
-        userDefaults.set(true, forKey: dailyFreeKey)
+        let calendar = Calendar.current
+        let now = nowProvider()
+        let todayStart = calendar.startOfDay(for: now)
+        let todayTen = calendar.date(byAdding: .hour, value: 10, to: todayStart) ?? now
+        userDefaults.set(todayTen, forKey: lastDailyFreeGrantAnchorKey)
+        userDefaults.set(now >= todayTen, forKey: dailyFreeKey)
     }
 
     func hasSignedInToday() -> Bool {
+        refreshBenefits()
         return userDefaults.bool(forKey: signInKey)
     }
 
@@ -88,18 +100,40 @@ final class WelfareStorage: IChipStorage {
         userDefaults.set(true, forKey: signInKey)
     }
 
-    private func checkDailyReset() {
+    func refreshBenefits() {
         let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
+        let now = nowProvider()
+        let todayStart = calendar.startOfDay(for: now)
+        let todayTen = calendar.date(byAdding: .hour, value: 10, to: todayStart) ?? now
 
         if let lastReset = userDefaults.object(forKey: lastResetKey) as? Date {
-            if !calendar.isDate(lastReset, inSameDayAs: today) {
-                userDefaults.set(false, forKey: dailyFreeKey)
+            if !calendar.isDate(lastReset, inSameDayAs: todayStart) {
                 userDefaults.set(false, forKey: signInKey)
-                userDefaults.set(today, forKey: lastResetKey)
+                userDefaults.set(todayStart, forKey: lastResetKey)
             }
         } else {
-            userDefaults.set(today, forKey: lastResetKey)
+            userDefaults.set(todayStart, forKey: lastResetKey)
         }
+
+        let lastGrantAnchor = userDefaults.object(forKey: lastDailyFreeGrantAnchorKey) as? Date
+        let alreadyGrantedToday = lastGrantAnchor.map {
+            calendar.isDate($0, equalTo: todayTen, toGranularity: .minute)
+        } ?? false
+
+        if now >= todayTen, !alreadyGrantedToday {
+            setRawChips(rawChips() + GameConstants.dailyFreeChips)
+            userDefaults.set(todayTen, forKey: lastDailyFreeGrantAnchorKey)
+            userDefaults.set(true, forKey: dailyFreeKey)
+        } else {
+            userDefaults.set(now >= todayTen && alreadyGrantedToday, forKey: dailyFreeKey)
+        }
+    }
+
+    private func rawChips() -> Int {
+        userDefaults.integer(forKey: chipsKey)
+    }
+
+    private func setRawChips(_ amount: Int) {
+        userDefaults.set(max(0, amount), forKey: chipsKey)
     }
 }

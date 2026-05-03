@@ -22,15 +22,12 @@ final class WelfareViewModel {
     }
 
     func loadState() {
+        welfareStorage.refreshBenefits()
         chips = welfareStorage.getChips()
     }
 
     func claimDailyFree() {
-        guard !hasClaimedDailyFree else { return }
-        welfareStorage.addChips(GameConstants.dailyFreeChips)
-        welfareStorage.markDailyFreeClaimed()
         loadState()
-        showToast(L10n.f("welfare.toast.daily_free_claimed", GameConstants.dailyFreeChips))
     }
 
     func claimSignIn() {
