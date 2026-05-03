@@ -49,6 +49,7 @@ struct StatisticsHandRecordCard: View {
             HStack {
                 Text(L10n.f("game.pot_amount", record.pot))
                     .font(.caption)
+                    .foregroundColor(.textPrimary)
                 Spacer()
                 Text(L10n.t("game.community_cards_colon"))
                     .font(.caption)
@@ -77,6 +78,7 @@ struct StatisticsHandRecordCard: View {
                     if let handType = record.playerHandType {
                         Text("(\(handType.displayName))")
                             .font(.caption)
+                            .foregroundColor(.textPrimary)
                     }
                 }
             }
@@ -99,6 +101,7 @@ struct StatisticsHandRecordCard: View {
                                     Text(hand.name)
                                         .font(.caption)
                                         .fontWeight(.semibold)
+                                        .foregroundColor(.textPrimary)
 
                                     if hand.isWinner {
                                         Text(L10n.t("common.win_badge"))

@@ -17,6 +17,37 @@ struct QuickBetView: View {
         ("3x", GameConstants.quickBetMultipliers[4]),
     ]
 
+    private var resolvedOptions: [(label: String, amount: Int)] {
+        var previousAmount = currentRoundBet
+        let maxTotalBet = currentRoundBet + playerChips
+        let minimumIncrement = QuickBetCalculator.minimumRaiseIncrement(
+            minimumAmount: minimumAmount,
+            callAmount: callAmount,
+            currentRoundBet: currentRoundBet
+        )
+
+        return options.map { option in
+            let rawAmount = QuickBetCalculator.targetAmount(
+                potSize: potSize,
+                callAmount: callAmount,
+                currentRoundBet: currentRoundBet,
+                playerChips: playerChips,
+                minimumAmount: minimumAmount,
+                potMultiplier: option.value
+            )
+
+            let adjustedAmount: Int
+            if rawAmount <= previousAmount {
+                adjustedAmount = min(maxTotalBet, previousAmount + minimumIncrement)
+            } else {
+                adjustedAmount = rawAmount
+            }
+
+            previousAmount = adjustedAmount
+            return (option.label, adjustedAmount)
+        }
+    }
+
     var body: some View {
         VStack(spacing: 10) {
             Text(L10n.t("quick_bet.title"))
@@ -24,25 +55,16 @@ struct QuickBetView: View {
                 .foregroundColor(.textOnDark.opacity(0.82))
 
             HStack(spacing: 8) {
-                ForEach(options, id: \.label) { option in
-                    let amount = QuickBetCalculator.targetAmount(
-                        potSize: potSize,
-                        callAmount: callAmount,
-                        currentRoundBet: currentRoundBet,
-                        playerChips: playerChips,
-                        minimumAmount: minimumAmount,
-                        potMultiplier: option.value
-                    )
-
+                ForEach(resolvedOptions, id: \.label) { option in
                     Button {
-                        onSelect(amount)
+                        onSelect(option.amount)
                     } label: {
                         VStack(spacing: 4) {
                             Text(option.label)
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundColor(.white)
 
-                            Text("\(amount)")
+                            Text("\(option.amount)")
                                 .font(.system(size: 16, weight: .bold, design: .rounded))
                                 .foregroundColor(.textOnDark.opacity(0.9))
                         }
@@ -51,8 +73,8 @@ struct QuickBetView: View {
                         .background(Color.raiseButton.opacity(0.8))
                         .cornerRadius(8)
                     }
-                    .disabled(amount <= currentRoundBet)
-                    .opacity(amount <= currentRoundBet ? 0.5 : 1.0)
+                    .disabled(option.amount <= currentRoundBet)
+                    .opacity(option.amount <= currentRoundBet ? 0.5 : 1.0)
                 }
             }
 
@@ -83,6 +105,15 @@ enum QuickBetCalculator {
         let raiseAfterCall = Int((Double(potAfterCall) * potMultiplier).rounded())
         let target = currentRoundBet + callToMatch + raiseAfterCall
         return min(max(minimumAmount, target), maxTotalBet)
+    }
+
+    static func minimumRaiseIncrement(
+        minimumAmount: Int,
+        callAmount: Int,
+        currentRoundBet: Int
+    ) -> Int {
+        let matchedAmount = currentRoundBet + max(0, callAmount)
+        return max(1, minimumAmount - matchedAmount)
     }
 }
 

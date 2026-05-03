@@ -4,32 +4,38 @@ struct StatisticsView: View {
     @State private var viewModel = StatisticsViewModel()
 
     var body: some View {
-        VStack(spacing: 0) {
-            StatisticsTabSelectorView(selectedTab: $viewModel.selectedTab)
+        ZStack {
+            Color.background
+                .ignoresSafeArea()
 
-            if viewModel.isLoading {
-                StatisticsLoadingStateView()
-            } else if let error = viewModel.error {
-                StatisticsErrorStateView(error: error)
-            } else {
-                TabView(selection: $viewModel.selectedTab) {
-                    StatisticsOverviewTabView(
-                        statistics: viewModel.statistics,
-                        recentHands: viewModel.recentHands,
-                        chips: viewModel.chips
-                    )
-                    .tag(0)
+            VStack(spacing: 0) {
+                StatisticsTabSelectorView(selectedTab: $viewModel.selectedTab)
 
-                    StatisticsAIProfilesTabView(
-                        profiles: viewModel.aiProfiles,
-                        selectedProfileId: $viewModel.selectedAIProfileId
-                    )
-                        .tag(1)
+                if viewModel.isLoading {
+                    StatisticsLoadingStateView()
+                } else if let error = viewModel.error {
+                    StatisticsErrorStateView(error: error)
+                } else {
+                    TabView(selection: $viewModel.selectedTab) {
+                        StatisticsOverviewTabView(
+                            statistics: viewModel.statistics,
+                            recentHands: viewModel.recentHands,
+                            chips: viewModel.chips
+                        )
+                        .tag(0)
 
-                    StatisticsRecentHandsTabView(hands: viewModel.recentHands)
-                        .tag(2)
+                        StatisticsAIProfilesTabView(
+                            profiles: viewModel.aiProfiles,
+                            selectedProfileId: $viewModel.selectedAIProfileId
+                        )
+                            .tag(1)
+
+                        StatisticsRecentHandsTabView(hands: viewModel.recentHands)
+                            .tag(2)
+                    }
+                    .tabViewStyle(.page(indexDisplayMode: .never))
+                    .background(Color.background)
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never))
             }
         }
         .navigationTitle(L10n.t("statistics.title"))

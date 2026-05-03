@@ -17,6 +17,7 @@ struct StatisticsAIProfileCardView: View {
                         Text(profile.name)
                             .font(.subheadline)
                             .fontWeight(.semibold)
+                            .foregroundColor(.textPrimary)
 
                         Text(profile.styleName)
                             .font(.caption2)
@@ -90,7 +91,7 @@ struct StatisticsAIProfileCardView: View {
 
                     Text(L10n.f("ai_profile.counter_strategy", humanRead.counterStrategyText))
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.statistics)
                 } else {
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                         StatisticsStaticMiniValueTile(label: L10n.t("metric.human_vpip"), value: "0.0%")
@@ -128,7 +129,7 @@ private struct StatisticsMiniValueTile: View {
                 Text(value)
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundColor(.textPrimary)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
@@ -190,6 +191,26 @@ private struct StatisticsLearningBiasChart: View {
                 }
             }
             .chartLegend(position: .bottom, spacing: 8)
+            .chartForegroundStyleScale([
+                L10n.t("ai_profile.chart.aggression_bias"): Color.statistics,
+                L10n.t("ai_profile.chart.tightness_bias"): Color.warning
+            ])
+            .chartXAxis {
+                AxisMarks { _ in
+                    AxisGridLine().foregroundStyle(Color.textSecondary.opacity(0.12))
+                    AxisTick().foregroundStyle(Color.textSecondary.opacity(0.35))
+                    AxisValueLabel()
+                        .foregroundStyle(Color.textSecondary)
+                }
+            }
+            .chartYAxis {
+                AxisMarks(position: .leading) { _ in
+                    AxisGridLine().foregroundStyle(Color.textSecondary.opacity(0.12))
+                    AxisTick().foregroundStyle(Color.textSecondary.opacity(0.35))
+                    AxisValueLabel()
+                        .foregroundStyle(Color.textSecondary)
+                }
+            }
             .frame(height: 120)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -239,6 +260,26 @@ private struct StatisticsHumanTrendChart: View {
                 }
             }
             .chartLegend(position: .bottom, spacing: 8)
+            .chartForegroundStyleScale([
+                L10n.t("metric.human_vpip_spaced"): Color.success,
+                L10n.t("metric.fold_to_pressure_rate"): Color.error
+            ])
+            .chartXAxis {
+                AxisMarks { _ in
+                    AxisGridLine().foregroundStyle(Color.textSecondary.opacity(0.12))
+                    AxisTick().foregroundStyle(Color.textSecondary.opacity(0.35))
+                    AxisValueLabel()
+                        .foregroundStyle(Color.textSecondary)
+                }
+            }
+            .chartYAxis {
+                AxisMarks(position: .leading) { _ in
+                    AxisGridLine().foregroundStyle(Color.textSecondary.opacity(0.12))
+                    AxisTick().foregroundStyle(Color.textSecondary.opacity(0.35))
+                    AxisValueLabel()
+                        .foregroundStyle(Color.textSecondary)
+                }
+            }
             .frame(height: 120)
 
             VStack(alignment: .leading, spacing: 2) {

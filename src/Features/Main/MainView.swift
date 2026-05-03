@@ -14,17 +14,21 @@ struct MainView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 16) {
-                chipCard
+            ZStack {
+                Color.background
+                    .ignoresSafeArea()
 
-                dailyWelfareCard
+                VStack(spacing: 16) {
+                    chipCard
 
-                Spacer()
+                    dailyWelfareCard
 
-                actionButtons
+                    Spacer()
+
+                    actionButtons
+                }
+                .padding(16)
             }
-            .padding(16)
-            .background(Color.background)
             .navigationTitle(L10n.t("app.name"))
             .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(Color.background, for: .navigationBar)
@@ -88,6 +92,7 @@ struct MainView: View {
             HStack {
                 Text(L10n.t("main.daily_free.title"))
                     .font(.headline)
+                    .foregroundColor(.textPrimary)
 
                 Spacer()
 

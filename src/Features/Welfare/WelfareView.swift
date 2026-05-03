@@ -6,19 +6,23 @@ struct WelfareView: View {
     let onClaimed: () -> Void
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                headerSection
+        ZStack {
+            Color.background
+                .ignoresSafeArea()
 
-                dailyFreeSection
+            ScrollView {
+                VStack(spacing: 20) {
+                    headerSection
 
-                signInSection
+                    dailyFreeSection
 
-                adPlaceholderSection
+                    signInSection
+
+                    adPlaceholderSection
+                }
+                .padding(16)
             }
-            .padding(16)
         }
-        .background(Color.background)
         .navigationTitle(L10n.t("welfare.title"))
         .navigationBarTitleDisplayMode(.large)
         .toolbarBackground(Color.background, for: .navigationBar)
@@ -53,6 +57,7 @@ struct WelfareView: View {
         .padding(24)
         .frame(maxWidth: .infinity)
         .background(Color.cardBackground)
+        .foregroundColor(.textPrimary)
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
     }
@@ -64,6 +69,7 @@ struct WelfareView: View {
                     .foregroundColor(.success)
                 Text(L10n.t("welfare.daily_free.title"))
                     .font(.headline)
+                    .foregroundColor(.textPrimary)
                 Spacer()
             }
 
@@ -71,6 +77,7 @@ struct WelfareView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(L10n.t("welfare.daily_free.reward"))
                         .font(.subheadline)
+                        .foregroundColor(.textPrimary)
                     Text(L10n.t("welfare.daily_free.subtitle"))
                         .font(.caption)
                         .foregroundColor(.textSecondary)
@@ -124,6 +131,7 @@ struct WelfareView: View {
                     .foregroundColor(.welfare)
                 Text(L10n.t("welfare.sign_in.title"))
                     .font(.headline)
+                    .foregroundColor(.textPrimary)
                 Spacer()
             }
 
@@ -131,6 +139,7 @@ struct WelfareView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(L10n.t("welfare.sign_in.reward"))
                         .font(.subheadline)
+                        .foregroundColor(.textPrimary)
                     Text(L10n.t("welfare.sign_in.subtitle"))
                         .font(.caption)
                         .foregroundColor(.textSecondary)
@@ -184,6 +193,7 @@ struct WelfareView: View {
                     .foregroundColor(.warning)
                 Text(L10n.t("welfare.reward_ad.title"))
                     .font(.headline)
+                    .foregroundColor(.textPrimary)
                 Spacer()
             }
 
@@ -191,6 +201,7 @@ struct WelfareView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(L10n.f("welfare.reward_ad.subtitle", GameConstants.rewardAdChips))
                         .font(.subheadline)
+                        .foregroundColor(.textPrimary)
                     Text(L10n.t("welfare.reward_ad.note"))
                         .font(.caption)
                         .foregroundColor(.textSecondary)

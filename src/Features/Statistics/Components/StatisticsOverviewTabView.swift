@@ -37,6 +37,7 @@ struct StatisticsOverviewTabView: View {
             .padding(16)
         }
         .background(Color.background)
+        .foregroundColor(.textPrimary)
     }
 }
 
@@ -55,6 +56,7 @@ private struct StatisticsSummaryCard: View {
             HStack {
                 Text(L10n.t("statistics.current_chips"))
                     .font(.subheadline)
+                    .foregroundColor(.textPrimary)
                 Spacer()
                 Text("\(chips)")
                     .font(.title2)
@@ -67,6 +69,7 @@ private struct StatisticsSummaryCard: View {
             HStack {
                 Text(L10n.t("statistics.total_profit"))
                     .font(.subheadline)
+                    .foregroundColor(.textPrimary)
                 Spacer()
                 Text("\(totalProfit)")
                     .font(.title2)
@@ -88,6 +91,7 @@ private struct StatisticsProfitTrendCard: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(L10n.t("statistics.profit_trend.title"))
                 .font(.headline)
+                .foregroundColor(.textPrimary)
 
             if !points.isEmpty {
                 Chart {
@@ -118,6 +122,22 @@ private struct StatisticsProfitTrendCard: View {
                         )
                     }
                 }
+                .chartXAxis {
+                    AxisMarks { _ in
+                        AxisGridLine().foregroundStyle(Color.textSecondary.opacity(0.12))
+                        AxisTick().foregroundStyle(Color.textSecondary.opacity(0.35))
+                        AxisValueLabel()
+                            .foregroundStyle(Color.textSecondary)
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks(position: .leading) { _ in
+                        AxisGridLine().foregroundStyle(Color.textSecondary.opacity(0.12))
+                        AxisTick().foregroundStyle(Color.textSecondary.opacity(0.35))
+                        AxisValueLabel()
+                            .foregroundStyle(Color.textSecondary)
+                    }
+                }
                 .frame(height: 150)
 
                 Text(L10n.f("statistics.profit_trend.recent_total", points.count, points.last?.cumulativeProfit ?? 0))
@@ -146,6 +166,7 @@ private struct StatisticsDetailedStatsCard: View {
             HStack {
                 Text(L10n.t("statistics.game_data"))
                     .font(.headline)
+                    .foregroundColor(.textPrimary)
                 Spacer()
             }
 
@@ -185,7 +206,7 @@ struct StatisticsValueTile: View {
                     .foregroundColor(.textSecondary)
                 Text(value)
                     .font(.headline)
-                    .foregroundColor(.primary)
+                    .foregroundColor(.textPrimary)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
