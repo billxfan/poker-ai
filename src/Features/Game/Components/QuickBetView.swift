@@ -9,25 +9,22 @@ struct QuickBetView: View {
     let onSelect: (Int) -> Void
     let onCancel: () -> Void
 
-    private let potMultipliers: [(label: String, value: Double)] = [
-        ("1/3", 0.33),
-        ("1/2", 0.5),
-        ("2/3", 0.67),
-    ]
-
-    private let potRaiseMultipliers: [(label: String, value: Double)] = [
-        ("1x", 1.0),
-        ("1.2x", 1.2),
+    private let options: [(label: String, value: Double)] = [
+        ("1/3", GameConstants.quickBetMultipliers[0]),
+        ("1/2", GameConstants.quickBetMultipliers[1]),
+        ("1x", GameConstants.quickBetMultipliers[2]),
+        ("2x", GameConstants.quickBetMultipliers[3]),
+        ("3x", GameConstants.quickBetMultipliers[4]),
     ]
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 10) {
             Text(L10n.t("quick_bet.title"))
-                .font(.caption)
-                .foregroundColor(.textOnDark.opacity(0.7))
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(.textOnDark.opacity(0.82))
 
             HStack(spacing: 8) {
-                ForEach(potMultipliers + potRaiseMultipliers, id: \.label) { option in
+                ForEach(options, id: \.label) { option in
                     let amount = QuickBetCalculator.targetAmount(
                         potSize: potSize,
                         callAmount: callAmount,
@@ -40,20 +37,17 @@ struct QuickBetView: View {
                     Button {
                         onSelect(amount)
                     } label: {
-                        VStack(spacing: 2) {
+                        VStack(spacing: 4) {
                             Text(option.label)
-                                .font(.caption)
+                                .font(.subheadline.weight(.semibold))
                                 .foregroundColor(.white)
 
-                            Text(L10n.f("quick_bet.to_amount", amount))
-                                .font(.caption2)
-                                .foregroundColor(.textOnDark.opacity(0.8))
-
-                            Text("+\(max(0, amount - currentRoundBet))")
-                                .font(.system(size: 10))
-                                .foregroundColor(.textOnDark.opacity(0.55))
+                            Text("\(amount)")
+                                .font(.system(size: 16, weight: .bold, design: .rounded))
+                                .foregroundColor(.textOnDark.opacity(0.9))
                         }
-                        .frame(width: 56, height: 44)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
                         .background(Color.raiseButton.opacity(0.8))
                         .cornerRadius(8)
                     }
@@ -63,7 +57,7 @@ struct QuickBetView: View {
             }
 
             Button(L10n.t("common.cancel"), action: onCancel)
-                .font(.caption)
+                .font(.subheadline)
                 .foregroundColor(.textOnDark.opacity(0.6))
         }
         .padding(12)

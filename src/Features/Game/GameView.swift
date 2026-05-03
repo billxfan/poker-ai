@@ -123,6 +123,9 @@ struct GameView: View {
             }
         }
         .navigationBarBackButtonHidden(true)
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .tint(.white)
         .toolbar {
             if !viewModel.showRoundEndModal {
                 if !viewModel.showActionLog {

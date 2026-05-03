@@ -34,6 +34,10 @@ struct StatisticsView: View {
         }
         .navigationTitle(L10n.t("statistics.title"))
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(Color.background, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarColorScheme(.light, for: .navigationBar)
+        .tint(Color.textPrimary)
         .task {
             await viewModel.loadData()
         }

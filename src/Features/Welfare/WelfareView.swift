@@ -21,6 +21,10 @@ struct WelfareView: View {
         .background(Color.background)
         .navigationTitle(L10n.t("welfare.title"))
         .navigationBarTitleDisplayMode(.large)
+        .toolbarBackground(Color.background, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarColorScheme(.light, for: .navigationBar)
+        .tint(Color.textPrimary)
         .overlay(alignment: .bottom) {
             if let toastMessage = viewModel.toastMessage {
                 WelfareToastView(message: toastMessage)

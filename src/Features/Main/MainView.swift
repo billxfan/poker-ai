@@ -27,6 +27,10 @@ struct MainView: View {
             .background(Color.background)
             .navigationTitle(L10n.t("app.name"))
             .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(Color.background, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.light, for: .navigationBar)
+            .tint(Color.textPrimary)
             .alert(L10n.t("main.reset.title"), isPresented: $viewModel.showNewGameConfirmation) {
                 Button(L10n.t("common.cancel"), role: .cancel) { }
                 Button(L10n.t("common.confirm")) {
