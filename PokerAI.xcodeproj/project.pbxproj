@@ -41,9 +41,6 @@
 		AA0000000000000000000012 /* AnalyticsEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000013 /* AnalyticsEvent.swift */; };
 		AA0000000000000000000014 /* MockAnalyticsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000015 /* MockAnalyticsService.swift */; };
 		AA0000000000000000000040 /* PokerAI/PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000041 /* PokerAI/PrivacyInfo.xcprivacy */; };
-		D0A11CE00000000000000001 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = D0A11CE00000000000000007 /* Localizable.strings */; };
-		D0A11CE00000000000000002 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = D0A11CE00000000000000008 /* InfoPlist.strings */; };
-		D0A11CE0000000000000000A /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A11CE00000000000000009 /* L10n.swift */; };
 		AA0000000000000000000050 /* AdMobConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000052 /* AdMobConfig.swift */; };
 		AA0000000000000000000051 /* AdMobService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000053 /* AdMobService.swift */; };
 		AC9F780B5B5610C40F9FD8E6 /* Street.swift in Sources */ = {isa = PBXBuildFile; fileRef = C96A3EDD743B1E6EF634AF25 /* Street.swift */; };
@@ -84,6 +81,9 @@
 		CD3222DD2FA5B6B7008F37B3 /* GoogleUserMessagingPlatform in Frameworks */ = {isa = PBXBuildFile; productRef = CD2DAA482FA5AEB300C82FE1 /* GoogleUserMessagingPlatform */; };
 		CD6CFE9A2FA5106100C1B48E /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = CD6CFE992FA5106100C1B48E /* GoogleService-Info.plist */; };
 		CF6ED67D8AF1CC1B980E7D40 /* GameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74EECA09C25E73B6235A1964 /* GameView.swift */; };
+		D0A11CE00000000000000001 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = D0A11CE00000000000000007 /* Localizable.strings */; };
+		D0A11CE00000000000000002 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = D0A11CE00000000000000008 /* InfoPlist.strings */; };
+		D0A11CE0000000000000000A /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A11CE00000000000000009 /* L10n.swift */; };
 		D6C60BB155A0781297226BF0 /* PokerEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC3E61AE9BDA6C7D05CD339F /* PokerEngine.swift */; };
 		DB85292C8856B47672D3C399 /* PreFlopHandTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B3EB6C2C558AF7E772408B5 /* PreFlopHandTable.swift */; };
 		E1A5B4C3D2F109876543210A /* PokerEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A5B4C3D2F109876543210B /* PokerEngineTests.swift */; };
@@ -112,15 +112,10 @@
 		2918AF107C1B5FAC8170BF77 /* MainViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainViewModel.swift; sourceTree = "<group>"; };
 		29AC71B2963FC806D9A6364B /* GameConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameConstants.swift; sourceTree = "<group>"; };
 		35E7C9248EDD3E73E290C09A /* Color+Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Theme.swift"; sourceTree = "<group>"; };
-		D0A11CE00000000000000003 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = "src/Resources/en.lproj/Localizable.strings"; sourceTree = SOURCE_ROOT; };
-		D0A11CE00000000000000004 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "src/Resources/zh-Hans.lproj/Localizable.strings"; sourceTree = SOURCE_ROOT; };
-		D0A11CE00000000000000005 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = "src/Resources/en.lproj/InfoPlist.strings"; sourceTree = SOURCE_ROOT; };
-		D0A11CE00000000000000006 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "src/Resources/zh-Hans.lproj/InfoPlist.strings"; sourceTree = SOURCE_ROOT; };
-		D0A11CE00000000000000009 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
 		3829E3CE2E5712EDA2C6C52D /* ChipLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChipLabel.swift; sourceTree = "<group>"; };
 		4063FE8247B5C0E604B9FCB8 /* Card.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Card.swift; sourceTree = "<group>"; };
 		4C1BCD39B237C92CFF4C0415 /* HandTypeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandTypeTests.swift; sourceTree = "<group>"; };
-		4D969E959A47D0D27973E54B /* PokerAI.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PokerAI.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4D969E959A47D0D27973E54B /* PokerAI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PokerAI.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		506F27EC459CA69DF758C983 /* GameRecordRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameRecordRepository.swift; sourceTree = "<group>"; };
 		54EF97628F7D2B7EDBC17824 /* AIPatternRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIPatternRepository.swift; sourceTree = "<group>"; };
 		5C616BABA49F411EC197018E /* ActionLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionLogView.swift; sourceTree = "<group>"; };
@@ -179,6 +174,11 @@
 		C96A3EDD743B1E6EF634AF25 /* Street.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Street.swift; sourceTree = "<group>"; };
 		CD1C98850B7A4ED2330E1A6B /* ActionButtonsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionButtonsView.swift; sourceTree = "<group>"; };
 		CD6CFE992FA5106100C1B48E /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		D0A11CE00000000000000003 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = src/Resources/en.lproj/Localizable.strings; sourceTree = SOURCE_ROOT; };
+		D0A11CE00000000000000004 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "src/Resources/zh-Hans.lproj/Localizable.strings"; sourceTree = SOURCE_ROOT; };
+		D0A11CE00000000000000005 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = src/Resources/en.lproj/InfoPlist.strings; sourceTree = SOURCE_ROOT; };
+		D0A11CE00000000000000006 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "src/Resources/zh-Hans.lproj/InfoPlist.strings"; sourceTree = SOURCE_ROOT; };
+		D0A11CE00000000000000009 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
 		D959BB465C39A29AB2EEAF53 /* AIAvatars.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIAvatars.swift; sourceTree = "<group>"; };
 		E1A5B4C3D2F109876543210B /* PokerEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PokerEngineTests.swift; sourceTree = "<group>"; };
 		E28A63EAE43B5AACB33D31F0 /* PotCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PotCalculator.swift; sourceTree = "<group>"; };
@@ -511,27 +511,6 @@
 		};
 /* End PBXGroup section */
 
-/* Begin PBXVariantGroup section */
-		D0A11CE00000000000000007 /* Localizable.strings */ = {
-			isa = PBXVariantGroup;
-			children = (
-				D0A11CE00000000000000003 /* en */,
-				D0A11CE00000000000000004 /* zh-Hans */,
-			);
-			name = Localizable.strings;
-			sourceTree = "<group>";
-		};
-		D0A11CE00000000000000008 /* InfoPlist.strings */ = {
-			isa = PBXVariantGroup;
-			children = (
-				D0A11CE00000000000000005 /* en */,
-				D0A11CE00000000000000006 /* zh-Hans */,
-			);
-			name = InfoPlist.strings;
-			sourceTree = "<group>";
-		};
-/* End PBXVariantGroup section */
-
 /* Begin PBXNativeTarget section */
 		4348EC15B6B01635DAFDB5D9 /* PokerAITests */ = {
 			isa = PBXNativeTarget;
@@ -730,6 +709,27 @@
 			targetProxy = 2CC42C53865A086B93A04861 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		D0A11CE00000000000000007 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				D0A11CE00000000000000003 /* en */,
+				D0A11CE00000000000000004 /* zh-Hans */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+		D0A11CE00000000000000008 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				D0A11CE00000000000000005 /* en */,
+				D0A11CE00000000000000006 /* zh-Hans */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		0EAD26A7FE161115A6ECAF0B /* Release */ = {
