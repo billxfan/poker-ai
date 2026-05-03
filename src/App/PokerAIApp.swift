@@ -9,7 +9,9 @@ struct PokerAIApp: App {
 
     init() {
         #if canImport(FirebaseCore)
-        FirebaseApp.configure()
+        if Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil {
+            FirebaseApp.configure()
+        }
         #endif
         AnalyticsService.shared.log(AnalyticsEvent.appLaunch)
     }

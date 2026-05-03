@@ -62,6 +62,11 @@ xcodebuild build -project PokerAI.xcodeproj -scheme PokerAI
 xcodebuild test -project PokerAI.xcodeproj -scheme PokerAI -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 ```
 
+Optional local setup:
+
+- `GoogleService-Info.plist` is intentionally not committed.
+- If you want Firebase Analytics enabled locally, add your own config file at the project root.
+
 ## Public Docs
 
 Public project-facing docs live here:

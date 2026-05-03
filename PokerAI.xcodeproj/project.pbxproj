@@ -79,7 +79,6 @@
 		CD3222DB2FA5B6B7008F37B3 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = CD2DAA452FA5AE9800C82FE1 /* FirebaseCore */; };
 		CD3222DC2FA5B6B7008F37B3 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = CD2DAA472FA5AEB300C82FE1 /* GoogleMobileAds */; };
 		CD3222DD2FA5B6B7008F37B3 /* GoogleUserMessagingPlatform in Frameworks */ = {isa = PBXBuildFile; productRef = CD2DAA482FA5AEB300C82FE1 /* GoogleUserMessagingPlatform */; };
-		CD6CFE9A2FA5106100C1B48E /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = CD6CFE992FA5106100C1B48E /* GoogleService-Info.plist */; };
 		CF6ED67D8AF1CC1B980E7D40 /* GameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74EECA09C25E73B6235A1964 /* GameView.swift */; };
 		D0A11CE00000000000000001 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = D0A11CE00000000000000007 /* Localizable.strings */; };
 		D0A11CE00000000000000002 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = D0A11CE00000000000000008 /* InfoPlist.strings */; };
@@ -173,7 +172,6 @@
 		C1B10000000000000000000A /* StatisticsHandRecordCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatisticsHandRecordCard.swift; sourceTree = "<group>"; };
 		C96A3EDD743B1E6EF634AF25 /* Street.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Street.swift; sourceTree = "<group>"; };
 		CD1C98850B7A4ED2330E1A6B /* ActionButtonsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionButtonsView.swift; sourceTree = "<group>"; };
-		CD6CFE992FA5106100C1B48E /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		D0A11CE00000000000000003 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = src/Resources/en.lproj/Localizable.strings; sourceTree = SOURCE_ROOT; };
 		D0A11CE00000000000000004 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "src/Resources/zh-Hans.lproj/Localizable.strings"; sourceTree = SOURCE_ROOT; };
 		D0A11CE00000000000000005 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = src/Resources/en.lproj/InfoPlist.strings; sourceTree = SOURCE_ROOT; };
@@ -227,7 +225,6 @@
 				F5377F1BAF89563D261DA04D /* Tests */,
 				FD12D14D9403840A92038EB7 /* Products */,
 				AA0000000000000000000002 /* PokerAI/Assets.xcassets */,
-				CD6CFE992FA5106100C1B48E /* GoogleService-Info.plist */,
 				AA0000000000000000000041 /* PokerAI/PrivacyInfo.xcprivacy */,
 				CDA36EEC2FA5B1D80041370A /* Frameworks */,
 			);
@@ -602,7 +599,6 @@
 			files = (
 				AA0000000000000000000001 /* PokerAI/Assets.xcassets in Resources */,
 				AA0000000000000000000040 /* PokerAI/PrivacyInfo.xcprivacy in Resources */,
-				CD6CFE9A2FA5106100C1B48E /* GoogleService-Info.plist in Resources */,
 				D0A11CE00000000000000001 /* Localizable.strings in Resources */,
 				D0A11CE00000000000000002 /* InfoPlist.strings in Resources */,
 			);

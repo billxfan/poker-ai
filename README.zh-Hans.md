@@ -62,6 +62,11 @@ xcodebuild build -project PokerAI.xcodeproj -scheme PokerAI
 xcodebuild test -project PokerAI.xcodeproj -scheme PokerAI -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 ```
 
+可选本地配置：
+
+- `GoogleService-Info.plist` 不会提交到公开仓库。
+- 如果你希望在本地启用 Firebase Analytics，请自行在项目根目录放入对应配置文件。
+
 ## 公开文档
 
 公开仓库中保留的项目说明文档：
