@@ -23,8 +23,10 @@ PokerAI.xcodeproj/xcuserdata/
 .claudian/
 
 # Obsidian local workspace state
-.obsidian/workspace.json
-.obsidian/workspace-mobile.json
+.obsidian/
+
+# Local reports / media artifacts
+docs/test-reports/
 
 # Temporary files
 *.log

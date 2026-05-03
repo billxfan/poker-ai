@@ -1,77 +1,78 @@
-# 德扑AI训练器
+# Poker AI Trainer
 
-iOS 17+ 德州扑克 AI 训练应用
+[中文说明](./README.zh-Hans.md)
 
-## 技术栈
+Offline Texas Hold'em training app for iOS 17+, built around a six-handed table, distinct AI play styles, hand history review, and long-term player profiling.
 
-- **语言**: Swift 5.9+
-- **UI**: SwiftUI
-- **数据持久化**: JSON 文件 + UserDefaults
-- **项目生成**: XcodeGen
-- **最低版本**: iOS 17.0
+## Highlights
 
-## 项目结构
+- Six-handed no-limit Texas Hold'em training
+- Five AI opponents with different baseline styles
+- Hand history, recent-hands review, and AI profiling
+- Daily rewards and rewarded-ad virtual chip flow
+- English and Simplified Chinese localization
 
+## Tech Stack
+
+- Swift 5.9+
+- SwiftUI
+- XcodeGen
+- Local persistence with JSON files and `UserDefaults`
+- Firebase Analytics + AdMob rewarded ads
+
+## Project Structure
+
+```text
+src/
+  App/           App entry
+  Core/          Poker engine, AI, and models
+  Features/      Main, Game, Welfare, Statistics
+  Services/      Ads, analytics, persistence, archive
+  Shared/        Shared UI components and extensions
+PokerAI/         iOS target resources and plist files
+Tests/           Unit and regression tests
+docs/            Product, architecture, release, and App Store docs
 ```
-poker-ai/
-├── App/                      # 应用入口
-├── Core/
-│   ├── Models/              # 核心数据模型
-│   ├── Engine/              # 扑克引擎（发牌、下注、结算）
-│   └── AI/                  # AI 决策系统
-├── Features/
-│   ├── Main/                # 主页
-│   ├── Game/               # 对局页面
-│   ├── Welfare/             # 福利中心
-│   └── Statistics/          # 统计页面
-├── Services/
-│   ├── Database/            # JSON 数据文件读写
-│   ├── Storage/             # UserDefaults 存储
-│   └── Archive/             # 游戏存档
-└── Shared/                  # 共享组件
+
+## Build
+
+1. Install XcodeGen:
+
+```bash
+brew install xcodegen
 ```
 
-## 构建步骤
+2. Generate the Xcode project:
 
-1. 确保已安装 XcodeGen:
-   ```bash
-   brew install xcodegen
-   ```
+```bash
+xcodegen generate
+```
 
-2. 生成 Xcode 项目:
-   ```bash
-   cd poker_game
-   xcodegen generate
-   ```
+3. Open the project:
 
-3. 打开项目:
-   ```bash
-   open PokerAI.xcodeproj
-   ```
+```bash
+open PokerAI.xcodeproj
+```
 
-4. 在 Xcode 中选择模拟器并运行
+4. Build or test:
 
-## 主要功能
+```bash
+xcodebuild build -project PokerAI.xcodeproj -scheme PokerAI
+xcodebuild test -project PokerAI.xcodeproj -scheme PokerAI -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
+```
 
-- 6人局德州扑克对战
-- 5个不同风格的 AI 对手
-- 每日免费筹码领取
-- 历史统计与回放
-- 断点存档恢复
+## App Store Assets
 
-## AI 对手
+App Store submission materials live in [`docs/app-store`](./docs/app-store/), including:
 
-| AI | 昵称 | 风格 |
-|----|------|------|
-| AI-1 | 老K | 紧凶型 |
-| AI-2 | 小马 | 松凶型 |
-| AI-3 | 大叔 | 紧弱型 |
-| AI-4 | 小鱼 | 松弱型 |
-| AI-5 | 狐狸 | 平衡型 |
+- metadata copy
+- screenshot checklist
+- app privacy reference
+- overseas launch runbook
 
-## 游戏规则
+GitHub Pages files for the privacy policy and support page live in [`docs/site`](./docs/site/README.md).
 
-- 小盲: 10 筹码
-- 大盲: 20 筹码
-- 初始筹码: 2000
-- 6人固定桌
+## Notes
+
+- This app uses virtual training points only.
+- It does not support real-money gambling, cash-out, or multiplayer betting.
