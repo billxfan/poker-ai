@@ -32,6 +32,7 @@ src/
 PokerAI/         iOS target resources and plist files
 Tests/           Unit and regression tests
 docs/            Product, architecture, release, and App Store docs
+  site/          Public privacy policy and support pages
 ```
 
 ## Build
@@ -61,16 +62,13 @@ xcodebuild build -project PokerAI.xcodeproj -scheme PokerAI
 xcodebuild test -project PokerAI.xcodeproj -scheme PokerAI -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 ```
 
-## App Store Assets
+## Public Docs
 
-App Store submission materials live in [`docs/app-store`](./docs/app-store/), including:
+Public project-facing docs live here:
 
-- metadata copy
-- screenshot checklist
-- app privacy reference
-- overseas launch runbook
-
-GitHub Pages files for the privacy policy and support page live in [`docs/site`](./docs/site/README.md).
+- architecture notes: [`docs/architecture.md`](./docs/architecture.md)
+- design notes: [`docs/DESIGN.md`](./docs/DESIGN.md)
+- GitHub Pages setup for privacy/support pages: [`docs/site/README.md`](./docs/site/README.md)
 
 ## Notes
 

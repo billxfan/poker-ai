@@ -32,6 +32,7 @@ src/
 PokerAI/         iOS Target 资源与 plist
 Tests/           单元测试与回归测试
 docs/            产品、架构、上架、App Store 文档
+  site/          对外公开的隐私政策与支持页
 ```
 
 ## 构建方式
@@ -61,16 +62,13 @@ xcodebuild build -project PokerAI.xcodeproj -scheme PokerAI
 xcodebuild test -project PokerAI.xcodeproj -scheme PokerAI -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 ```
 
-## 上架素材
+## 公开文档
 
-`App Store` 相关素材在 [`docs/app-store`](./docs/app-store/) 下，包括：
+公开仓库中保留的项目说明文档：
 
-- 元数据文案
-- 截图清单
-- 隐私申报参考
-- 海外上架执行清单
-
-隐私政策页与支持页的 `GitHub Pages` 文件在 [`docs/site`](./docs/site/README.md)。
+- 架构说明：[`docs/architecture.md`](./docs/architecture.md)
+- 设计说明：[`docs/DESIGN.md`](./docs/DESIGN.md)
+- 隐私政策/支持页的 GitHub Pages 说明：[`docs/site/README.md`](./docs/site/README.md)
 
 ## 说明
 
