@@ -2,6 +2,7 @@
 
 这组静态页面位于 `docs/site/`：
 
+- `../index.html`
 - `index.html`
 - `privacy-policy.html`
 - `support.html`
@@ -22,6 +23,7 @@ GitHub 仓库：`billxfan/poker-ai`
 
 如果仓库 Pages 根目录是 `docs/`，通常访问形式会是：
 
+- `https://billxfan.github.io/poker-ai/`
 - `https://billxfan.github.io/poker-ai/site/`
 - `https://billxfan.github.io/poker-ai/site/privacy-policy.html`
 - `https://billxfan.github.io/poker-ai/site/support.html`
