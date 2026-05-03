@@ -56,7 +56,7 @@ extension Player {
     static func createHuman(position: Position, chips: Int) -> Player {
         Player(
             id: humanPlayerId,
-            name: "你",
+            name: L10n.t("player.you"),
             avatar: "🧑",
             position: position,
             chips: chips,

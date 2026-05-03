@@ -55,7 +55,7 @@ struct ChipCard: View {
     let chips: Int
     let title: String
 
-    init(chips: Int, title: String = "虚拟训练积分") {
+    init(chips: Int, title: String = L10n.t("chip.virtual_training_points")) {
         self.chips = chips
         self.title = title
     }

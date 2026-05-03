@@ -32,7 +32,7 @@ struct StatisticsView: View {
                 .tabViewStyle(.page(indexDisplayMode: .never))
             }
         }
-        .navigationTitle("历史统计")
+        .navigationTitle(L10n.t("statistics.title"))
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await viewModel.loadData()
@@ -53,7 +53,7 @@ private struct StatisticsAIProfilesTabView: View {
             if profiles.isEmpty {
                 VStack {
                     Spacer()
-                    Text("暂无 AI 画像")
+                    Text(L10n.t("statistics.no_ai_profiles"))
                         .font(.caption)
                         .foregroundColor(.textSecondary)
                     Spacer()
@@ -108,7 +108,7 @@ private struct StatisticsLoadingStateView: View {
             Spacer()
             ProgressView()
                 .progressViewStyle(CircularProgressViewStyle())
-            Text("加载中...")
+            Text(L10n.t("common.loading"))
                 .font(.caption)
                 .foregroundColor(.textSecondary)
                 .padding(.top, 8)

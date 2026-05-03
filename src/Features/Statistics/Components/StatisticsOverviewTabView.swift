@@ -53,7 +53,7 @@ private struct StatisticsSummaryCard: View {
     var body: some View {
         VStack(spacing: 12) {
             HStack {
-                Text("💰 当前筹码")
+                Text(L10n.t("statistics.current_chips"))
                     .font(.subheadline)
                 Spacer()
                 Text("\(chips)")
@@ -65,7 +65,7 @@ private struct StatisticsSummaryCard: View {
             Divider()
 
             HStack {
-                Text("📈 累计盈亏")
+                Text(L10n.t("statistics.total_profit"))
                     .font(.subheadline)
                 Spacer()
                 Text("\(totalProfit)")
@@ -86,25 +86,25 @@ private struct StatisticsProfitTrendCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("最近30手盈亏趋势")
+            Text(L10n.t("statistics.profit_trend.title"))
                 .font(.headline)
 
             if !points.isEmpty {
                 Chart {
-                    RuleMark(y: .value("盈亏平衡", 0))
+                    RuleMark(y: .value(L10n.t("statistics.chart.break_even"), 0))
                         .foregroundStyle(Color.textSecondary.opacity(0.5))
                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
 
                     ForEach(points) { point in
                         LineMark(
-                            x: .value("手数", point.handIndex),
-                            y: .value("累计盈亏", point.cumulativeProfit)
+                            x: .value(L10n.t("statistics.chart.hand_count"), point.handIndex),
+                            y: .value(L10n.t("statistics.chart.cumulative_profit"), point.cumulativeProfit)
                         )
                         .foregroundStyle(point.cumulativeProfit >= 0 ? Color.success : Color.error)
 
                         AreaMark(
-                            x: .value("手数", point.handIndex),
-                            y: .value("累计盈亏", point.cumulativeProfit)
+                            x: .value(L10n.t("statistics.chart.hand_count"), point.handIndex),
+                            y: .value(L10n.t("statistics.chart.cumulative_profit"), point.cumulativeProfit)
                         )
                         .foregroundStyle(
                             LinearGradient(
@@ -120,11 +120,11 @@ private struct StatisticsProfitTrendCard: View {
                 }
                 .frame(height: 150)
 
-                Text("最近 \(points.count) 手累计: \(points.last?.cumulativeProfit ?? 0)")
+                Text(L10n.f("statistics.profit_trend.recent_total", points.count, points.last?.cumulativeProfit ?? 0))
                     .font(.caption)
                     .foregroundColor(.textSecondary)
             } else {
-                Text("暂无数据")
+                Text(L10n.t("common.no_data"))
                     .font(.caption)
                     .foregroundColor(.textSecondary)
                     .frame(height: 150)
@@ -144,18 +144,18 @@ private struct StatisticsDetailedStatsCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("对局数据")
+                Text(L10n.t("statistics.game_data"))
                     .font(.headline)
                 Spacer()
             }
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                StatisticsValueTile(label: "总局数", value: "\(statistics?.totalHands ?? 0)", explanation: .totalHands, selection: $explanation)
-                StatisticsValueTile(label: "总胜率", value: String(format: "%.1f%%", (statistics?.winRate ?? 0) * 100), explanation: .winRate, selection: $explanation)
+                StatisticsValueTile(label: L10n.t("metric.total_hands"), value: "\(statistics?.totalHands ?? 0)", explanation: .totalHands, selection: $explanation)
+                StatisticsValueTile(label: L10n.t("metric.win_rate"), value: String(format: "%.1f%%", (statistics?.winRate ?? 0) * 100), explanation: .winRate, selection: $explanation)
                 StatisticsValueTile(label: "VPIP", value: String(format: "%.1f%%", (statistics?.vpip ?? 0) * 100), explanation: .vpip, selection: $explanation)
                 StatisticsValueTile(label: "PFR", value: String(format: "%.1f%%", (statistics?.pfr ?? 0) * 100), explanation: .pfr, selection: $explanation)
-                StatisticsValueTile(label: "3Bet率", value: String(format: "%.1f%%", (statistics?.threeBetRate ?? 0) * 100), explanation: .threeBet, selection: $explanation)
-                StatisticsValueTile(label: "摊牌胜率", value: String(format: "%.1f%%", (statistics?.showdownWinRate ?? 0) * 100), explanation: .showdownWinRate, selection: $explanation)
+                StatisticsValueTile(label: L10n.t("metric.three_bet_rate"), value: String(format: "%.1f%%", (statistics?.threeBetRate ?? 0) * 100), explanation: .threeBet, selection: $explanation)
+                StatisticsValueTile(label: L10n.t("metric.showdown_win_rate"), value: String(format: "%.1f%%", (statistics?.showdownWinRate ?? 0) * 100), explanation: .showdownWinRate, selection: $explanation)
             }
 
             if let explanation {
@@ -230,29 +230,29 @@ enum MetricExplanation: String, Identifiable {
     var text: String {
         switch self {
         case .totalHands:
-            return "总局数：已记录的完整手牌数量。"
+            return L10n.t("metric_explanation.total_hands")
         case .winRate:
-            return "总胜率：你赢下或平分底池的手牌占比。"
+            return L10n.t("metric_explanation.win_rate")
         case .vpip:
-            return "VPIP：翻牌前主动投入筹码入池的比例，不含被迫下盲注。"
+            return L10n.t("metric_explanation.vpip")
         case .pfr:
-            return "PFR：翻牌前主动加注的比例，用来看进攻性。"
+            return L10n.t("metric_explanation.pfr")
         case .threeBet:
-            return "3Bet率：面对别人首次加注后再次加注的比例。"
+            return L10n.t("metric_explanation.three_bet")
         case .showdownWinRate:
-            return "摊牌胜率：进入摊牌后没有输掉的比例。"
+            return L10n.t("metric_explanation.showdown_win_rate")
         case .af:
-            return "AF：攻击因子，下注/加注次数相对跟注次数的比例。"
+            return L10n.t("metric_explanation.af")
         case .totalProfit:
-            return "累计盈亏：该对象已记录手牌的筹码净变化。"
+            return L10n.t("metric_explanation.total_profit")
         case .humanVpip:
-            return "你的VPIP：AI观察到你翻牌前主动入池的比例，越高越松。"
+            return L10n.t("metric_explanation.human_vpip")
         case .humanPfr:
-            return "你的PFR：AI观察到你翻牌前加注的比例，反映进攻倾向。"
+            return L10n.t("metric_explanation.human_pfr")
         case .humanFoldToAggression:
-            return "受压弃牌率：AI观察到你面对加注时弃牌的比例，越高越容易被逼退。"
+            return L10n.t("metric_explanation.human_fold_to_aggression")
         case .humanBluffRate:
-            return "诈唬成功率：AI观察到你诈唬（弱牌激进）后赢下底池的比例。"
+            return L10n.t("metric_explanation.human_bluff_rate")
         }
     }
 }

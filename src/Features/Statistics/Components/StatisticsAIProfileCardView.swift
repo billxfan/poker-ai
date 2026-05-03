@@ -27,7 +27,7 @@ struct StatisticsAIProfileCardView: View {
                             .cornerRadius(4)
                     }
 
-                    Text("\(profile.learningStatusText) · 样本 \(profile.handsPlayed) 手")
+                    Text(L10n.f("ai_profile.sample_status", profile.learningStatusText, profile.handsPlayed))
                         .font(.caption)
                         .foregroundColor(.textSecondary)
                 }
@@ -40,7 +40,7 @@ struct StatisticsAIProfileCardView: View {
                 StatisticsMiniValueTile(label: "PFR", value: String(format: "%.1f%%", profile.pfr * 100), explanation: .pfr, selection: $explanation)
                 StatisticsMiniValueTile(label: "3Bet", value: String(format: "%.1f%%", profile.threeBet * 100), explanation: .threeBet, selection: $explanation)
                 StatisticsMiniValueTile(label: "AF", value: String(format: "%.2f", profile.af), explanation: .af, selection: $explanation)
-                StatisticsMiniValueTile(label: "累计盈亏", value: "\(profile.totalProfit)", explanation: .totalProfit, selection: $explanation)
+                StatisticsMiniValueTile(label: L10n.t("metric.total_profit"), value: "\(profile.totalProfit)", explanation: .totalProfit, selection: $explanation)
             }
 
             if let explanation {
@@ -63,15 +63,15 @@ struct StatisticsAIProfileCardView: View {
                 Divider()
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("对你的画像 · 已观察 \(humanRead.handsObserved) 手")
+                    Text(L10n.f("ai_profile.read_on_you", humanRead.handsObserved))
                         .font(.caption)
                         .foregroundColor(.textSecondary)
 
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                        StatisticsMiniValueTile(label: "你的VPIP", value: String(format: "%.1f%%", humanRead.vpip * 100), explanation: .humanVpip, selection: $humanExplanation)
-                        StatisticsMiniValueTile(label: "你的PFR", value: String(format: "%.1f%%", humanRead.pfr * 100), explanation: .humanPfr, selection: $humanExplanation)
-                        StatisticsMiniValueTile(label: "受压弃牌", value: String(format: "%.1f%%", humanRead.foldToAggressionRate * 100), explanation: .humanFoldToAggression, selection: $humanExplanation)
-                        StatisticsMiniValueTile(label: "诈唬成功", value: String(format: "%.1f%%", humanRead.bluffRate * 100), explanation: .humanBluffRate, selection: $humanExplanation)
+                        StatisticsMiniValueTile(label: L10n.t("metric.human_vpip"), value: String(format: "%.1f%%", humanRead.vpip * 100), explanation: .humanVpip, selection: $humanExplanation)
+                        StatisticsMiniValueTile(label: L10n.t("metric.human_pfr"), value: String(format: "%.1f%%", humanRead.pfr * 100), explanation: .humanPfr, selection: $humanExplanation)
+                        StatisticsMiniValueTile(label: L10n.t("metric.fold_to_pressure"), value: String(format: "%.1f%%", humanRead.foldToAggressionRate * 100), explanation: .humanFoldToAggression, selection: $humanExplanation)
+                        StatisticsMiniValueTile(label: L10n.t("metric.bluff_success"), value: String(format: "%.1f%%", humanRead.bluffRate * 100), explanation: .humanBluffRate, selection: $humanExplanation)
                     }
 
                     if let humanExplanation {
@@ -79,16 +79,16 @@ struct StatisticsAIProfileCardView: View {
                     }
 
                     if humanRead.defaultWinCount > 0 {
-                        Text("被动赢 \(humanRead.defaultWinCount) 次（对手弃牌到你）")
+                        Text(L10n.f("ai_profile.default_wins", humanRead.defaultWinCount))
                             .font(.caption2)
                             .foregroundColor(.textSecondary)
                     }
 
-                    Text("AI判断：\(humanRead.readSummaryText)")
+                    Text(L10n.f("ai_profile.ai_read", humanRead.readSummaryText))
                         .font(.caption2)
                         .foregroundColor(.textSecondary)
 
-                    Text("针对性策略：\(humanRead.counterStrategyText)")
+                    Text(L10n.f("ai_profile.counter_strategy", humanRead.counterStrategyText))
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
@@ -153,27 +153,27 @@ private struct StatisticsLearningBiasChart: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("学习曲线")
+            Text(L10n.t("ai_profile.learning_curve"))
                 .font(.caption)
                 .foregroundColor(.textSecondary)
 
             Chart {
-                RuleMark(y: .value("中性", 0))
+                RuleMark(y: .value(L10n.t("ai_profile.chart.neutral"), 0))
                     .foregroundStyle(Color.textSecondary.opacity(0.35))
                     .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
 
                 ForEach(profile.learningSnapshots) { snapshot in
                     LineMark(
-                        x: .value("手数", snapshot.handIndex),
-                        y: .value("偏移", snapshot.aggressionBias * 100),
-                        series: .value("类型", "进攻偏移")
+                        x: .value(L10n.t("statistics.chart.hand_count"), snapshot.handIndex),
+                        y: .value(L10n.t("ai_profile.chart.bias"), snapshot.aggressionBias * 100),
+                        series: .value(L10n.t("ai_profile.chart.type"), L10n.t("ai_profile.chart.aggression_bias"))
                     )
                     .foregroundStyle(Color.statistics)
 
                     LineMark(
-                        x: .value("手数", snapshot.handIndex),
-                        y: .value("偏移", snapshot.tightnessBias * 100),
-                        series: .value("类型", "紧度偏移")
+                        x: .value(L10n.t("statistics.chart.hand_count"), snapshot.handIndex),
+                        y: .value(L10n.t("ai_profile.chart.bias"), snapshot.tightnessBias * 100),
+                        series: .value(L10n.t("ai_profile.chart.type"), L10n.t("ai_profile.chart.tightness_bias"))
                     )
                     .foregroundStyle(Color.warning)
                 }
@@ -184,11 +184,11 @@ private struct StatisticsLearningBiasChart: View {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
                     Circle().fill(Color.statistics).frame(width: 6, height: 6)
-                    Text("进攻偏移：>0 偏激进（爱加注），<0 偏保守（爱过牌/跟注）")
+                    Text(L10n.t("ai_profile.aggression_bias_hint"))
                 }
                 HStack(spacing: 4) {
                     Circle().fill(Color.warning).frame(width: 6, height: 6)
-                    Text("紧度偏移：>0 偏紧（只玩好牌），<0 偏松（什么牌都入池）")
+                    Text(L10n.t("ai_profile.tightness_bias_hint"))
                 }
             }
             .font(.caption2)
@@ -202,7 +202,7 @@ private struct StatisticsHumanTrendChart: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("AI 眼中的你")
+            Text(L10n.t("ai_profile.you_from_ai"))
                 .font(.caption)
                 .foregroundColor(.textSecondary)
 
@@ -210,18 +210,18 @@ private struct StatisticsHumanTrendChart: View {
                 ForEach(profile.learningSnapshots) { snapshot in
                     if let vpip = snapshot.observedHumanVPIP {
                         LineMark(
-                            x: .value("手数", snapshot.handIndex),
-                            y: .value("百分比", vpip * 100),
-                            series: .value("指标", "你的 VPIP")
+                            x: .value(L10n.t("statistics.chart.hand_count"), snapshot.handIndex),
+                            y: .value(L10n.t("statistics.chart.percentage"), vpip * 100),
+                            series: .value(L10n.t("statistics.chart.metric"), L10n.t("metric.human_vpip_spaced"))
                         )
                         .foregroundStyle(Color.success)
                     }
 
                     if let foldRate = snapshot.observedHumanFoldToAggression {
                         LineMark(
-                            x: .value("手数", snapshot.handIndex),
-                            y: .value("百分比", foldRate * 100),
-                            series: .value("指标", "受压弃牌率")
+                            x: .value(L10n.t("statistics.chart.hand_count"), snapshot.handIndex),
+                            y: .value(L10n.t("statistics.chart.percentage"), foldRate * 100),
+                            series: .value(L10n.t("statistics.chart.metric"), L10n.t("metric.fold_to_pressure_rate"))
                         )
                         .foregroundStyle(Color.error)
                     }
@@ -233,11 +233,11 @@ private struct StatisticsHumanTrendChart: View {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
                     Circle().fill(Color.success).frame(width: 6, height: 6)
-                    Text("你的 VPIP：你主动入池的频率，越高越松")
+                    Text(L10n.t("ai_profile.human_vpip_hint"))
                 }
                 HStack(spacing: 4) {
                     Circle().fill(Color.error).frame(width: 6, height: 6)
-                    Text("受压弃牌率：面对加注/全压时弃牌的比例，越高越容易被逼退")
+                    Text(L10n.t("ai_profile.fold_to_pressure_hint"))
                 }
             }
             .font(.caption2)

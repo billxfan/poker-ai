@@ -47,30 +47,30 @@ struct AIOpponentProfile: Codable {
     var readSummaryText: String {
         let looseness: String
         switch perceivedTightness {
-        case 0.65...: looseness = "偏紧"
-        case ..<0.35: looseness = "偏松"
-        default: looseness = "中等入局"
+        case 0.65...: looseness = L10n.t("opponent_read.tight")
+        case ..<0.35: looseness = L10n.t("opponent_read.loose")
+        default: looseness = L10n.t("opponent_read.medium_vpip")
         }
 
         let aggression: String
         switch aggressionRate {
-        case ..<0.18: aggression = "偏被动"
-        case 0.38...: aggression = "偏激进"
-        default: aggression = "进攻中等"
+        case ..<0.18: aggression = L10n.t("opponent_read.passive")
+        case 0.38...: aggression = L10n.t("opponent_read.aggressive")
+        default: aggression = L10n.t("opponent_read.medium_aggression")
         }
 
         let pressure: String
         switch foldToAggressionRate {
-        case 0.55...: pressure = "受压易弃牌"
-        case ..<0.28 where continueFacingAggressionRate > 0.45: pressure = "抗压偏强"
-        default: pressure = "抗压一般"
+        case 0.55...: pressure = L10n.t("opponent_read.folds_to_pressure")
+        case ..<0.28 where continueFacingAggressionRate > 0.45: pressure = L10n.t("opponent_read.resists_pressure")
+        default: pressure = L10n.t("opponent_read.medium_pressure")
         }
 
         let bluff: String
         switch bluffRate {
-        case 0.45...: bluff = "诈唬偏多"
-        case ..<0.18: bluff = "诈唬较少"
-        default: bluff = "诈唬适中"
+        case 0.45...: bluff = L10n.t("opponent_read.bluffs_often")
+        case ..<0.18: bluff = L10n.t("opponent_read.bluffs_rarely")
+        default: bluff = L10n.t("opponent_read.medium_bluff")
         }
 
         return "\(looseness) · \(aggression) · \(pressure) · \(bluff)"
@@ -78,22 +78,22 @@ struct AIOpponentProfile: Codable {
 
     var counterStrategyText: String {
         if foldToAggressionRate >= 0.50 {
-            return "AI 会增加偷池与持续下注频率"
+            return L10n.t("opponent_strategy.steal_more")
         }
 
         if continueFacingAggressionRate >= 0.55 {
-            return "AI 会减少纯诈唬，转向价值下注"
+            return L10n.t("opponent_strategy.value_bet_more")
         }
 
         if bluffRate >= 0.40 {
-            return "AI 会更愿意跟注到底，减少被诈唬"
+            return L10n.t("opponent_strategy.call_down_more")
         }
 
         if aggressionRate >= 0.38, bluffRate < 0.22 {
-            return "AI 会更尊重你的进攻，适当收紧跟注"
+            return L10n.t("opponent_strategy.respect_aggression")
         }
 
-        return "AI 会保持基线策略，继续观察你的倾向"
+        return L10n.t("opponent_strategy.baseline")
     }
 
     mutating func observeHand(

@@ -25,18 +25,18 @@ struct MainView: View {
             }
             .padding(16)
             .background(Color.background)
-            .navigationTitle("德扑AI训练器")
+            .navigationTitle(L10n.t("app.name"))
             .navigationBarTitleDisplayMode(.large)
-            .alert("⚠️ 确认重置", isPresented: $viewModel.showNewGameConfirmation) {
-                Button("取消", role: .cancel) { }
-                Button("确认") {
+            .alert(L10n.t("main.reset.title"), isPresented: $viewModel.showNewGameConfirmation) {
+                Button(L10n.t("common.cancel"), role: .cancel) { }
+                Button(L10n.t("common.confirm")) {
                     loadedArchive = nil  // 清除旧存档，确保新游戏从干净状态开始
                     viewModel.startNewGame()
                     hasSavedArchive = false
                     navigateToGame = true
                 }
             } message: {
-                Text("此操作将重置所有AI的学习数据，重新从零开始训练")
+                Text(L10n.t("main.reset.message"))
             }
             .navigationDestination(isPresented: $navigateToGame) {
                 GameView(
@@ -64,6 +64,7 @@ struct MainView: View {
             .onAppear {
                 viewModel.loadState()
                 hasSavedArchive = viewModel.hasArchive
+                prepareAds()
             }
             .onChange(of: navigateToGame) { _, isNavigating in
                 if !isNavigating {
@@ -81,17 +82,17 @@ struct MainView: View {
     private var dailyWelfareCard: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("📅 每日免费领 2,000")
+                Text(L10n.t("main.daily_free.title"))
                     .font(.headline)
 
                 Spacer()
 
                 if viewModel.hasClaimedDailyFree {
-                    Text("✅ 今日已到账")
+                    Text(L10n.t("main.daily_free.claimed"))
                         .font(.caption)
                         .foregroundColor(.success)
                 } else {
-                    Text("⏳ 即将到账...")
+                    Text(L10n.t("main.daily_free.pending"))
                         .font(.caption)
                         .foregroundColor(.textSecondary)
                 }
@@ -115,7 +116,7 @@ struct MainView: View {
 
             actionButton(
                 icon: "▶️",
-                title: "继续游戏",
+                title: L10n.t("main.continue"),
                 color: .secondary,
                 isEnabled: canContinueGame
             ) {
@@ -131,7 +132,7 @@ struct MainView: View {
 
             actionButton(
                 icon: "🔄",
-                title: "新开始",
+                title: L10n.t("main.new_game"),
                 color: .accent,
                 isEnabled: true
             ) {
@@ -140,7 +141,7 @@ struct MainView: View {
 
             actionButton(
                 icon: "🎁",
-                title: "福利中心",
+                title: L10n.t("main.welfare"),
                 color: .welfare,
                 isEnabled: true
             ) {
@@ -149,7 +150,7 @@ struct MainView: View {
 
             actionButton(
                 icon: "📊",
-                title: "历史统计",
+                title: L10n.t("main.statistics"),
                 color: .statistics,
                 isEnabled: true
             ) {
@@ -179,6 +180,12 @@ struct MainView: View {
             .cornerRadius(12)
         }
         .disabled(!isEnabled)
+    }
+
+    private func prepareAds() {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let rootVC = windowScene.windows.first?.rootViewController else { return }
+        AdMobService.shared.prepareForAds(from: rootVC)
     }
 }
 

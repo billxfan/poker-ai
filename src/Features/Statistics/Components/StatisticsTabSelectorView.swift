@@ -6,9 +6,9 @@ struct StatisticsTabSelectorView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-                tabButton("📊 数据统计", index: 0)
-                tabButton("🤖 AI画像", index: 1)
-                tabButton("🃏 最近30手", index: 2)
+                tabButton(L10n.t("statistics.tab.overview"), index: 0)
+                tabButton(L10n.t("statistics.tab.ai_profiles"), index: 1)
+                tabButton(L10n.t("statistics.tab.recent_hands"), index: 2)
             }
 
             Rectangle()

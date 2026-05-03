@@ -22,17 +22,17 @@ struct RoundEndModal: View {
                 VStack(spacing: 0) {
                     ScrollView {
                         VStack(spacing: 18) {
-                            Text("本局结束")
+                            Text(L10n.t("round_end.title"))
                                 .font(.title2)
                                 .fontWeight(.bold)
 
                             if isSplitPot {
                                 let winnerNames = players
                                     .filter { winningPlayerIds.contains($0.id) }
-                                    .map { $0.id == Player.humanPlayerId ? "你" : $0.name }
+                                    .map { $0.id == Player.humanPlayerId ? L10n.t("player.you") : $0.name }
                                     .joined(separator: " / ")
 
-                                Text("平局分池")
+                                Text(L10n.t("round_end.split_pot"))
                                     .font(.title3)
                                     .fontWeight(.semibold)
 
@@ -41,7 +41,7 @@ struct RoundEndModal: View {
                                     .foregroundColor(.secondary)
                             } else if winningPlayerIds.count > 1 {
                                 // Side pot: different players won different pots
-                                Text("多人获胜")
+                                Text(L10n.t("round_end.multiple_winners"))
                                     .font(.title3)
                                     .fontWeight(.semibold)
 
@@ -49,7 +49,7 @@ struct RoundEndModal: View {
                                     let playerProfit = (payouts[player.id] ?? 0) - (handBets[player.id] ?? 0)
                                     HStack {
                                         Text(player.avatar)
-                                        Text(player.id == Player.humanPlayerId ? "你" : player.name)
+                                        Text(player.id == Player.humanPlayerId ? L10n.t("player.you") : player.name)
                                         Spacer()
                                         Text(playerProfit >= 0 ? "+\(playerProfit)" : "\(playerProfit)")
                                             .foregroundColor(playerProfit >= 0 ? .success : .error)
@@ -59,7 +59,7 @@ struct RoundEndModal: View {
                             } else if let winner {
                                 HStack {
                                     Text(winner.avatar)
-                                    Text(winner.id == Player.humanPlayerId ? "你获胜!" : "\(winner.name) 获胜")
+                                    Text(winner.id == Player.humanPlayerId ? L10n.t("round_end.you_win") : L10n.f("round_end.player_wins", winner.name))
                                         .fontWeight(.semibold)
                                 }
                                 .font(.title3)
@@ -70,7 +70,7 @@ struct RoundEndModal: View {
                                 .foregroundColor(profit >= 0 ? .success : .error)
 
                             VStack(spacing: 8) {
-                                Text("公共牌")
+                                Text(L10n.t("game.community_cards"))
                                     .font(.headline)
 
                                 HStack(spacing: 4) {
@@ -81,17 +81,17 @@ struct RoundEndModal: View {
                             }
 
                             VStack(spacing: 8) {
-                                Text("各方手牌")
+                                Text(L10n.t("round_end.all_hole_cards"))
                                     .font(.headline)
 
                                 ForEach(players.filter { !$0.isFolded && $0.holeCards != nil }) { player in
                                     HStack {
                                         Text(player.avatar)
                                             .font(.title2)
-                                        Text(player.id == Player.humanPlayerId ? "你" : player.name)
+                                        Text(player.id == Player.humanPlayerId ? L10n.t("player.you") : player.name)
                                             .font(.subheadline)
                                         if winningPlayerIds.contains(player.id) {
-                                            Text("胜")
+                                            Text(L10n.t("common.win_badge"))
                                                 .font(.caption)
                                                 .foregroundColor(.white)
                                                 .padding(.horizontal, 6)
@@ -122,7 +122,7 @@ struct RoundEndModal: View {
                         Button(action: onNextHand) {
                             HStack {
                                 Image(systemName: "arrow.right.circle.fill")
-                                Text("下一局")
+                                Text(L10n.t("round_end.next_hand"))
                             }
                             .font(.headline)
                             .foregroundColor(.white)
@@ -133,7 +133,7 @@ struct RoundEndModal: View {
                         }
 
                         Button(action: onReturnToMain) {
-                            Text("返回主页")
+                            Text(L10n.t("round_end.return_home"))
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                                 .frame(maxWidth: .infinity)

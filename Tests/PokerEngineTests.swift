@@ -463,10 +463,9 @@ final class PokerEngineTests: XCTestCase {
         XCTAssertEqual(firstHandState.handNumber, 1)
         XCTAssertEqual(secondHandState.handNumber, 2)
         XCTAssertEqual(firstHandState.players.first { $0.id == 0 }?.position, .bb)
-        // 顺时针轮转：SB → BB → UTG → MP → CO → BTN
-        XCTAssertEqual(secondHandState.players.first { $0.id == 0 }?.position, .utg)
-        XCTAssertEqual(secondHandState.players.first { $0.id == 4 }?.position, .sb)
-        XCTAssertEqual(secondHandState.players.first { $0.id == 5 }?.position, .bb)
+        XCTAssertEqual(secondHandState.players.first { $0.id == 0 }?.position, .sb)
+        XCTAssertEqual(secondHandState.players.first { $0.id == 4 }?.position, .co)
+        XCTAssertEqual(secondHandState.players.first { $0.id == 5 }?.position, .btn)
     }
 
     func testPreFlopBettingOrderStartsFromUTGAfterBlindsPosted() async {
@@ -566,7 +565,9 @@ final class PokerEngineTests: XCTestCase {
 
         XCTAssertNotEqual(firstHand.players.first { $0.position == .sb }?.id, secondHand.players.first { $0.position == .sb }?.id)
         XCTAssertNotEqual(secondHand.players.first { $0.position == .sb }?.id, thirdHand.players.first { $0.position == .sb }?.id)
-        XCTAssertEqual(secondHand.players.first { $0.position == .bb }?.id, firstHand.players.first { $0.position == .sb }?.id)
-        XCTAssertEqual(thirdHand.players.first { $0.position == .bb }?.id, secondHand.players.first { $0.position == .sb }?.id)
+        XCTAssertEqual(secondHand.players.first { $0.position == .sb }?.id, firstHand.players.first { $0.position == .bb }?.id)
+        XCTAssertEqual(thirdHand.players.first { $0.position == .sb }?.id, secondHand.players.first { $0.position == .bb }?.id)
+        XCTAssertEqual(secondHand.players.first { $0.position == .btn }?.id, firstHand.players.first { $0.position == .sb }?.id)
+        XCTAssertEqual(thirdHand.players.first { $0.position == .btn }?.id, secondHand.players.first { $0.position == .sb }?.id)
     }
 }

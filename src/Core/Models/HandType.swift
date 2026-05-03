@@ -14,16 +14,16 @@ enum HandType: Int, Codable, Comparable {
 
     var displayName: String {
         switch self {
-        case .highCard: return "高牌"
-        case .onePair: return "一对"
-        case .twoPair: return "两对"
-        case .threeOfAKind: return "三条"
-        case .straight: return "顺子"
-        case .flush: return "同花"
-        case .fullHouse: return "葫芦"
-        case .fourOfAKind: return "四条"
-        case .straightFlush: return "同花顺"
-        case .royalFlush: return "皇家同花顺"
+        case .highCard: return L10n.t("hand_type.high_card")
+        case .onePair: return L10n.t("hand_type.one_pair")
+        case .twoPair: return L10n.t("hand_type.two_pair")
+        case .threeOfAKind: return L10n.t("hand_type.three_of_a_kind")
+        case .straight: return L10n.t("hand_type.straight")
+        case .flush: return L10n.t("hand_type.flush")
+        case .fullHouse: return L10n.t("hand_type.full_house")
+        case .fourOfAKind: return L10n.t("hand_type.four_of_a_kind")
+        case .straightFlush: return L10n.t("hand_type.straight_flush")
+        case .royalFlush: return L10n.t("hand_type.royal_flush")
         }
     }
 

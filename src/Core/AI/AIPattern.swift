@@ -608,16 +608,22 @@ struct AIPattern: Codable {
             )
         }
 
-        let groupedActions = Dictionary(grouping: allActions, by: \.playerId)
+        let visibleActions = actionsVisibleToObserver(playerId: playerId, allActions: allActions)
+        let groupedActions = Dictionary(grouping: visibleActions, by: \.playerId)
         for opponent in players where opponent.id != playerId {
             let opponentActions = groupedActions[opponent.id] ?? []
+            let observerActions = groupedActions[playerId] ?? []
             let opponentShownHandType = shownHandTypes[opponent.id]
             let opponentReachedShowdown = showdown && opponentShownHandType != nil
             let opponentDidWin = winningPlayerIds.contains(opponent.id)
 
-            // Skip only if opponent had no actions AND didn't reach showdown AND didn't win
-            // This ensures we observe even passive wins (e.g. everyone folds to BB)
-            if opponentActions.isEmpty && !opponentReachedShowdown && !opponentDidWin {
+            if !shouldUpdateObservedProfile(
+                observerStyle: style,
+                observerActions: observerActions,
+                opponentActions: opponentActions,
+                opponentDidWin: opponentDidWin,
+                opponentReachedShowdown: opponentReachedShowdown
+            ) {
                 continue
             }
 
@@ -625,7 +631,7 @@ struct AIPattern: Codable {
             observed.observeHand(
                 playerId: opponent.id,
                 playerActions: opponentActions,
-                allActions: allActions,
+                allActions: visibleActions,
                 didWin: opponentDidWin,
                 showdown: opponentReachedShowdown,
                 shownHandType: opponentShownHandType
@@ -635,5 +641,73 @@ struct AIPattern: Codable {
 
         appendLearningSnapshot(for: style)
         lastUpdated = Date()
+    }
+
+    private func actionsVisibleToObserver(playerId: Int, allActions: [Action]) -> [Action] {
+        var visibleActions: [Action] = []
+        var observerFolded = false
+
+        for action in allActions {
+            guard !observerFolded else { break }
+            visibleActions.append(action)
+
+            if action.playerId == playerId, action.type == .fold {
+                observerFolded = true
+            }
+        }
+
+        return visibleActions
+    }
+
+    private func shouldUpdateObservedProfile(
+        observerStyle: AIStyle,
+        observerActions: [Action],
+        opponentActions: [Action],
+        opponentDidWin: Bool,
+        opponentReachedShowdown: Bool
+    ) -> Bool {
+        guard !opponentActions.isEmpty || opponentReachedShowdown || opponentDidWin else {
+            return false
+        }
+
+        let aggressiveTypes: Set<ActionType> = [.raise, .bet, .allIn]
+        let voluntaryTypes: Set<ActionType> = [.call, .raise, .bet, .allIn]
+        let opponentWasAggressive = opponentActions.contains { aggressiveTypes.contains($0.type) }
+        let opponentVoluntarilyEntered = opponentActions.contains { $0.street == .preFlop && voluntaryTypes.contains($0.type) }
+        let opponentFoldedToPressure = didOpponentFoldAfterObserverAggression(
+            observerActions: observerActions,
+            opponentActions: opponentActions
+        )
+        let hasPostFlopSignal = opponentActions.contains { $0.street != .preFlop }
+
+        switch observerStyle {
+        case .tightAggressive:
+            return opponentWasAggressive || opponentFoldedToPressure || opponentReachedShowdown || opponentDidWin
+        case .looseAggressive:
+            return opponentVoluntarilyEntered || opponentFoldedToPressure || hasPostFlopSignal || opponentDidWin
+        case .tightWeak:
+            return opponentWasAggressive || opponentReachedShowdown
+        case .looseWeak:
+            return opponentVoluntarilyEntered || opponentReachedShowdown || opponentDidWin
+        case .balanced:
+            return !opponentActions.isEmpty || opponentReachedShowdown || opponentDidWin
+        }
+    }
+
+    private func didOpponentFoldAfterObserverAggression(
+        observerActions: [Action],
+        opponentActions: [Action]
+    ) -> Bool {
+        let aggressiveTypes: Set<ActionType> = [.raise, .bet, .allIn]
+
+        for opponentAction in opponentActions where opponentAction.type == .fold {
+            if observerActions.contains(where: { action in
+                action.street == opponentAction.street && aggressiveTypes.contains(action.type)
+            }) {
+                return true
+            }
+        }
+
+        return false
     }
 }

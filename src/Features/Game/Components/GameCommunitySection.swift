@@ -10,7 +10,7 @@ struct GameCommunitySection: View {
         VStack(spacing: 8) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("底池")
+                    Text(L10n.t("game.pot"))
                         .font(.caption2)
                         .foregroundColor(.textOnDark.opacity(0.6))
                     Text("\(pot)")
@@ -22,7 +22,7 @@ struct GameCommunitySection: View {
 
                 if callAmount > 0 {
                     VStack(alignment: .trailing, spacing: 2) {
-                        Text("跟注")
+                        Text(L10n.t("action.call"))
                             .font(.caption2)
                             .foregroundColor(.textOnDark.opacity(0.6))
                         Text("\(callAmount)")

@@ -6,11 +6,11 @@ struct StatisticsHandRecordCard: View {
     private var resultText: String {
         switch record.result {
         case .win:
-            return "胜 +\(record.profit)"
+            return L10n.f("hand_record.win_profit", record.profit)
         case .lose:
-            return "负 \(record.profit)"
+            return L10n.f("hand_record.lose_profit", record.profit)
         case .tie:
-            return record.profit >= 0 ? "平 +\(record.profit)" : "平 \(record.profit)"
+            return record.profit >= 0 ? L10n.f("hand_record.tie_profit_plus", record.profit) : L10n.f("hand_record.tie_profit", record.profit)
         }
     }
 
@@ -32,7 +32,7 @@ struct StatisticsHandRecordCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text(record.showdown ? "摊牌局" : "未摊牌")
+                Text(record.showdown ? L10n.t("hand_record.showdown") : L10n.t("hand_record.no_showdown"))
                     .font(.caption)
                     .foregroundColor(.textSecondary)
 
@@ -47,10 +47,10 @@ struct StatisticsHandRecordCard: View {
             Divider()
 
             HStack {
-                Text("底池: \(record.pot)")
+                Text(L10n.f("game.pot_amount", record.pot))
                     .font(.caption)
                 Spacer()
-                Text("公共牌:")
+                Text(L10n.t("game.community_cards_colon"))
                     .font(.caption)
                     .foregroundColor(.textSecondary)
 
@@ -67,7 +67,7 @@ struct StatisticsHandRecordCard: View {
 
             if let holeCards = record.playerHoleCards {
                 HStack {
-                    Text("你的手牌:")
+                    Text(L10n.t("hand_record.your_hole_cards"))
                         .font(.caption)
                         .foregroundColor(.textSecondary)
 
@@ -85,7 +85,7 @@ struct StatisticsHandRecordCard: View {
                 Divider()
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("已知对手手牌")
+                    Text(L10n.t("hand_record.known_opponent_hands"))
                         .font(.caption)
                         .foregroundColor(.textSecondary)
 
@@ -101,7 +101,7 @@ struct StatisticsHandRecordCard: View {
                                         .fontWeight(.semibold)
 
                                     if hand.isWinner {
-                                        Text("胜")
+                                        Text(L10n.t("common.win_badge"))
                                             .font(.caption2)
                                             .foregroundColor(.white)
                                             .padding(.horizontal, 6)

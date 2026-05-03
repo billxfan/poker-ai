@@ -8,10 +8,10 @@ enum Street: String, Codable, CaseIterable {
 
     var displayName: String {
         switch self {
-        case .preFlop: return "预翻牌"
-        case .flop: return "翻牌"
-        case .turn: return "转牌"
-        case .river: return "河牌"
+        case .preFlop: return L10n.t("street.pre_flop")
+        case .flop: return L10n.t("street.flop")
+        case .turn: return L10n.t("street.turn")
+        case .river: return L10n.t("street.river")
         }
     }
 

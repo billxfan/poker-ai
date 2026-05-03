@@ -11,7 +11,6 @@ struct PokerAIApp: App {
         #if canImport(FirebaseCore)
         FirebaseApp.configure()
         #endif
-        AdMobService.shared.configure()
         AnalyticsService.shared.log(AnalyticsEvent.appLaunch)
     }
 

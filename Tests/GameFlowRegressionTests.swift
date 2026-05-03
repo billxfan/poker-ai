@@ -278,6 +278,89 @@ final class GameFlowRegressionTests: XCTestCase {
         XCTAssertEqual(humanProfile.foldToAggressionRate, 1.0, accuracy: 0.0001)
     }
 
+    func testAIStylesObserveHumanThroughDifferentLenses() {
+        let players = [
+            Player.createAI(id: 3, name: "大叔", avatar: "🧔", position: .co, chips: 2000),
+            Player.createAI(id: 4, name: "小鱼", avatar: "👧", position: .btn, chips: 2000),
+            Player.createHuman(position: .bb, chips: 2000)
+        ]
+        let actions = [
+            Action(playerId: 0, street: .preFlop, type: .call, amount: 20),
+            Action(playerId: 3, street: .preFlop, type: .fold),
+            Action(playerId: 4, street: .preFlop, type: .call, amount: 20)
+        ]
+
+        var tightWeakPattern = AIPattern()
+        tightWeakPattern.updateAfterHand(
+            playerId: 3,
+            style: .tightWeak,
+            playerActions: [actions[1]],
+            allActions: actions,
+            players: players,
+            profit: -10,
+            didWin: false,
+            showdown: false,
+            shownHandType: nil,
+            winningPlayerIds: [0],
+            shownHandTypes: [:],
+            potSize: 60
+        )
+
+        var looseWeakPattern = AIPattern()
+        looseWeakPattern.updateAfterHand(
+            playerId: 4,
+            style: .looseWeak,
+            playerActions: [actions[2]],
+            allActions: actions,
+            players: players,
+            profit: -20,
+            didWin: false,
+            showdown: false,
+            shownHandType: nil,
+            winningPlayerIds: [0],
+            shownHandTypes: [:],
+            potSize: 60
+        )
+
+        XCTAssertNil(tightWeakPattern.observedProfile(for: 0))
+        XCTAssertEqual(looseWeakPattern.observedProfile(for: 0)?.vpipCount, 1)
+    }
+
+    func testQuickBetTargetsUsePotAfterCallAndTotalStreetBet() {
+        let target = QuickBetCalculator.targetAmount(
+            potSize: 200,
+            callAmount: 40,
+            currentRoundBet: 40,
+            playerChips: 34_408,
+            minimumAmount: 100,
+            potMultiplier: 1.0 / 3.0
+        )
+
+        XCTAssertEqual(target, 160)
+    }
+
+    func testQuickBetTargetsRespectMinimumRaiseAndAllInCap() {
+        let minimumCappedTarget = QuickBetCalculator.targetAmount(
+            potSize: 20,
+            callAmount: 0,
+            currentRoundBet: 0,
+            playerChips: 1_000,
+            minimumAmount: 40,
+            potMultiplier: 1.0 / 3.0
+        )
+        let allInCappedTarget = QuickBetCalculator.targetAmount(
+            potSize: 200,
+            callAmount: 40,
+            currentRoundBet: 40,
+            playerChips: 90,
+            minimumAmount: 160,
+            potMultiplier: 1.0
+        )
+
+        XCTAssertEqual(minimumCappedTarget, 40)
+        XCTAssertEqual(allInCappedTarget, 130)
+    }
+
     func testOpponentProfileCanShiftTowardMoreBluffingAgainstFoldyHuman() {
         var pattern = AIPattern()
         let foldyHuman = AIOpponentProfile(

@@ -10,11 +10,11 @@ struct StatisticsRecentHandsTabView: View {
                     Text("🗂️")
                         .font(.system(size: 36))
 
-                    Text("最近30手暂无记录")
+                    Text(L10n.t("statistics.recent.empty_title"))
                         .font(.headline)
                         .foregroundColor(.textSecondary)
 
-                    Text("先开始几局训练，再回来复盘每一手的盈亏、公共牌和已知对手手牌。")
+                    Text(L10n.t("statistics.recent.empty_body"))
                         .font(.subheadline)
                         .foregroundColor(.textSecondary)
                         .multilineTextAlignment(.center)

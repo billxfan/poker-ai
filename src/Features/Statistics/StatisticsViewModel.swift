@@ -39,7 +39,7 @@ final class StatisticsViewModel {
             }
             chips = chipStorage.getChips()
         } catch {
-            self.error = "加载失败: \(error.localizedDescription)"
+            self.error = L10n.f("statistics.load_failed", error.localizedDescription)
         }
 
         isLoading = false
@@ -122,13 +122,13 @@ struct AIProfileSummary: Identifiable {
     var learningStatusText: String {
         switch handsPlayed {
         case 0:
-            return "暂无样本"
+            return L10n.t("ai_learning.no_sample")
         case 1..<10:
-            return "样本较少"
+            return L10n.t("ai_learning.low_sample")
         case 10..<100:
-            return "学习中"
+            return L10n.t("ai_learning.learning")
         default:
-            return "充足样本"
+            return L10n.t("ai_learning.enough_sample")
         }
     }
 
@@ -137,7 +137,7 @@ struct AIProfileSummary: Identifiable {
         let tightnessText = String(format: "%+.1f%%", tightnessBias * 100)
         let epsilonText = String(format: "%.0f%%", explorationRate * 100)
         let rateText = String(format: "%.2f", learningRate)
-        return "探索 \(epsilonText) · 学习率 \(rateText) · 进攻偏移 \(aggressionText) · 紧度偏移 \(tightnessText)"
+        return L10n.f("ai_learning.summary", epsilonText, rateText, aggressionText, tightnessText)
     }
 
     var hasHumanTrendData: Bool {

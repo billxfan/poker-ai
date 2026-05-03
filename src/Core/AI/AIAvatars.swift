@@ -2,11 +2,11 @@ import Foundation
 
 enum AIAvatars {
     static let avatars: [Int: (name: String, avatar: String, style: AIStyle)] = [
-        1: ("老K", "👴", .tightAggressive),
-        2: ("小马", "🧑", .looseAggressive),
-        3: ("大叔", "🧔", .tightWeak),
-        4: ("小鱼", "👧", .looseWeak),
-        5: ("狐狸", "🦊", .balanced)
+        1: (L10n.t("ai.old_k"), "👴", .tightAggressive),
+        2: (L10n.t("ai.pony"), "🧑", .looseAggressive),
+        3: (L10n.t("ai.uncle"), "🧔", .tightWeak),
+        4: (L10n.t("ai.fish"), "👧", .looseWeak),
+        5: (L10n.t("ai.fox"), "🦊", .balanced)
     ]
 
     static func getAvatar(for id: Int) -> (name: String, avatar: String, style: AIStyle) {
@@ -23,11 +23,11 @@ enum AIStyle {
 
     var displayName: String {
         switch self {
-        case .tightAggressive: return "紧凶型"
-        case .looseAggressive: return "松凶型"
-        case .tightWeak: return "紧弱型"
-        case .looseWeak: return "松弱型"
-        case .balanced: return "平衡型"
+        case .tightAggressive: return L10n.t("ai_style.tight_aggressive")
+        case .looseAggressive: return L10n.t("ai_style.loose_aggressive")
+        case .tightWeak: return L10n.t("ai_style.tight_weak")
+        case .looseWeak: return L10n.t("ai_style.loose_weak")
+        case .balanced: return L10n.t("ai_style.balanced")
         }
     }
 }

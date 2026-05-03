@@ -11,11 +11,11 @@ extension PokerEngine {
         players.append(Player.createHuman(position: .bb, chips: humanChips))
 
         let aiConfigs: [(Int, String, String, Position)] = [
-            (1, "老K", "👴", .utg),
-            (2, "小马", "🧑", .mp),
-            (3, "大叔", "🧔", .co),
-            (4, "小鱼", "👧", .btn),
-            (5, "狐狸", "🦊", .sb)
+            (1, AIAvatars.getAvatar(for: 1).name, "👴", .utg),
+            (2, AIAvatars.getAvatar(for: 2).name, "🧑", .mp),
+            (3, AIAvatars.getAvatar(for: 3).name, "🧔", .co),
+            (4, AIAvatars.getAvatar(for: 4).name, "👧", .btn),
+            (5, AIAvatars.getAvatar(for: 5).name, "🦊", .sb)
         ]
 
         for (id, name, avatar, position) in aiConfigs {
@@ -48,7 +48,7 @@ extension PokerEngine {
 
     private func rotatePlayerPositions() {
         for index in gameState.players.indices {
-            gameState.players[index].position = gameState.players[index].position.next()
+            gameState.players[index].position = gameState.players[index].position.previous()
         }
     }
 

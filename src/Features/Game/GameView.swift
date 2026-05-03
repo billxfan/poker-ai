@@ -126,7 +126,7 @@ struct GameView: View {
             if !viewModel.showRoundEndModal {
                 if !viewModel.showActionLog {
                     ToolbarItem(placement: .navigationBarLeading) {
-                        Button("返回", action: handleBack)
+                        Button(L10n.t("common.back"), action: handleBack)
                     }
                 }
 
@@ -140,9 +140,9 @@ struct GameView: View {
 
             ToolbarItem(placement: .principal) {
                 VStack {
-                    Text("第 \(viewModel.gameState.handNumber) 局")
+                    Text(L10n.f("game.hand_number", viewModel.gameState.handNumber))
                         .font(.headline)
-                    Text("底池: \(viewModel.pot)")
+                    Text(L10n.f("game.pot_amount", viewModel.pot))
                         .font(.caption)
                         .foregroundColor(.textOnDark.opacity(0.8))
                 }

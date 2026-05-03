@@ -10,12 +10,12 @@ enum ActionType: String, Codable {
 
     var displayName: String {
         switch self {
-        case .fold: return "弃牌"
-        case .call: return "跟注"
-        case .raise: return "加注"
-        case .allIn: return "全下"
-        case .check: return "过牌"
-        case .bet: return "下注"
+        case .fold: return L10n.t("action.fold")
+        case .call: return L10n.t("action.call")
+        case .raise: return L10n.t("action.raise")
+        case .allIn: return L10n.t("action.all_in")
+        case .check: return L10n.t("action.check")
+        case .bet: return L10n.t("action.bet")
         }
     }
 }
@@ -38,29 +38,29 @@ struct Action: Codable, Identifiable {
     var displayText: String {
         switch type {
         case .fold:
-            return "弃牌"
+            return L10n.t("action.fold")
         case .call:
             if let amount = amount {
-                return "跟注 \(amount)"
+                return L10n.f("action.call_amount", amount)
             }
-            return "跟注"
+            return L10n.t("action.call")
         case .raise:
             if let amount = amount {
-                return "加到 \(amount)"
+                return L10n.f("action.raise_to_amount", amount)
             }
-            return "加注"
+            return L10n.t("action.raise")
         case .allIn:
             if let amount = amount {
-                return "全下 \(amount)"
+                return L10n.f("action.all_in_amount", amount)
             }
-            return "全下"
+            return L10n.t("action.all_in")
         case .check:
-            return "过牌"
+            return L10n.t("action.check")
         case .bet:
             if let amount = amount {
-                return "下注到 \(amount)"
+                return L10n.f("action.bet_to_amount", amount)
             }
-            return "下注"
+            return L10n.t("action.bet")
         }
     }
 }

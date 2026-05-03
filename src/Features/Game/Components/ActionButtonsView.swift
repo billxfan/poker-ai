@@ -35,8 +35,8 @@ struct ActionButtonsView: View {
             if showQuickBet {
                 QuickBetView(
                     potSize: potSize,
-                    referenceAmount: minRaiseAmount,
                     minimumAmount: minRaiseAmount,
+                    callAmount: callAmount,
                     currentRoundBet: currentRoundBet,
                     playerChips: playerChips,
                     onSelect: { amount in
@@ -59,7 +59,7 @@ struct ActionButtonsView: View {
             VStack(spacing: 4) {
                 Text("🔴")
                     .font(.title3)
-                Text("弃牌")
+                Text(L10n.t("action.fold"))
                     .font(.caption)
             }
             .foregroundColor(.white)
@@ -75,7 +75,7 @@ struct ActionButtonsView: View {
             VStack(spacing: 4) {
                 Text("🟢")
                     .font(.title3)
-                Text("跟注 \(callAmount)")
+                Text(L10n.f("action.call_amount", callAmount))
                     .font(.caption)
             }
             .foregroundColor(.white)
@@ -92,7 +92,7 @@ struct ActionButtonsView: View {
             VStack(spacing: 4) {
                 Text("🟢")
                     .font(.title3)
-                Text("过牌")
+                Text(L10n.t("action.check"))
                     .font(.caption)
             }
             .foregroundColor(.white)
@@ -112,7 +112,7 @@ struct ActionButtonsView: View {
             VStack(spacing: 4) {
                 Text("🟡")
                     .font(.title3)
-                Text("+加注")
+                Text(L10n.t("action.raise_plus"))
                     .font(.caption)
             }
             .foregroundColor(.white)
@@ -129,7 +129,7 @@ struct ActionButtonsView: View {
             VStack(spacing: 4) {
                 Text("🟠")
                     .font(.title3)
-                Text("全下")
+                Text(L10n.t("action.all_in"))
                     .font(.caption)
             }
             .foregroundColor(.white)

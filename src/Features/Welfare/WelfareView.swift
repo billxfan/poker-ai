@@ -19,8 +19,17 @@ struct WelfareView: View {
             .padding(16)
         }
         .background(Color.background)
-        .navigationTitle("福利中心")
+        .navigationTitle(L10n.t("welfare.title"))
         .navigationBarTitleDisplayMode(.large)
+        .overlay(alignment: .bottom) {
+            if let toastMessage = viewModel.toastMessage {
+                WelfareToastView(message: toastMessage)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 24)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: viewModel.toastMessage)
     }
 
     private var headerSection: some View {
@@ -29,7 +38,7 @@ struct WelfareView: View {
                 .font(.system(size: 48))
                 .foregroundColor(.welfare)
 
-            Text("当前筹码")
+            Text(L10n.t("common.current_chips"))
                 .font(.caption)
                 .foregroundColor(.textSecondary)
 
@@ -49,16 +58,16 @@ struct WelfareView: View {
             HStack {
                 Image(systemName: "calendar")
                     .foregroundColor(.success)
-                Text("每日免费领")
+                Text(L10n.t("welfare.daily_free.title"))
                     .font(.headline)
                 Spacer()
             }
 
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("每日 2,000 筹码")
+                    Text(L10n.t("welfare.daily_free.reward"))
                         .font(.subheadline)
-                    Text("每日凌晨自动到账")
+                    Text(L10n.t("welfare.daily_free.subtitle"))
                         .font(.caption)
                         .foregroundColor(.textSecondary)
                 }
@@ -72,7 +81,7 @@ struct WelfareView: View {
                             onClaimed()
                         }
                     } label: {
-                        Text("已领取 ✓")
+                        Text(L10n.t("welfare.claimed"))
                             .font(.subheadline)
                             .foregroundColor(.white)
                             .padding(.horizontal, 16)
@@ -87,7 +96,7 @@ struct WelfareView: View {
                             onClaimed()
                         }
                     } label: {
-                        Text("领取 +2000")
+                        Text(L10n.t("welfare.claim_2000"))
                             .font(.subheadline)
                             .foregroundColor(.white)
                             .padding(.horizontal, 16)
@@ -109,16 +118,16 @@ struct WelfareView: View {
             HStack {
                 Image(systemName: "checkmark.circle")
                     .foregroundColor(.welfare)
-                Text("每日签到")
+                Text(L10n.t("welfare.sign_in.title"))
                     .font(.headline)
                 Spacer()
             }
 
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("签到 +1000 筹码")
+                    Text(L10n.t("welfare.sign_in.reward"))
                         .font(.subheadline)
-                    Text("每日可领取一次")
+                    Text(L10n.t("welfare.sign_in.subtitle"))
                         .font(.caption)
                         .foregroundColor(.textSecondary)
                 }
@@ -132,7 +141,7 @@ struct WelfareView: View {
                             onClaimed()
                         }
                     } label: {
-                        Text("已签到 ✓")
+                        Text(L10n.t("welfare.signed_in"))
                             .font(.subheadline)
                             .foregroundColor(.white)
                             .padding(.horizontal, 16)
@@ -147,7 +156,7 @@ struct WelfareView: View {
                             onClaimed()
                         }
                     } label: {
-                        Text("签到 +1000")
+                        Text(L10n.t("welfare.sign_in_1000"))
                             .font(.subheadline)
                             .foregroundColor(.white)
                             .padding(.horizontal, 16)
@@ -169,16 +178,16 @@ struct WelfareView: View {
             HStack {
                 Image(systemName: "play.rectangle")
                     .foregroundColor(.warning)
-                Text("看广告")
+                Text(L10n.t("welfare.reward_ad.title"))
                     .font(.headline)
                 Spacer()
             }
 
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("观看广告获取 \(GameConstants.rewardAdChips) 筹码")
+                    Text(L10n.f("welfare.reward_ad.subtitle", GameConstants.rewardAdChips))
                         .font(.subheadline)
-                    Text("每次观看后自动到账")
+                    Text(L10n.t("welfare.reward_ad.note"))
                         .font(.caption)
                         .foregroundColor(.textSecondary)
                 }
@@ -192,7 +201,7 @@ struct WelfareView: View {
                         ProgressView()
                             .frame(width: 80, height: 32)
                     } else {
-                        Text("领取 +\(GameConstants.rewardAdChips)")
+                        Text(L10n.f("welfare.claim_amount", GameConstants.rewardAdChips))
                             .font(.subheadline)
                             .foregroundColor(.white)
                             .padding(.horizontal, 16)
@@ -219,6 +228,23 @@ struct WelfareView: View {
     private func claimAndDismiss(action: @escaping () -> Void) {
         action()
         dismiss()
+    }
+}
+
+private struct WelfareToastView: View {
+    let message: String
+
+    var body: some View {
+        Text(message)
+            .font(.subheadline)
+            .fontWeight(.semibold)
+            .foregroundColor(.textOnDark)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color.black.opacity(0.82))
+            .cornerRadius(14)
+            .shadow(color: .black.opacity(0.18), radius: 10, x: 0, y: 4)
     }
 }
 

@@ -2,8 +2,8 @@ import SwiftUI
 
 struct QuickBetView: View {
     let potSize: Int
-    let referenceAmount: Int
     let minimumAmount: Int
+    let callAmount: Int
     let currentRoundBet: Int
     let playerChips: Int
     let onSelect: (Int) -> Void
@@ -15,22 +15,26 @@ struct QuickBetView: View {
         ("2/3", 0.67),
     ]
 
-    private let raiseMultipliers: [(label: String, value: Double)] = [
+    private let potRaiseMultipliers: [(label: String, value: Double)] = [
         ("1x", 1.0),
         ("1.2x", 1.2),
     ]
 
     var body: some View {
         VStack(spacing: 8) {
-            Text("快捷下注")
+            Text(L10n.t("quick_bet.title"))
                 .font(.caption)
                 .foregroundColor(.textOnDark.opacity(0.7))
 
             HStack(spacing: 8) {
-                ForEach(potMultipliers + raiseMultipliers, id: \.label) { option in
-                    let amount = calculateAmount(
-                        multiplier: option.value,
-                        usePot: option.value < 1.0
+                ForEach(potMultipliers + potRaiseMultipliers, id: \.label) { option in
+                    let amount = QuickBetCalculator.targetAmount(
+                        potSize: potSize,
+                        callAmount: callAmount,
+                        currentRoundBet: currentRoundBet,
+                        playerChips: playerChips,
+                        minimumAmount: minimumAmount,
+                        potMultiplier: option.value
                     )
 
                     Button {
@@ -41,7 +45,7 @@ struct QuickBetView: View {
                                 .font(.caption)
                                 .foregroundColor(.white)
 
-                            Text("到 \(amount)")
+                            Text(L10n.f("quick_bet.to_amount", amount))
                                 .font(.caption2)
                                 .foregroundColor(.textOnDark.opacity(0.8))
 
@@ -53,12 +57,12 @@ struct QuickBetView: View {
                         .background(Color.raiseButton.opacity(0.8))
                         .cornerRadius(8)
                     }
-                    .disabled(amount > maxTotalBet || amount <= currentRoundBet)
-                    .opacity(amount > maxTotalBet || amount <= currentRoundBet ? 0.5 : 1.0)
+                    .disabled(amount <= currentRoundBet)
+                    .opacity(amount <= currentRoundBet ? 0.5 : 1.0)
                 }
             }
 
-            Button("取消", action: onCancel)
+            Button(L10n.t("common.cancel"), action: onCancel)
                 .font(.caption)
                 .foregroundColor(.textOnDark.opacity(0.6))
         }
@@ -67,15 +71,24 @@ struct QuickBetView: View {
         .cornerRadius(12)
     }
 
-    private var maxTotalBet: Int {
-        currentRoundBet + playerChips
-    }
+}
 
-    private func calculateAmount(multiplier: Double, usePot: Bool) -> Int {
-        let base = usePot ? Double(potSize) : Double(referenceAmount)
-        let amount = Int(base * multiplier)
-        let legalAmount = max(minimumAmount, amount)
-        return min(legalAmount, maxTotalBet)
+enum QuickBetCalculator {
+    /// Returns the target total bet for this street, not the extra chips to add.
+    static func targetAmount(
+        potSize: Int,
+        callAmount: Int,
+        currentRoundBet: Int,
+        playerChips: Int,
+        minimumAmount: Int,
+        potMultiplier: Double
+    ) -> Int {
+        let maxTotalBet = currentRoundBet + playerChips
+        let callToMatch = min(max(0, callAmount), max(0, playerChips))
+        let potAfterCall = potSize + callToMatch
+        let raiseAfterCall = Int((Double(potAfterCall) * potMultiplier).rounded())
+        let target = currentRoundBet + callToMatch + raiseAfterCall
+        return min(max(minimumAmount, target), maxTotalBet)
     }
 }
 
@@ -86,8 +99,8 @@ struct QuickBetView: View {
 
         QuickBetView(
             potSize: 790,
-            referenceAmount: 200,
             minimumAmount: 200,
+            callAmount: 180,
             currentRoundBet: 20,
             playerChips: 2500,
             onSelect: { _ in },

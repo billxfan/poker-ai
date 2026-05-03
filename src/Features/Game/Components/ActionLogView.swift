@@ -40,7 +40,7 @@ struct ActionLogView: View {
 
                 VStack(spacing: 0) {
                     HStack {
-                        Text("本局行动记录")
+                        Text(L10n.t("action_log.title"))
                             .font(.headline)
 
                         Spacer()

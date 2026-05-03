@@ -54,13 +54,13 @@ struct PlayerCard: View {
                 if currentRoundBet > 0 || totalBet > 0 {
                     HStack(spacing: 2) {
                         if currentRoundBet > 0 {
-                            Text("轮:\(currentRoundBet)")
+                            Text(L10n.f("player.round_bet", currentRoundBet))
                                 .font(.system(size: betFontSize, weight: .medium, design: .rounded))
                                 .monospacedDigit()
                                 .foregroundColor(.chipGold)
                         }
                         if totalBet > 0 {
-                            Text("累:\(totalBet)")
+                            Text(L10n.f("player.total_bet", totalBet))
                                 .font(.system(size: betFontSize, weight: .medium, design: .rounded))
                                 .monospacedDigit()
                                 .foregroundColor(.callButton.opacity(0.8))
@@ -113,15 +113,15 @@ struct PlayerCard: View {
         let color: Color
 
         if let btn = buttonPosition, player.position == btn {
-            text = "庄"
+            text = L10n.t("position.button")
             color = .chipGold
         } else {
             switch player.position {
             case .sb:
-                text = "小盲"
+                text = L10n.t("position.sb")
                 color = .raiseButton
             case .bb:
-                text = "大盲"
+                text = L10n.t("position.bb")
                 color = .raiseButton
             case .utg, .mp, .co, .btn:
                 text = player.position.displayName
@@ -140,7 +140,7 @@ struct PlayerCard: View {
 
     private var thinkingBubble: some View {
         VStack(spacing: 2) {
-            Text("💭 思考中...")
+            Text(L10n.t("player.thinking"))
                 .font(.caption2)
                 .foregroundColor(.textOnDark)
 
@@ -157,14 +157,14 @@ struct PlayerCard: View {
         Group {
             switch player.status {
             case .folded:
-                statusLabel("❌ 弃牌", color: .folded)
+                statusLabel(L10n.t("player.status.folded"), color: .folded)
             case .allIn:
-                statusLabel("🔥 全下", color: .allInButton)
+                statusLabel(L10n.t("player.status.all_in"), color: .allInButton)
             case .out:
-                statusLabel("💤 出局", color: .disabled)
+                statusLabel(L10n.t("player.status.out"), color: .disabled)
             case .active:
                 if isCurrentActor {
-                    statusLabel("👆 行动中", color: .callButton)
+                    statusLabel(L10n.t("player.status.acting"), color: .callButton)
                 } else {
                     EmptyView()
                 }

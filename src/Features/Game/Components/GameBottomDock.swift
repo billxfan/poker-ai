@@ -67,7 +67,7 @@ struct GameBottomDock: View {
     private var waitingView: some View {
         HStack {
             Spacer()
-            Text("等待其他玩家...")
+            Text(L10n.t("game.waiting"))
                 .foregroundColor(.textOnDark.opacity(0.7))
             Spacer()
         }
