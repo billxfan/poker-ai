@@ -12,6 +12,7 @@ struct GameView: View {
         restoredRemainingDeck: [Card]? = nil,
         restoredResumeMode: GameArchive.ResumeMode = .currentHand,
         onGameEnd: @escaping (Int) -> Void,
+        onChipCountSync: @escaping (Int) -> Void = { _ in },
         onExit: @escaping () -> Void = {}
     ) {
         _viewModel = State(
@@ -20,7 +21,8 @@ struct GameView: View {
                 restoredGameState: restoredGameState,
                 restoredRemainingDeck: restoredRemainingDeck,
                 restoredResumeMode: restoredResumeMode,
-                onGameEnd: onGameEnd
+                onGameEnd: onGameEnd,
+                onChipCountSync: onChipCountSync
             )
         )
         self.onExit = onExit
@@ -80,6 +82,7 @@ struct GameView: View {
                     payouts: viewModel.lastPayouts,
                     handBets: viewModel.gameState.handBets,
                     showdown: viewModel.lastWasShowdown,
+                    isGameOver: viewModel.isHumanBusted,
                     onNextHand: handleNextHand,
                     onReturnToMain: handleReturnToMain
                 )
@@ -199,6 +202,7 @@ private extension GameView {
     }
 
     func handleNextHand() {
+        guard !viewModel.isHumanBusted else { return }
         viewModel.triggerNewHand = true
     }
 

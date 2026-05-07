@@ -87,7 +87,12 @@ extension GameViewModel {
         await saveHandRecord(settlement: settlement, showdown: showdown)
 
         onGameEnd(lastProfit)
-        saveGame(resumeMode: .nextHand)
+        onChipCountSync(humanPlayer?.chips ?? 0)
+        if isHumanBusted {
+            clearSavedGame()
+        } else {
+            saveGame(resumeMode: .nextHand)
+        }
 
         showRoundEndModal = true
         viewState = .roundEnd

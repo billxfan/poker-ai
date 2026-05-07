@@ -109,6 +109,10 @@
 "round_end.no_showdown_hidden" = "No showdown: other players' hole cards stay hidden.";
 "round_end.next_hand" = "Next Hand";
 "round_end.return_home" = "Return Home";
+"round_end.game_over_title" = "Game Over";
+"round_end.game_over_message" = "Your table stack is now zero. This training run has ended. Return home to start over or claim welfare chips.";
+"round_end.game_over_return_home" = "Return Home";
+"round_end.final_stack" = "Final Stack";
 
 "statistics.title" = "History";
 "statistics.no_ai_profiles" = "No AI profiles yet";

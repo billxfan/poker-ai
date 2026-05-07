@@ -17,11 +17,11 @@ struct StatisticsHandRecordCard: View {
     private var resultColor: Color {
         switch record.result {
         case .win:
-            return .success
+            return .resultWin
         case .lose:
-            return .error
+            return .resultLoss
         case .tie:
-            return .statistics
+            return .resultTie
         }
     }
 
@@ -93,8 +93,7 @@ struct StatisticsHandRecordCard: View {
 
                     ForEach(opponentRevealedHands) { hand in
                         HStack(spacing: 8) {
-                            Text(hand.avatar)
-                                .font(.title3)
+                            AvatarView(avatar: hand.avatar, displayName: hand.name, size: 28, backgroundColor: Color.white)
 
                             VStack(alignment: .leading, spacing: 2) {
                                 HStack(spacing: 6) {

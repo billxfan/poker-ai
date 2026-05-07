@@ -450,6 +450,45 @@ final class PokerEngineTests: XCTestCase {
         XCTAssertEqual(updatedState.players.first { $0.id == 2 }?.chips, 50)
     }
 
+    func testAllInWinnerIsReactivatedAfterShowdownSettlement() async {
+        let engine = PokerEngine()
+        let communityCards = [
+            Card(suit: .clubs, rank: 2),
+            Card(suit: .diamonds, rank: 7),
+            Card(suit: .hearts, rank: 9),
+            Card(suit: .spades, rank: 11),
+            Card(suit: .clubs, rank: 13)
+        ]
+        let players = [
+            Player(id: 0, name: "你", avatar: "🧑", position: .utg, chips: 0, holeCards: HoleCards(Card(suit: .spades, rank: 14), Card(suit: .hearts, rank: 14)), status: .allIn),
+            Player(id: 1, name: "AI", avatar: "🤖", position: .bb, chips: 100, holeCards: HoleCards(Card(suit: .spades, rank: 10), Card(suit: .hearts, rank: 10)), status: .active)
+        ]
+        let state = GameState(
+            players: players,
+            communityCards: communityCards,
+            currentStreet: .river,
+            pot: 200,
+            sidePots: [],
+            currentBet: 100,
+            playerBets: [0: 100, 1: 100],
+            buttonPosition: .btn,
+            actionLog: [],
+            currentActorIndex: 0,
+            handNumber: 1,
+            playerBetsAtLastAction: [0: 100, 1: 100],
+            playersActedThisStreet: [0, 1],
+            handBets: [0: 100, 1: 100]
+        )
+
+        await engine.restoreState(state)
+        _ = await engine.settleShowdown()
+        let updatedState = await engine.getState()
+
+        XCTAssertEqual(updatedState.players.first { $0.id == 0 }?.chips, 200)
+        XCTAssertEqual(updatedState.players.first { $0.id == 0 }?.status, .active)
+        XCTAssertEqual(updatedState.players.first { $0.id == 1 }?.status, .active)
+    }
+
     func testStartingNextHandRotatesPositionsAndIncrementsHandNumber() async {
         let engine = PokerEngine()
 

@@ -109,6 +109,10 @@
 "round_end.no_showdown_hidden" = "未进入摊牌，其他玩家手牌不会公开";
 "round_end.next_hand" = "下一局";
 "round_end.return_home" = "返回主页";
+"round_end.game_over_title" = "你已破产";
+"round_end.game_over_message" = "你的桌上筹码已归零。本次训练已结束，请返回主页重新开始或领取福利。";
+"round_end.game_over_return_home" = "返回主页";
+"round_end.final_stack" = "最终筹码";
 
 "statistics.title" = "历史统计";
 "statistics.no_ai_profiles" = "暂无 AI 画像";

@@ -11,11 +11,11 @@ extension PokerEngine {
         players.append(Player.createHuman(position: .bb, chips: humanChips))
 
         let aiConfigs: [(Int, String, String, Position)] = [
-            (1, AIAvatars.getAvatar(for: 1).name, "👴", .utg),
-            (2, AIAvatars.getAvatar(for: 2).name, "🧑", .mp),
-            (3, AIAvatars.getAvatar(for: 3).name, "🧔", .co),
-            (4, AIAvatars.getAvatar(for: 4).name, "👧", .btn),
-            (5, AIAvatars.getAvatar(for: 5).name, "🦊", .sb)
+            (1, AIAvatars.getAvatar(for: 1).name, AIAvatars.getAvatar(for: 1).avatar, .utg),
+            (2, AIAvatars.getAvatar(for: 2).name, AIAvatars.getAvatar(for: 2).avatar, .mp),
+            (3, AIAvatars.getAvatar(for: 3).name, AIAvatars.getAvatar(for: 3).avatar, .co),
+            (4, AIAvatars.getAvatar(for: 4).name, AIAvatars.getAvatar(for: 4).avatar, .btn),
+            (5, AIAvatars.getAvatar(for: 5).name, AIAvatars.getAvatar(for: 5).avatar, .sb)
         ]
 
         for (id, name, avatar, position) in aiConfigs {

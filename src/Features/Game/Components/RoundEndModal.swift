@@ -10,6 +10,7 @@ struct RoundEndModal: View {
     let payouts: [Int: Int]
     let handBets: [Int: Int]
     let showdown: Bool
+    let isGameOver: Bool
     let onNextHand: () -> Void
     let onReturnToMain: () -> Void
 
@@ -28,7 +29,7 @@ struct RoundEndModal: View {
                 VStack(spacing: 0) {
                     ScrollView {
                         VStack(spacing: 18) {
-                            Text(L10n.t("round_end.title"))
+                            Text(L10n.t(isGameOver ? "round_end.game_over_title" : "round_end.title"))
                                 .font(.title2)
                                 .fontWeight(.bold)
 
@@ -54,17 +55,17 @@ struct RoundEndModal: View {
                                 ForEach(players.filter { winningPlayerIds.contains($0.id) }) { player in
                                     let playerProfit = (payouts[player.id] ?? 0) - (handBets[player.id] ?? 0)
                                     HStack {
-                                        Text(player.avatar)
+                                        AvatarView(avatar: player.avatar, size: 24, backgroundColor: Color.black.opacity(0.08))
                                         Text(player.id == Player.humanPlayerId ? L10n.t("player.you") : player.name)
                                         Spacer()
                                         Text(playerProfit >= 0 ? "+\(playerProfit)" : "\(playerProfit)")
-                                            .foregroundColor(playerProfit >= 0 ? .success : .error)
+                                            .foregroundColor(playerProfit >= 0 ? .resultWin : .resultLoss)
                                     }
                                     .font(.subheadline)
                                 }
                             } else if let winner {
                                 HStack {
-                                    Text(winner.avatar)
+                                    AvatarView(avatar: winner.avatar, size: 28, backgroundColor: Color.black.opacity(0.08))
                                     Text(winner.id == Player.humanPlayerId ? L10n.t("round_end.you_win") : L10n.f("round_end.player_wins", winner.name))
                                         .fontWeight(.semibold)
                                 }
@@ -73,7 +74,34 @@ struct RoundEndModal: View {
 
                             Text(profit >= 0 ? "+\(profit)" : "\(profit)")
                                 .font(.system(size: 48, weight: .bold, design: .rounded))
-                                .foregroundColor(profit >= 0 ? .success : .error)
+                                .foregroundColor(profit >= 0 ? .resultWin : .resultLoss)
+
+                            if isGameOver {
+                                VStack(spacing: 10) {
+                                    Image(systemName: "xmark.octagon.fill")
+                                        .font(.system(size: 42, weight: .bold))
+                                        .foregroundColor(.resultLoss)
+
+                                    Text(L10n.t("round_end.game_over_message"))
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                        .multilineTextAlignment(.center)
+                                        .padding(.horizontal, 12)
+
+                                    HStack(spacing: 6) {
+                                        Text(L10n.t("round_end.final_stack"))
+                                            .foregroundColor(.secondary)
+                                        Text("0")
+                                            .fontWeight(.bold)
+                                            .foregroundColor(.resultLoss)
+                                    }
+                                    .font(.headline)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 8)
+                                    .background(Color.resultLoss.opacity(0.08))
+                                    .cornerRadius(10)
+                                }
+                            }
 
                             VStack(spacing: 8) {
                                 Text(L10n.t("game.community_cards"))
@@ -93,8 +121,7 @@ struct RoundEndModal: View {
 
                                     ForEach(playersWithRevealedHands) { player in
                                         HStack {
-                                            Text(player.avatar)
-                                                .font(.title2)
+                                            AvatarView(avatar: player.avatar, size: 32, backgroundColor: Color.black.opacity(0.08))
                                             Text(player.id == Player.humanPlayerId ? L10n.t("player.you") : player.name)
                                                 .font(.subheadline)
                                             if winningPlayerIds.contains(player.id) {
@@ -137,30 +164,32 @@ struct RoundEndModal: View {
                     Divider()
 
                     VStack(spacing: 10) {
-                        Button(action: onNextHand) {
-                            HStack {
-                                Image(systemName: "arrow.right.circle.fill")
-                                Text(L10n.t("round_end.next_hand"))
+                        if !isGameOver {
+                            Button(action: onNextHand) {
+                                HStack {
+                                    Image(systemName: "arrow.right.circle.fill")
+                                    Text(L10n.t("round_end.next_hand"))
+                                }
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 52)
+                                .background(Color.callButton)
+                                .cornerRadius(14)
                             }
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 52)
-                            .background(Color.callButton)
-                            .cornerRadius(14)
                         }
 
                         Button(action: onReturnToMain) {
-                            Text(L10n.t("round_end.return_home"))
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
+                            Text(L10n.t(isGameOver ? "round_end.game_over_return_home" : "round_end.return_home"))
+                                .font(isGameOver ? .headline : .subheadline)
+                                .foregroundColor(isGameOver ? .white : .secondary)
                                 .frame(maxWidth: .infinity)
-                                .frame(height: 40)
-                                .background(Color.clear)
-                                .cornerRadius(10)
+                                .frame(height: isGameOver ? 52 : 40)
+                                .background(isGameOver ? Color.resultLoss : Color.clear)
+                                .cornerRadius(14)
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .stroke(Color.secondary.opacity(0.5), lineWidth: 1)
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .stroke(isGameOver ? Color.clear : Color.secondary.opacity(0.5), lineWidth: 1)
                                 )
                         }
                     }
@@ -174,5 +203,6 @@ struct RoundEndModal: View {
                 .padding(24)
             }
         }
+        .environment(\.colorScheme, .light)
     }
 }

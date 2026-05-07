@@ -44,6 +44,7 @@ struct StatisticsView: View {
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.light, for: .navigationBar)
         .tint(Color.textPrimary)
+        .environment(\.colorScheme, .light)
         .task {
             await viewModel.loadData()
         }
@@ -98,7 +99,12 @@ private struct StatisticsAIProfilesTabView: View {
             selectedProfileId = profile.id
         } label: {
             HStack(spacing: 6) {
-                Text(profile.avatar)
+                AvatarView(
+                    avatar: profile.avatar,
+                    displayName: profile.name,
+                    size: 24,
+                    backgroundColor: selectedProfileId == profile.id ? Color.white.opacity(0.16) : Color.cardBackground
+                )
                 Text(profile.name)
                     .font(.caption)
                     .fontWeight(selectedProfileId == profile.id ? .semibold : .regular)

@@ -55,6 +55,9 @@ struct MainView: View {
                     onGameEnd: { profit in
                         viewModel.addChipsToPlayer(profit)
                     },
+                    onChipCountSync: { finalChips in
+                        viewModel.syncPlayerChips(finalChips)
+                    },
                     onExit: {
                         viewModel.loadState()
                         hasSavedArchive = viewModel.hasArchive

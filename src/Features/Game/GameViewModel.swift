@@ -43,6 +43,7 @@ final class GameViewModel {
 
     let initialChips: Int
     let onGameEnd: (Int) -> Void
+    let onChipCountSync: (Int) -> Void
     var restoredResumeMode: GameArchive.ResumeMode = .currentHand
     var restoredRemainingDeck: [Card]?
 
@@ -64,6 +65,10 @@ final class GameViewModel {
 
     var humanPlayer: Player? {
         players.first { $0.id == Player.humanPlayerId }
+    }
+
+    var isHumanBusted: Bool {
+        (humanPlayer?.chips ?? 0) <= 0 || humanPlayer?.status == .out
     }
 
     private var humanCurrentBet: Int {
@@ -88,6 +93,7 @@ final class GameViewModel {
         restoredRemainingDeck: [Card]? = nil,
         restoredResumeMode: GameArchive.ResumeMode = .currentHand,
         onGameEnd: @escaping (Int) -> Void,
+        onChipCountSync: @escaping (Int) -> Void = { _ in },
         patternRepository: IAIPatternRepository = AIPatternRepository(),
         recordRepository: IGameRecordRepository = GameRecordRepository(),
         archiveManager: IGameArchiveManager = GameArchiveManager(),
@@ -95,6 +101,7 @@ final class GameViewModel {
     ) {
         self.initialChips = initialChips
         self.onGameEnd = onGameEnd
+        self.onChipCountSync = onChipCountSync
         self.patternRepository = patternRepository
         self.recordRepository = recordRepository
         self.archiveManager = archiveManager

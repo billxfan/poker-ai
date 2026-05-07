@@ -2,11 +2,11 @@ import Foundation
 
 enum AIAvatars {
     static let avatars: [Int: (name: String, avatar: String, style: AIStyle)] = [
-        1: (L10n.t("ai.old_k"), "👴", .tightAggressive),
-        2: (L10n.t("ai.pony"), "🧑", .looseAggressive),
-        3: (L10n.t("ai.uncle"), "🧔", .tightWeak),
-        4: (L10n.t("ai.fish"), "👧", .looseWeak),
-        5: (L10n.t("ai.fox"), "🦊", .balanced)
+        1: (L10n.t("ai.old_k"), "ai_old_k", .tightAggressive),
+        2: (L10n.t("ai.pony"), "ai_pony", .looseAggressive),
+        3: (L10n.t("ai.uncle"), "ai_uncle", .tightWeak),
+        4: (L10n.t("ai.fish"), "ai_fish", .looseWeak),
+        5: (L10n.t("ai.fox"), "ai_fox", .balanced)
     ]
 
     static func getAvatar(for id: Int) -> (name: String, avatar: String, style: AIStyle) {

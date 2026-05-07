@@ -507,6 +507,7 @@ final class GameFlowRegressionTests: XCTestCase {
             payouts: [winner.id: 46],
             handBets: [human.id: 46],
             showdown: false,
+            isGameOver: false,
             onNextHand: {},
             onReturnToMain: {}
         )
@@ -544,11 +545,34 @@ final class GameFlowRegressionTests: XCTestCase {
             payouts: [human.id: 240],
             handBets: [human.id: 120, showdownOpponent.id: 120],
             showdown: true,
+            isGameOver: false,
             onNextHand: {},
             onReturnToMain: {}
         )
 
         XCTAssertEqual(modal.playersWithRevealedHands.map(\.id), [human.id, showdownOpponent.id])
+    }
+
+    func testRoundEndModalMarksGameOverWhenHumanHasNoChips() {
+        var human = Player.createHuman(position: .bb, chips: 0)
+        human.status = .out
+
+        let modal = RoundEndModal(
+            winner: nil,
+            winningPlayerIds: [1],
+            isSplitPot: false,
+            profit: -20_000,
+            players: [human],
+            communityCards: [],
+            payouts: [:],
+            handBets: [human.id: 20_000],
+            showdown: true,
+            isGameOver: true,
+            onNextHand: {},
+            onReturnToMain: {}
+        )
+
+        XCTAssertTrue(modal.isGameOver)
     }
 
     func testOpponentProfileCanShiftTowardMoreBluffingAgainstFoldyHuman() {
@@ -1023,6 +1047,85 @@ final class GameFlowRegressionTests: XCTestCase {
 
         defaults.removePersistentDomain(forName: suiteName)
     }
+    @MainActor
+    func testStartGameDoesNotAutoResetBustedPlayerToInitialChipsOnNextHand() async {
+        var bustedState = validTableState
+        bustedState.players[0].chips = 0
+        bustedState.players[0].status = .out
+
+        let viewModel = GameViewModel(
+            initialChips: 20_000,
+            restoredGameState: nil,
+            onGameEnd: { _ in },
+            patternRepository: MockPatternRepository(),
+            recordRepository: MockRecordRepository(),
+            archiveManager: MockArchiveManager(),
+            analytics: MockAnalyticsService()
+        )
+        viewModel.gameState = bustedState
+
+        await viewModel.startGame()
+
+        XCTAssertEqual(viewModel.humanPlayer?.chips, 0)
+        XCTAssertEqual(viewModel.humanPlayer?.status, .out)
+    }
+
+    @MainActor
+    func testFinalizeHandClearsArchiveWhenHumanIsBusted() async {
+        let archiveManager = MockArchiveManager()
+        let viewModel = GameViewModel(
+            initialChips: 20_000,
+            restoredGameState: nil,
+            onGameEnd: { _ in },
+            patternRepository: MockPatternRepository(),
+            recordRepository: MockRecordRepository(),
+            archiveManager: archiveManager,
+            analytics: MockAnalyticsService()
+        )
+
+        var bustedState = validTableState
+        bustedState.players[0].chips = 0
+        bustedState.players[0].status = .out
+        viewModel.gameState = bustedState
+
+        let settlement = HandSettlement(
+            winningPlayerIds: [1],
+            payouts: [1: 200],
+            handsByPlayer: [:],
+            totalPot: 200,
+            isSplitPot: false
+        )
+
+        await viewModel.finalizeHand(with: settlement, showdown: true)
+
+        XCTAssertEqual(archiveManager.clearCount, 1)
+        XCTAssertNil(archiveManager.lastSavedArchive)
+        XCTAssertTrue(viewModel.showRoundEndModal)
+        XCTAssertTrue(viewModel.isHumanBusted)
+    }
+
+    func testSyncPlayerChipsPersistsExactFinalStack() {
+        let suiteName = "MainViewModelSyncPlayerChips-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defaults.set(2000, forKey: "poker_ai_chips")
+        defaults.set(true, forKey: "poker_ai_daily_free")
+
+        let viewModel = MainViewModel(
+            chipStorage: ChipStorage(userDefaults: defaults),
+            welfareStorage: WelfareStorage(userDefaults: defaults),
+            archiveManager: MockArchiveManager(),
+            databaseManager: .shared
+        )
+
+        viewModel.syncPlayerChips(0)
+
+        XCTAssertEqual(viewModel.chips, 0)
+        XCTAssertEqual(defaults.integer(forKey: "poker_ai_chips"), 0)
+
+        defaults.removePersistentDomain(forName: suiteName)
+    }
+
 }
 
 private final class MockArchiveManager: IGameArchiveManager {

@@ -77,6 +77,7 @@ struct ActionLogView: View {
                 .shadow(color: .black.opacity(0.15), radius: 12, x: -4, y: 0)
             }
         }
+        .environment(\.colorScheme, .light)
     }
 
     private func streetLabel(_ street: Street, cards: [Card]) -> String {
@@ -96,9 +97,10 @@ struct ActionLogView: View {
 
     private func actionRow(player: Player, action: Action) -> some View {
         HStack {
-            Text(player.avatar)
+            AvatarView(avatar: player.avatar, displayName: player.name, size: 24, backgroundColor: Color.background)
             Text(player.name)
                 .font(.subheadline)
+                .foregroundColor(.textPrimary)
             Spacer()
             Text(action.displayText)
                 .font(.caption)

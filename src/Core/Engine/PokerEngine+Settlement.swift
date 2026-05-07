@@ -17,8 +17,14 @@ extension PokerEngine {
         for index in gameState.players.indices {
             let playerId = gameState.players[index].id
             gameState.players[index].chips += payouts[playerId, default: 0]
+
             if gameState.players[index].chips <= 0 {
+                gameState.players[index].chips = 0
                 gameState.players[index].status = .out
+            } else if !gameState.players[index].isFolded {
+                // 摊牌结算后，仍有筹码的参与者应恢复为可继续下一手的状态，
+                // 避免 all-in 获胜后残留 .allIn 状态影响后续显示与流程。
+                gameState.players[index].status = .active
             }
         }
     }

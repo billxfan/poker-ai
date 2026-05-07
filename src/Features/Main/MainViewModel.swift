@@ -93,6 +93,11 @@ final class MainViewModel {
         chips = chipStorage.getChips()
     }
 
+    func syncPlayerChips(_ amount: Int) {
+        chipStorage.setChips(amount)
+        chips = chipStorage.getChips()
+    }
+
     private func refreshArchiveAvailability() -> Bool {
         guard let archive = archiveManager.loadArchive() else {
             return false

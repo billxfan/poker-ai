@@ -19,6 +19,9 @@ extension Color {
     static let warning = Color(hex: "F59E0B")
     static let error = Color(hex: "EF4444")
     static let folded = Color(hex: "6B7280")
+    static let resultWin = Color(hex: "166534")
+    static let resultTie = Color(hex: "475569")
+    static let resultLoss = Color(hex: "B91C1C")
 
     // MARK: - Button Colors
     static let foldButton = Color(hex: "EF4444")

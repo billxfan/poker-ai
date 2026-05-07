@@ -98,14 +98,7 @@ struct PlayerCard: View {
     }
 
     private var avatar: some View {
-        ZStack {
-            Circle()
-                .fill(Color.white.opacity(0.2))
-                .frame(width: 40, height: 40)
-
-            Text(player.avatar)
-                .font(.system(size: 24))
-        }
+        AvatarView(avatar: player.avatar, displayName: player.name, size: 40)
     }
 
     private var positionBadge: some View {
