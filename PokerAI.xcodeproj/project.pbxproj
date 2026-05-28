@@ -111,7 +111,7 @@
 		099F07A4A6819A8A5140AE1C /* GameCommunitySection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameCommunitySection.swift; sourceTree = "<group>"; };
 		0EC489D313BD99C7ABBC180E /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		0F23ED6F5E47ACB660717337 /* AIStyleProfiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIStyleProfiles.swift; sourceTree = "<group>"; };
-		14B2FAB06B0026871A745C41 /* PokerAITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = PokerAITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		14B2FAB06B0026871A745C41 /* PokerAITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PokerAITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		18C3AD1AC58DB95965E1C1A1 /* Hand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Hand.swift; sourceTree = "<group>"; };
 		18D019BC9F9DE38DA4B02B21 /* PokerEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PokerEngineTests.swift; sourceTree = "<group>"; };
 		194C5D0EC34CA39F5F002061 /* GameRecordRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameRecordRepositoryTests.swift; sourceTree = "<group>"; };
@@ -744,6 +744,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				DEVELOPMENT_TEAM = X9SL8P6R8V;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -753,7 +754,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.pokerai.trainer.tests;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.9;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PokerAI.app/PokerAI";
 			};
 			name = Release;
@@ -762,6 +763,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				DEVELOPMENT_TEAM = X9SL8P6R8V;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -771,7 +773,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.pokerai.trainer.tests;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.9;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PokerAI.app/PokerAI";
 			};
 			name = Debug;
@@ -927,7 +929,7 @@
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.pokerai.trainer;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -947,7 +949,7 @@
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.pokerai.trainer;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
