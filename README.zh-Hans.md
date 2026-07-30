@@ -2,40 +2,35 @@
 
 [English README](./README.md)
 
-一款面向 iOS 17+ 的离线德州扑克训练应用，围绕 6 人桌训练、差异化 AI 对手、手牌复盘与长期打法画像展开。
+一个包含两套独立客户端的离线德州扑克训练项目：原有 iOS App，以及本次新增的浏览器单机版。
 
-## 核心特性
+## 选择版本
 
-- 6 人桌无限注德州扑克训练
-- 5 个不同基础风格的 AI 对手
-- 最近手牌、行动记录、AI 画像与历史统计
-- 每日奖励与激励广告虚拟筹码体系
-- 支持英文与简体中文本地化
+| 版本 | 位置 | 技术栈 | 定位 |
+| --- | --- | --- | --- |
+| **iOS · 原版** | 仓库根目录 | Swift 5.9+、SwiftUI、XcodeGen | 原有 iOS 17+ 训练 App |
+| **Web · 单机版** | [`web/`](./web/) | React、TypeScript、可安装 PWA | 无账号、无后端、无广告的本地网页游戏 |
 
-## 技术栈
+两套客户端都提供 6 人桌无限注德州扑克、5 个差异化 AI 对手、结算、
+历史统计和设备本地存档。它们共享产品设定，但源码、构建工具和运行时
+存储相互独立。
 
-- Swift 5.9+
-- SwiftUI
-- XcodeGen
-- JSON 文件 + `UserDefaults` 本地持久化
-- Firebase Analytics + AdMob 激励广告
-
-## 项目结构
+## 仓库结构
 
 ```text
-src/
-  App/           应用入口
-  Core/          德扑规则引擎、AI、数据模型
-  Features/      主页面、对局页、福利页、统计页
-  Services/      广告、分析、存储、存档
-  Shared/        共享 UI 组件与扩展
-PokerAI/         iOS Target 资源与 plist
-Tests/           单元测试与回归测试
-docs/            产品、架构、上架、App Store 文档
-  site/          对外公开的隐私政策与支持页
+src/                 原有 iOS App 源码
+PokerAI/             iOS Target 资源与 plist
+PokerAI.xcodeproj/   生成后的 Xcode 工程
+Tests/               iOS 单元测试与回归测试
+docs/                iOS 产品文档与公开支持页面
+web/                 本次新增的离线网页端
+  app/               React 页面与界面组件
+  core/              德扑规则、AI、牌型计算与本地存储
+  public/            PWA 配置、Service Worker、图标与头像
+  tests/             确定性德扑回归测试
 ```
 
-## 构建方式
+## 运行 iOS 原版
 
 1. 安装 XcodeGen：
 
@@ -67,6 +62,25 @@ xcodebuild test -project PokerAI.xcodeproj -scheme PokerAI -destination 'platfor
 - `GoogleService-Info.plist` 不会提交到公开仓库。
 - 如果你希望在本地启用 Firebase Analytics，请自行在项目根目录放入对应配置文件。
 
+## 运行 Web 单机版
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+验证生产构建与德扑规则回归测试：
+
+```bash
+cd web
+npm test
+```
+
+网页端的全部游戏数据只保存在当前浏览器中，不包含账号、登录、后端、
+云同步、统计 SDK、广告或真钱功能。更多说明见
+[`web/README.zh-Hans.md`](./web/README.zh-Hans.md)。
+
 ## 公开文档
 
 公开仓库中保留的项目说明文档：
@@ -77,5 +91,6 @@ xcodebuild test -project PokerAI.xcodeproj -scheme PokerAI -destination 'platfor
 
 ## 说明
 
-- 应用仅使用虚拟训练积分。
-- 不支持真钱赌博、提现或多人下注对战。
+- 两套客户端都只使用虚拟训练积分。
+- 两套客户端都不支持真钱赌博、提现或多人下注对战。
+- 原 iOS 工程中的移动端专属集成不会被网页端引用。
