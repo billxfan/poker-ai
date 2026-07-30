@@ -2,40 +2,37 @@
 
 [中文说明](./README.zh-Hans.md)
 
-Offline Texas Hold'em training app for iOS 17+, built around a six-handed table, distinct AI play styles, hand history review, and long-term player profiling.
+An offline Texas Hold'em training project with two clearly separated clients:
+the original iOS app and a new browser-based single-player game.
 
-## Highlights
+## Choose a client
 
-- Six-handed no-limit Texas Hold'em training
-- Five AI opponents with different baseline styles
-- Hand history, recent-hands review, and AI profiling
-- Daily rewards and rewarded-ad virtual chip flow
-- English and Simplified Chinese localization
+| Client | Location | Stack | Scope |
+| --- | --- | --- | --- |
+| **iOS · Original** | Repository root | Swift 5.9+, SwiftUI, XcodeGen | The original iOS 17+ training app |
+| **Web · Single player** | [`web/`](./web/) | React, TypeScript, installable PWA | Account-free, backend-free, ad-free local play |
 
-## Tech Stack
+Both clients provide a six-handed no-limit Texas Hold'em table with five AI
+opponents, hand settlement, history, statistics, and device-local persistence.
+They share the same product concept, but their source code, build tooling, and
+runtime storage are independent.
 
-- Swift 5.9+
-- SwiftUI
-- XcodeGen
-- Local persistence with JSON files and `UserDefaults`
-- Firebase Analytics + AdMob rewarded ads
-
-## Project Structure
+## Repository structure
 
 ```text
-src/
-  App/           App entry
-  Core/          Poker engine, AI, and models
-  Features/      Main, Game, Welfare, Statistics
-  Services/      Ads, analytics, persistence, archive
-  Shared/        Shared UI components and extensions
-PokerAI/         iOS target resources and plist files
-Tests/           Unit and regression tests
-docs/            Product, architecture, release, and App Store docs
-  site/          Public privacy policy and support pages
+src/                 Original iOS application source
+PokerAI/             iOS target resources and plist files
+PokerAI.xcodeproj/   Generated Xcode project
+Tests/               iOS unit and regression tests
+docs/                iOS product and public support docs
+web/                 New offline web client
+  app/               React screens and presentation
+  core/              Poker rules, AI, evaluation, and local storage
+  public/            PWA manifest, service worker, icons, avatars
+  tests/             Deterministic poker regression tests
 ```
 
-## Build
+## Run the iOS app
 
 1. Install XcodeGen:
 
@@ -67,7 +64,26 @@ Optional local setup:
 - `GoogleService-Info.plist` is intentionally not committed.
 - If you want Firebase Analytics enabled locally, add your own config file at the project root.
 
-## Public Docs
+## Run the web game
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+Verify the production build and poker regression suite:
+
+```bash
+cd web
+npm test
+```
+
+The web client stores all game state in the current browser. It has no account,
+authentication, backend, cloud sync, analytics, ads, or real-money features.
+See [`web/README.md`](./web/README.md) for details.
+
+## Public docs
 
 Public project-facing docs live here:
 
@@ -77,5 +93,6 @@ Public project-facing docs live here:
 
 ## Notes
 
-- This app uses virtual training points only.
-- It does not support real-money gambling, cash-out, or multiplayer betting.
+- Both clients use virtual training points only.
+- Neither client supports real-money gambling, cash-out, or multiplayer betting.
+- Mobile-only integrations in the original iOS project are not used by the web client.
