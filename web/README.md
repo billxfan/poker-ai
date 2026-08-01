@@ -3,12 +3,6 @@
 An offline-first, single-player Texas Hold'em web game. Play a six-handed table
 against five local AI opponents without an account or backend.
 
-[简体中文](./README.zh-Hans.md) · [Back to repository root](../README.md)
-
-This directory is the standalone web client. The original iOS app remains at
-the repository root and does not share build tooling or runtime storage with
-this client.
-
 ## MVP scope
 
 - Six-handed no-limit Texas Hold'em

@@ -139,3 +139,4 @@ export function evaluateBest(cards: Card[]): EvaluatedHand {
     compareHands(candidate, best) > 0 ? candidate : best,
   );
 }
+

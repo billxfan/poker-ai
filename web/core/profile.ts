@@ -41,6 +41,7 @@ export type HandHistoryParticipant = {
   holeCards: Card[];
   handName: string | null;
   isWinner: boolean;
+  status?: string;
 };
 
 export type AIProfileStats = {
@@ -261,11 +262,6 @@ export function recordCompletedHand(
     holeCards: game.players[0].holeCards,
     actions: [...game.actionLog].reverse(),
     participants: game.players
-      .filter(
-        (player) =>
-          player.totalContribution > 0 ||
-          (game.result?.payouts[player.id] ?? 0) > 0,
-      )
       .map((player) => {
         const payout = game.result?.payouts[player.id] ?? 0;
         const revealCards =
@@ -289,6 +285,7 @@ export function recordCompletedHand(
           holeCards: revealCards ? [...player.holeCards] : [],
           handName: hand?.categoryName ?? null,
           isWinner: game.result?.winnerIds.includes(player.id) ?? false,
+          status: player.status,
         };
       })
       .sort(

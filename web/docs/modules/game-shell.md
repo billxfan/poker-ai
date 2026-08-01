@@ -42,3 +42,4 @@ Supporting overlays are `action-log`, `session-info`, and `reset-confirmation`.
 
 The first screen is the game itself. Product chrome stays minimal, and no
 authentication or onboarding blocks the first hand.
+

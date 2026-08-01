@@ -21,7 +21,14 @@ import {
   startNewHand,
   STARTING_CHIPS,
 } from "../core/engine.ts";
-import { rankLabel, seededRandom } from "../core/cards.ts";
+import { createDeck, rankLabel, seededRandom } from "../core/cards.ts";
+import {
+  cardArtRankToken,
+  catCardAccessibleLabel,
+  catCardArtSource,
+} from "../app/cardArt.ts";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { recordCompletedHand, type LocalProfile } from "../core/profile.ts";
 import type { Card } from "../core/types.ts";
 
@@ -31,6 +38,34 @@ function card(rank: number, suit: Card["suit"]): Card {
 
 test("renders rank ten as 10 instead of poker shorthand T", () => {
   assert.equal(rankLabel(10), "10");
+});
+
+test("maps the complete deck to unique local cat-card artwork", () => {
+  const deck = createDeck();
+  const sources = deck.map((item) => catCardArtSource(item));
+
+  assert.equal(sources.length, 52);
+  assert.equal(new Set(sources).size, 52);
+  assert.ok(
+    sources.every(
+      (source) =>
+        source !== null &&
+        existsSync(resolve(process.cwd(), "public", source.replace(/^\//, ""))),
+    ),
+  );
+  assert.equal(cardArtRankToken(10), "10");
+  assert.equal(cardArtRankToken(14), "a");
+  assert.equal(cardArtRankToken(15), null);
+  assert.ok(sources.every((source) => source?.startsWith("/cards/deck-v2/")));
+  assert.match(catCardAccessibleLabel(card(14, "spades")), /黑桃A，缅因猫/);
+});
+
+test("uses the standard 52-card Hold'em deck without jokers", () => {
+  const deck = createDeck();
+
+  assert.equal(deck.length, 52);
+  assert.equal(new Set(deck.map((item) => `${item.rank}-${item.suit}`)).size, 52);
+  assert.ok(deck.every((item) => item.rank >= 2 && item.rank <= 14));
 });
 
 test("recognizes a royal-high straight flush", () => {
@@ -624,7 +659,11 @@ test("completed hand history retains settlement and street-by-street actions", (
 
   assert.ok(history.actions.length >= 7);
   assert.equal(history.actions[0].label.startsWith("小盲"), true);
-  assert.ok(history.participants.length >= 2);
+  assert.equal(history.participants.length, 6);
+  assert.deepEqual(
+    history.participants.map((participant) => participant.playerId).sort(),
+    [0, 1, 2, 3, 4, 5],
+  );
   assert.equal(
     history.participants.some(
       (participant) =>

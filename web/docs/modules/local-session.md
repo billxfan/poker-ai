@@ -41,3 +41,4 @@ Failure transitions are `loading → fresh` and `saving → memory-only`.
 
 All user data remains on the current device. There is no identity, backend,
 cloud sync, analytics stream, or remote save.
+

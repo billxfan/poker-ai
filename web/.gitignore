@@ -40,10 +40,7 @@ next-env.d.ts
 /dist/
 /.wrangler/
 /outputs/
+/output/
 /work/
 /.playwright-cli/
 /assets/screenshots/reference/
-
-# local delivery metadata
-/.openai/hosting.json
-/app-factory-state.yaml

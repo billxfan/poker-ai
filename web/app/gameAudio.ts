@@ -46,6 +46,42 @@ function tone(
   oscillator.stop(end + 0.02);
 }
 
+function cardSlide(context: AudioContext, offset: number, accent = false) {
+  const duration = 0.052;
+  const frameCount = Math.max(1, Math.floor(context.sampleRate * duration));
+  const buffer = context.createBuffer(1, frameCount, context.sampleRate);
+  const samples = buffer.getChannelData(0);
+  for (let index = 0; index < frameCount; index += 1) {
+    const progress = index / frameCount;
+    samples[index] = (Math.random() * 2 - 1) * (1 - progress) ** 1.8;
+  }
+
+  const source = context.createBufferSource();
+  const filter = context.createBiquadFilter();
+  const gain = context.createGain();
+  const start = context.currentTime + offset;
+
+  filter.type = "bandpass";
+  filter.frequency.setValueAtTime(accent ? 1850 : 1450, start);
+  filter.Q.setValueAtTime(0.78, start);
+  gain.gain.setValueAtTime(0.0001, start);
+  gain.gain.exponentialRampToValueAtTime(accent ? 0.052 : 0.04, start + 0.006);
+  gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+  source.connect(filter);
+  filter.connect(gain);
+  gain.connect(context.destination);
+  source.start(start);
+
+  tone(
+    context,
+    accent ? 430 : 350,
+    offset + 0.018,
+    0.034,
+    accent ? 0.013 : 0.009,
+    "triangle",
+  );
+}
+
 export function loadSoundPreference(): boolean {
   try {
     return window.localStorage.getItem(SOUND_PREFERENCE_KEY) !== "false";
@@ -70,6 +106,22 @@ export function unlockGameAudio(enabled: boolean) {
   }
 }
 
+export function playDealSequence(
+  cardCount: number,
+  enabled: boolean,
+  spacingSeconds = 0.062,
+) {
+  if (!enabled) return;
+  const context = getAudioContext();
+  if (!context) return;
+  if (context.state === "suspended") void context.resume();
+
+  const count = Math.min(12, Math.max(1, Math.floor(cardCount)));
+  for (let index = 0; index < count; index += 1) {
+    cardSlide(context, index * spacingSeconds, index === count - 1);
+  }
+}
+
 export function playGameSound(sound: GameSound, enabled: boolean) {
   if (!enabled) return;
   const context = getAudioContext();
@@ -78,9 +130,7 @@ export function playGameSound(sound: GameSound, enabled: boolean) {
 
   switch (sound) {
     case "deal":
-      [0, 0.055, 0.11].forEach((offset, index) =>
-        tone(context, 520 + index * 55, offset, 0.055, 0.022, "triangle"),
-      );
+      cardSlide(context, 0, true);
       break;
     case "check":
       tone(context, 420, 0, 0.055, 0.026, "triangle");

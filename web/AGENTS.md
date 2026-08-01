@@ -29,3 +29,4 @@ authentication, a backend, cloud sync, or real-money features.
 - `npm run dev` starts the local preview.
 - `npm run build` validates the production bundle.
 - `npm test` runs the project verification suite.
+

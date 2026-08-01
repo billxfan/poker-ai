@@ -64,3 +64,4 @@ must be accessible by keyboard and touch.
 - v0.2: hand-history review, richer AI styles, statistics, and bilingual copy
 - v1.0: rule parity fixtures with iOS, polished PWA install flow, and public
   open-source documentation
+

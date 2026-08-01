@@ -1,9 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { CSSProperties, ReactNode } from "react";
 import {
   loadSoundPreference,
+  playDealSequence,
   playGameSound,
   saveSoundPreference,
   unlockGameAudio,
@@ -22,6 +30,7 @@ import {
   type AIThinkingPlan,
 } from "../core/aiThinking";
 import { rankLabel, SUIT_SYMBOLS } from "../core/cards";
+import { catCardAccessibleLabel, catCardArtSource } from "./cardArt";
 import {
   applyAction,
   BIG_BLIND,
@@ -61,14 +70,53 @@ import type { ActionType, Card, GameState, Player } from "../core/types";
 const HUMAN_ID = 0;
 const EMPTY_THINKING_STEPS: readonly string[] = [];
 const AVATAR_SOURCES: Record<number, string> = {
-  1: "/avatars/old-k.png",
-  2: "/avatars/pony.png",
-  3: "/avatars/uncle.png",
-  4: "/avatars/fish.png",
-  5: "/avatars/fox.png",
+  0: "/characters/portraits/golden-player.webp",
+  1: "/characters/portraits/british-shorthair.webp",
+  2: "/characters/portraits/siamese.webp",
+  3: "/characters/portraits/maine-coon.webp",
+  4: "/characters/portraits/orange-tabby.webp",
+  5: "/characters/portraits/abyssinian.webp",
+};
+
+const CAT_CHARACTER_PROFILES: Record<
+  number,
+  { seatAsset: string; breed: string; persona: string }
+> = {
+  0: {
+    seatAsset: "/characters/v3/golden-player-back.webp",
+    breed: "金色英短",
+    persona: "沉着的新牌手",
+  },
+  1: {
+    seatAsset: "/characters/v3/british-left-side.webp",
+    breed: "蓝灰英短",
+    persona: "谨慎的价值派",
+  },
+  2: {
+    seatAsset: "/characters/v3/siamese-far-left.webp",
+    breed: "暹罗猫",
+    persona: "敏捷的进攻派",
+  },
+  3: {
+    seatAsset: "/characters/v3/maine-coon-far-center.webp",
+    breed: "缅因猫",
+    persona: "稳健的分析派",
+  },
+  4: {
+    seatAsset: "/characters/v3/orange-far-right.webp",
+    breed: "橘猫",
+    persona: "好奇的松弛派",
+  },
+  5: {
+    seatAsset: "/characters/v3/abyssinian-right-side.webp",
+    breed: "阿比西尼亚猫",
+    persona: "难测的诈唬派",
+  },
 };
 
 type AppScreen = "home" | "game" | "welfare" | "statistics";
+
+const CardPreviewContext = createContext<((card: Card) => void) | null>(null);
 type StatisticsTab = "overview" | "profiles" | "recent";
 type GlossaryItem = {
   term: string;
@@ -108,6 +156,18 @@ function BackIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path d="m15 18-6-6 6-6" />
+    </svg>
+  );
+}
+
+function CatFoodIcon() {
+  return (
+    <svg className="cat-food-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4.5 11.5h15l-1.4 6.1a2 2 0 0 1-2 1.6H7.9a2 2 0 0 1-2-1.6l-1.4-6.1Z" />
+      <path d="M6.2 11.5c.8-2.2 2.7-3.3 5.8-3.3s5 1.1 5.8 3.3" />
+      <circle cx="8.5" cy="7.1" r="1.25" />
+      <circle cx="12.1" cy="5.8" r="1.25" />
+      <circle cx="15.7" cy="7.1" r="1.25" />
     </svg>
   );
 }
@@ -231,15 +291,18 @@ function PlayingCard({
   card,
   hidden = false,
   compact = false,
+  previewable = true,
   motion = "none",
   motionIndex = 0,
 }: {
   card?: Card;
   hidden?: boolean;
   compact?: boolean;
+  previewable?: boolean;
   motion?: "none" | "deal" | "reveal";
   motionIndex?: number;
 }) {
+  const openPreview = useContext(CardPreviewContext);
   const motionClass = motion === "none" ? "" : `card-motion card-${motion}`;
   const motionStyle =
     motion === "none"
@@ -256,40 +319,156 @@ function PlayingCard({
         style={motionStyle}
       >
         <span className="card-back-pattern" aria-hidden="true">
-          <i>PA</i>
+          <svg viewBox="0 0 32 32">
+            <ellipse cx="16" cy="20.2" rx="7.2" ry="6.1" />
+            <ellipse cx="7.6" cy="14.1" rx="3.2" ry="4" transform="rotate(-24 7.6 14.1)" />
+            <ellipse cx="13.2" cy="8.7" rx="3.1" ry="4.1" transform="rotate(-7 13.2 8.7)" />
+            <ellipse cx="19.2" cy="8.7" rx="3.1" ry="4.1" transform="rotate(7 19.2 8.7)" />
+            <ellipse cx="24.6" cy="14.1" rx="3.2" ry="4" transform="rotate(24 24.6 14.1)" />
+          </svg>
         </span>
       </span>
     );
   }
 
   const isRed = card.suit === "hearts" || card.suit === "diamonds";
-  const label = `${rankLabel(card.rank)}${SUIT_SYMBOLS[card.suit]}`;
   const rank = rankLabel(card.rank);
   const suit = SUIT_SYMBOLS[card.suit];
+  const catArtSource = catCardArtSource(card);
+  const canPreview = previewable && !!catArtSource && !!openPreview;
+  const accessibleLabel = catCardAccessibleLabel(card);
   return (
     <span
       className={`playing-card card-face card-${card.suit} ${
         card.rank >= 11 ? "card-honor" : ""
-      } ${isRed ? "card-red" : ""} ${compact ? "card-compact" : ""} ${motionClass}`}
-      aria-label={label}
+      } ${catArtSource ? "card-illustrated" : ""} ${isRed ? "card-red" : ""} ${
+        compact ? "card-compact" : ""
+      } ${canPreview ? "is-previewable" : ""} ${motionClass}`}
+      aria-label={canPreview ? `${accessibleLabel}，点击查看大图` : accessibleLabel}
+      role={canPreview ? "button" : undefined}
+      tabIndex={canPreview ? 0 : undefined}
+      title={canPreview ? "点击查看大牌面" : undefined}
       style={motionStyle}
+      onClick={
+        canPreview
+          ? (event) => {
+              event.stopPropagation();
+              openPreview(card);
+            }
+          : undefined
+      }
+      onKeyDown={
+        canPreview
+          ? (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                event.stopPropagation();
+                openPreview(card);
+              }
+            }
+          : undefined
+      }
     >
-      <span className="card-corner card-corner-top" aria-hidden="true">
-        <b className="card-rank">{rank}</b>
-        <i className="card-suit">{suit}</i>
-      </span>
-      <span className="card-center-pip" aria-hidden="true">
-        {suit}
-      </span>
-      <span className="card-corner card-corner-bottom" aria-hidden="true">
-        <b className="card-rank">{rank}</b>
-        <i className="card-suit">{suit}</i>
-      </span>
+      {catArtSource ? (
+        // Cat art is decorative; the accessible card name comes from the outer element.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          className="card-cat-art"
+          src={catArtSource}
+          alt=""
+          aria-hidden="true"
+          decoding="async"
+          loading={compact ? "lazy" : "eager"}
+          draggable={false}
+        />
+      ) : (
+        <>
+          <span className="card-corner card-corner-top" aria-hidden="true">
+            <b className="card-rank">{rank}</b>
+            <i className="card-suit">{suit}</i>
+          </span>
+          <span className="card-center-pip" aria-hidden="true">
+            {suit}
+          </span>
+          <span className="card-corner card-corner-bottom" aria-hidden="true">
+            <b className="card-rank">{rank}</b>
+            <i className="card-suit">{suit}</i>
+          </span>
+        </>
+      )}
     </span>
   );
 }
 
-function PlayerAvatar({ player, size = "normal" }: { player: Player; size?: "small" | "normal" }) {
+function CardPreviewModal({
+  card,
+  onClose,
+}: {
+  card: Card;
+  onClose: () => void;
+}) {
+  const dialogRef = useRef<HTMLElement>(null);
+  const source = catCardArtSource(card);
+  const label = catCardAccessibleLabel(card);
+
+  useEffect(() => {
+    const previousFocus = document.activeElement as HTMLElement | null;
+    dialogRef.current?.focus();
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      window.removeEventListener("keydown", handleEscape);
+      previousFocus?.focus();
+    };
+  }, [onClose]);
+
+  if (!source) return null;
+
+  return (
+    <div className="modal-backdrop card-preview-backdrop" onClick={onClose}>
+      <section
+        ref={dialogRef}
+        className="card-preview-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${label}大图`}
+        tabIndex={-1}
+        onClick={(event) => event.stopPropagation()}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={source} alt={label} draggable={false} />
+      </section>
+    </div>
+  );
+}
+
+function PlayerAvatar({
+  player,
+  size = "normal",
+  variant = "avatar",
+}: {
+  player: Player;
+  size?: "small" | "normal";
+  variant?: "avatar" | "table";
+}) {
+  if (variant === "table") {
+    const character =
+      CAT_CHARACTER_PROFILES[player.id] ?? CAT_CHARACTER_PROFILES[0];
+    return (
+      <span className={`player-avatar avatar-${size} avatar-table`} aria-hidden="true">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          className="seat-character-material"
+          src={character.seatAsset}
+          alt=""
+          draggable={false}
+        />
+      </span>
+    );
+  }
+
   const source = AVATAR_SOURCES[player.id];
   if (!source) {
     return (
@@ -366,6 +545,9 @@ function Seat({
   dealSeatCount: number;
 }) {
   const hiddenCards = !player.isHuman && !reveal;
+  const character =
+    CAT_CHARACTER_PROFILES[player.id] ?? CAT_CHARACTER_PROFILES[0];
+  const [showCharacter, setShowCharacter] = useState(false);
   return (
     <article
       className={`game-seat seat-${player.id} ${player.isHuman ? "seat-human" : ""} ${
@@ -373,12 +555,32 @@ function Seat({
       } ${player.status === "folded" ? "is-folded" : ""} ${
         player.status === "out" ? "is-out" : ""
       } ${thinkingMode ? `is-thinking thinking-${thinkingMode}` : ""}`}
-      aria-label={`${player.name}，${player.position}，${player.chips} 筹码`}
+      aria-label={`${player.name}，${player.position}，${player.chips} 猫粮`}
     >
       <SeatPositionBadges player={player} dealer={dealer} />
-      <PlayerAvatar player={player} />
-      <strong className="seat-player-name">{player.name}</strong>
-      <span className="seat-stack">{player.chips.toLocaleString()}</span>
+      <button
+        className="seat-character-button"
+        aria-label={`查看${player.name}的猫咪角色`}
+        aria-expanded={showCharacter}
+        title={`${character.breed} · ${character.persona}`}
+        onClick={() => setShowCharacter((visible) => !visible)}
+        onBlur={() => setShowCharacter(false)}
+      >
+        <PlayerAvatar player={player} variant="table" />
+      </button>
+      {showCharacter ? (
+        <span className="seat-character-popover" role="status">
+          <strong>{character.breed}</strong>
+          <small>{character.persona}</small>
+        </span>
+      ) : null}
+      <div className="seat-identity">
+        <strong className="seat-player-name">{player.name}</strong>
+        <span className="seat-stack" aria-label={`${player.chips} 猫粮`}>
+          <CatFoodIcon />
+          <b>{player.chips.toLocaleString()}</b>
+        </span>
+      </div>
       <div className="seat-cards" aria-label={`${player.name}的手牌`}>
         {player.status === "out" ? (
           <span className="out-label">离桌</span>
@@ -388,7 +590,7 @@ function Seat({
               key={`${card.suit}-${card.rank}-${index}-${hiddenCards ? "back" : "face"}`}
               card={card}
               hidden={hiddenCards}
-              compact
+              compact={!player.isHuman && !reveal}
               motion={hiddenCards || player.isHuman ? "deal" : "reveal"}
               motionIndex={dealOrder + index * dealSeatCount}
             />
@@ -399,11 +601,15 @@ function Seat({
         key={`${player.bet}-${player.totalContribution}`}
         className="seat-contribution"
       >
-        {player.bet > 0 ? `本轮 ${player.bet}` : ""}
-        {player.bet > 0 && player.totalContribution > player.bet ? " · " : ""}
-        {player.totalContribution > player.bet
-          ? `累计 ${player.totalContribution}`
-          : ""}
+        {player.bet > 0 ? (
+          <span className="cat-food-bet" aria-label={`本轮投入 ${player.bet} 猫粮`}>
+            <CatFoodIcon />
+            <b>{player.bet}</b>
+          </span>
+        ) : null}
+        {player.totalContribution > player.bet ? (
+          <small>累计 {player.totalContribution}</small>
+        ) : null}
       </span>
       {thinkingLabel ? (
         <span
@@ -746,7 +952,12 @@ function StatisticsScreen({
                 </div>
                 <div className="history-cards">
                   {record.holeCards.map((card, index) => (
-                    <PlayingCard key={`${card.suit}-${card.rank}-${index}`} card={card} compact />
+                    <PlayingCard
+                      key={`${card.suit}-${card.rank}-${index}`}
+                      card={card}
+                      compact
+                      previewable={false}
+                    />
                   ))}
                 </div>
                 <b className={record.humanDelta >= 0 ? "positive" : "negative"}>
@@ -821,6 +1032,29 @@ function HistoryDetailModal({
     return () => window.removeEventListener("keydown", handleEscape);
   }, [onClose]);
 
+  const settlementParticipants = players
+    .map((player) =>
+      record.participants.find(
+        (participant) => participant.playerId === player.id,
+      ) ?? {
+        playerId: player.id,
+        name: player.name,
+        isHuman: player.isHuman,
+        contribution: 0,
+        payout: 0,
+        net: 0,
+        holeCards: [],
+        handName: null,
+        isWinner: false,
+        status: "out",
+      },
+    )
+    .sort(
+      (left, right) =>
+        Number(right.isWinner) - Number(left.isWinner) ||
+        left.playerId - right.playerId,
+    );
+
   return (
     <div className="modal-backdrop history-detail-backdrop" onClick={onClose}>
       <section
@@ -877,9 +1111,9 @@ function HistoryDetailModal({
         <div className="history-detail-scroll">
           <section className="history-detail-section">
             <h3>结算明细</h3>
-            {record.participants.length ? (
+            {settlementParticipants.length ? (
               <ol className="history-settlement">
-                {record.participants.map((participant) => {
+                {settlementParticipants.map((participant) => {
                   const player = players[participant.playerId];
                   return (
                     <li
@@ -905,11 +1139,24 @@ function HistoryDetailModal({
                                   compact
                                 />
                               ))
-                            : "未亮牌"}
+                            : participant.contribution === 0
+                              ? "未参与"
+                              : participant.status === "folded"
+                                ? "已弃牌"
+                                : "未亮牌"}
                         </span>
                       </div>
                       <p>
-                        <strong>{participant.handName ?? (participant.isWinner ? "未摊牌获胜" : "已弃牌")}</strong>
+                        <strong>
+                          {participant.handName ??
+                            (participant.isWinner
+                              ? "未摊牌获胜"
+                              : participant.contribution === 0
+                                ? "未参与底池"
+                                : participant.status === "folded"
+                                  ? "已弃牌"
+                                  : "未亮牌")}
+                        </strong>
                         <small>
                           投入 {participant.contribution.toLocaleString()} ·
                           获得 {participant.payout.toLocaleString()}
@@ -1062,14 +1309,17 @@ function AIProfileCard({
             <h3>学习曲线</h3>
             <p>{style?.summary ?? "根据对局结果调整策略"}</p>
           </div>
-          <strong>
-            {Math.round(
-              (style
-                ? aiLearningConfidence(style, profile.learning)
-                : 0) * 100,
-            )}
-            %
-          </strong>
+          <span className="learning-confidence">
+            <small>学习置信度</small>
+            <strong>
+              {Math.round(
+                (style
+                  ? aiLearningConfidence(style, profile.learning)
+                  : 0) * 100,
+              )}
+              %
+            </strong>
+          </span>
         </div>
         <LearningSparkline profile={profile} />
         <div className="learning-facts">
@@ -1103,94 +1353,85 @@ function AIProfileCard({
 
 function LearningSparkline({ profile }: { profile: AIProfileStats }) {
   const source = profile.learning.snapshots.slice(-24);
-  const snapshots =
-    source.length >= 2
-      ? source
-      : [
-          source[0] ?? {
-            handIndex: 0,
-            totalProfit: 0,
-            aggressionBias: 0,
-            tightnessBias: 0,
-            bluffBias: 0,
-            explorationRate: 0,
-          },
-          source[0] ?? {
-            handIndex: 1,
-            totalProfit: 0,
-            aggressionBias: 0,
-            tightnessBias: 0,
-            bluffBias: 0,
-            explorationRate: 0,
-          },
-        ];
-  const pointSet = (
-    key: "aggressionBias" | "tightnessBias" | "bluffBias",
-  ) =>
-    snapshots
-      .map((snapshot, index) => {
-        const x = (index / Math.max(1, snapshots.length - 1)) * 300;
-        const y = 38 - Math.max(-0.3, Math.min(0.3, snapshot[key])) * 100;
-        return { x, y };
-      });
-  const aggressionPoints = pointSet("aggressionBias");
-  const tightnessPoints = pointSet("tightnessBias");
-  const bluffPoints = pointSet("bluffBias");
+  const baselineTarget = 8;
+
+  if (source.length < baselineTarget) {
+    return (
+      <div className="learning-baseline" role="status">
+        <div>
+          <strong>正在建立行为基线</strong>
+          <span>
+            再观察 {baselineTarget - source.length} 手后生成可靠趋势
+          </span>
+        </div>
+        <div
+          className="learning-baseline-progress"
+          aria-label={`基线样本 ${source.length}/${baselineTarget} 手`}
+        >
+          {Array.from({ length: baselineTarget }, (_, index) => (
+            <i className={index < source.length ? "is-filled" : ""} key={index} />
+          ))}
+        </div>
+        <small>{source.length} / {baselineTarget} 手</small>
+      </div>
+    );
+  }
+
+  const tracks = [
+    {
+      key: "aggressionBias" as const,
+      label: "进攻倾向",
+      hint: "主动施压",
+      className: "aggression",
+    },
+    {
+      key: "tightnessBias" as const,
+      label: "范围收紧",
+      hint: "谨慎入池",
+      className: "tightness",
+    },
+    {
+      key: "bluffBias" as const,
+      label: "诈唬倾向",
+      hint: "制造不确定性",
+      className: "bluff",
+    },
+  ];
+  const pointSet = (key: (typeof tracks)[number]["key"]) =>
+    source.map((snapshot, index) => {
+      const x = (index / Math.max(1, source.length - 1)) * 220;
+      const y = 16 - Math.max(-0.3, Math.min(0.3, snapshot[key])) * 40;
+      return { x, y };
+    });
   const serializePoints = (items: Array<{ x: number; y: number }>) =>
     items.map(({ x, y }) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
-  const lastPoint = (items: Array<{ x: number; y: number }>) =>
-    items[items.length - 1];
 
   return (
-    <div className="learning-chart">
-      <svg
-        role="img"
-        aria-label="最近学习趋势：黄色为进攻，蓝色为收紧，紫色为诈唬"
-        viewBox="0 0 300 76"
-        preserveAspectRatio="none"
-      >
-        <line className="chart-grid" x1="0" y1="8" x2="300" y2="8" />
-        <line x1="0" y1="38" x2="300" y2="38" />
-        <line className="chart-grid" x1="0" y1="68" x2="300" y2="68" />
-        <polyline
-          className="curve-aggression"
-          pathLength="1"
-          points={serializePoints(aggressionPoints)}
-        />
-        <polyline
-          className="curve-tightness"
-          pathLength="1"
-          points={serializePoints(tightnessPoints)}
-        />
-        <polyline
-          className="curve-bluff"
-          pathLength="1"
-          points={serializePoints(bluffPoints)}
-        />
-        <circle
-          className="endpoint endpoint-aggression"
-          cx={lastPoint(aggressionPoints).x}
-          cy={lastPoint(aggressionPoints).y}
-          r="3.5"
-        />
-        <circle
-          className="endpoint endpoint-tightness"
-          cx={lastPoint(tightnessPoints).x}
-          cy={lastPoint(tightnessPoints).y}
-          r="3"
-        />
-        <circle
-          className="endpoint endpoint-bluff"
-          cx={lastPoint(bluffPoints).x}
-          cy={lastPoint(bluffPoints).y}
-          r="2.5"
-        />
-      </svg>
-      <div>
-        <span className="legend-aggression">进攻</span>
-        <span className="legend-tightness">收紧</span>
-        <span className="legend-bluff">诈唬</span>
-      </div>
+    <div className="learning-tracks" aria-label="最近 24 手的策略调整趋势">
+      {tracks.map((track) => {
+        const points = pointSet(track.key);
+        const current = source[source.length - 1][track.key];
+        const last = points[points.length - 1];
+        return (
+          <div className={`learning-track is-${track.className}`} key={track.key}>
+            <span>
+              <strong>{track.label}</strong>
+              <small>{track.hint}</small>
+            </span>
+            <svg
+              role="img"
+              aria-label={`${track.label}当前偏移 ${Math.round(current * 100)}%`}
+              viewBox="0 0 220 32"
+              preserveAspectRatio="none"
+            >
+              <line x1="0" y1="16" x2="220" y2="16" />
+              <polyline pathLength="1" points={serializePoints(points)} />
+              <circle cx={last.x} cy={last.y} r="3" />
+            </svg>
+            <b>{current >= 0 ? "+" : ""}{Math.round(current * 100)}%</b>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -1355,14 +1596,12 @@ function HandResultModal({
   const outcomeDetail = result.showdown
     ? `${winningHand?.categoryName ?? "最佳牌型"} · 摊牌`
     : "其他玩家均已弃牌";
-  const settlementPlayers = game.players
-    .filter((player) =>
-      player.totalContribution > 0 || (result.payouts[player.id] ?? 0) > 0,
-    )
+  const settlementPlayers = [...game.players]
     .sort(
       (left, right) =>
         Number(result.winnerIds.includes(right.id)) -
-        Number(result.winnerIds.includes(left.id)),
+          Number(result.winnerIds.includes(left.id)) ||
+        left.id - right.id,
     );
 
   return (
@@ -1461,15 +1700,23 @@ function HandResultModal({
                               compact
                             />
                           ))
-                        : player.status === "folded"
-                          ? "已弃牌"
-                          : "未摊牌"}
+                        : player.totalContribution === 0
+                          ? "未参与"
+                          : player.status === "folded"
+                            ? "已弃牌"
+                            : "未摊牌"}
                     </span>
                   </div>
                   <div className="result-player-hand">
                     <strong>
                       {hand?.categoryName ??
-                        (isWinner ? "未摊牌获胜" : "已弃牌")}
+                        (isWinner
+                          ? "未摊牌获胜"
+                          : player.totalContribution === 0
+                            ? "未参与底池"
+                            : player.status === "folded"
+                              ? "已弃牌"
+                              : "未亮牌")}
                     </strong>
                     <small>
                       投入 {player.totalContribution.toLocaleString()} · 获得{" "}
@@ -1608,6 +1855,7 @@ function GameScreen({
   const dealOrderById = new Map(
     dealSeatIds.map((playerId, index) => [playerId, index]),
   );
+  const dealCardCount = dealSeatIds.length * 2;
   const previousAudioState = useRef({
     handNumber: game.handNumber,
     communityCards: game.communityCards.length,
@@ -1703,9 +1951,13 @@ function GameScreen({
   useEffect(() => {
     const previous = previousAudioState.current;
     if (game.handNumber !== previous.handNumber) {
-      playGameSound("deal", soundEnabled);
+      playDealSequence(dealCardCount, soundEnabled);
     } else if (game.communityCards.length > previous.communityCards) {
-      playGameSound("deal", soundEnabled);
+      playDealSequence(
+        game.communityCards.length - previous.communityCards,
+        soundEnabled,
+        0.085,
+      );
     }
 
     if (previous.phase === "playing" && game.phase !== "playing" && game.result) {
@@ -1727,7 +1979,7 @@ function GameScreen({
       currentActor: game.currentActor,
       phase: game.phase,
     };
-  }, [game, soundEnabled]);
+  }, [dealCardCount, game, soundEnabled]);
 
   useEffect(() => {
     function handleKey(event: KeyboardEvent) {
@@ -1961,7 +2213,7 @@ function GameScreen({
   );
 }
 
-export function PokerGame() {
+function PokerGameContent() {
   const [screen, setScreen] = useState<AppScreen>("home");
   const [game, setGame] = useState<GameState>(() => createGame(20260725));
   const [profile, setProfile] = useState<LocalProfile>({
@@ -1990,7 +2242,35 @@ export function PokerGame() {
     }, 0);
 
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+      const isLocalPreview =
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1";
+
+      if (isLocalPreview) {
+        // A stopped local server must not leave a cached, partially styled app
+        // behind. Offline mode is enabled for installed/production origins only.
+        void navigator.serviceWorker
+          .getRegistrations()
+          .then((registrations) =>
+            Promise.all(registrations.map((registration) => registration.unregister())),
+          )
+          .catch(() => undefined);
+
+        if ("caches" in window) {
+          void window.caches
+            .keys()
+            .then((keys) =>
+              Promise.all(
+                keys
+                  .filter((key) => key.startsWith("poker-ai-web-"))
+                  .map((key) => window.caches.delete(key)),
+              ),
+            )
+            .catch(() => undefined);
+        }
+      } else {
+        void navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+      }
     }
 
     return () => {
@@ -2012,7 +2292,7 @@ export function PokerGame() {
 
   function startFreshGame() {
     unlockGameAudio(soundEnabled);
-    playGameSound("deal", soundEnabled);
+    playDealSequence(12, soundEnabled);
     clearSession();
     const learningReset = resetLearningData(profile);
     const startingChips = Math.max(STARTING_CHIPS, learningReset.chips);
@@ -2135,5 +2415,21 @@ export function PokerGame() {
         </div>
       ) : null}
     </>
+  );
+}
+
+export function PokerGame() {
+  const [previewCard, setPreviewCard] = useState<Card | null>(null);
+
+  return (
+    <CardPreviewContext.Provider value={(card) => setPreviewCard(card)}>
+      <PokerGameContent />
+      {previewCard ? (
+        <CardPreviewModal
+          card={previewCard}
+          onClose={() => setPreviewCard(null)}
+        />
+      ) : null}
+    </CardPreviewContext.Provider>
   );
 }
