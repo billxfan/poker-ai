@@ -1,6 +1,6 @@
 # GitHub Pages 发布说明
 
-这组静态页面位于 `docs/site/`：
+这组静态页面位于 `ios/docs/site/`：
 
 - `../index.html`
 - `index.html`
@@ -15,13 +15,12 @@ GitHub 仓库：`billxfan/poker-ai`
 
 1. 进入 `Settings`
 2. 打开 `Pages`
-3. `Source` 选择 `Deploy from a branch`
-4. Branch 选择 `main`
-5. Folder 选择 `/docs`
+3. `Source` 选择 `GitHub Actions`
+4. 使用工作流发布 `ios/docs/` 目录
 
 ## 发布后的建议 URL
 
-如果仓库 Pages 根目录是 `docs/`，通常访问形式会是：
+如果工作流将 `ios/docs/` 发布为 Pages 根目录，通常访问形式会是：
 
 - `https://billxfan.github.io/poker-ai/`
 - `https://billxfan.github.io/poker-ai/site/`

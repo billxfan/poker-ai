@@ -11,6 +11,8 @@ Thanks for your interest in contributing to Poker AI Trainer.
 
 ## Local Setup
 
+All commands below are run from the `ios/` directory.
+
 1. Install XcodeGen:
 
 ```bash

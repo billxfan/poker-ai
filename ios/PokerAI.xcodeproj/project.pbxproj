@@ -31,12 +31,10 @@
 		391873418900CFF17B7C94B7 /* QuickBetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E45E9E0F0BEB9C4DC99EE64 /* QuickBetView.swift */; };
 		43AF9326D0FF71FCBC1CA789 /* Card.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4063FE8247B5C0E604B9FCB8 /* Card.swift */; };
 		4435D730B32829CA7FD6EFA5 /* GameRecordRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 506F27EC459CA69DF758C983 /* GameRecordRepository.swift */; };
-		482727F08D87B0471B3D1FBF /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 772C569166F0D0DF3BD3DB49 /* GoogleService-Info.plist */; };
 		49B411D3E10B56F767180973 /* WelfareView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7D0ABC3ADC8E4F67F3EE15B /* WelfareView.swift */; };
 		4D50C0C76982E6DB9C9956FE /* PlayerCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EB10370240BA30FE4802E6F /* PlayerCard.swift */; };
 		4D5DC1E39F563B5A32333F86 /* StatisticsOverviewTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D891539057A9C84EC453999 /* StatisticsOverviewTabView.swift */; };
 		4EE6D0E0264E9234CF370E07 /* GameViewModel+Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDF317BD961DF189CCD9964D /* GameViewModel+Persistence.swift */; };
-		4F6A2A8EAA1177F8E21C11B1 /* AvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F6A2A8DAA1177F8E21C11B1 /* AvatarView.swift */; };
 		502951B40AE23051BA56D9FE /* StatisticsHandRecordCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1A2D3E9FE8E5100E397D3A /* StatisticsHandRecordCard.swift */; };
 		50C8F78FBA8D868F3E71F38B /* CardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 607C8B90FA1E9DC8DA356182 /* CardTests.swift */; };
 		516DBC76002FBEA6D885ECBE /* StatisticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8ABAA32BC2D0FEF119CA4CDC /* StatisticsView.swift */; };
@@ -56,6 +54,7 @@
 		82C49DD10ECD20B9F702BC3C /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 060D7D05AA0974312B0FABD6 /* FirebaseAnalytics */; };
 		8533933AD39A7DB909013B5E /* HandTypeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C1BCD39B237C92CFF4C0415 /* HandTypeTests.swift */; };
 		8D84E46DC948B5E14FF14A97 /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B00F95E8E8DFCD10A0CF933 /* MainView.swift */; };
+		8E0D1A4C76DE9FD8664D5CF0 /* AvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F47FE9BBB5A8D18B9C9A64AD /* AvatarView.swift */; };
 		8F83B5A9ABB3D585E68CA5A6 /* GamePlayerSeatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57A4B11892F7278F4ED1A87F /* GamePlayerSeatView.swift */; };
 		920953539AD7B81A40D91AA3 /* AILearningContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58D16FCC48F7D76C26E6DA86 /* AILearningContext.swift */; };
 		927D86F3C760EE63C0E8EACA /* GoogleUserMessagingPlatform in Frameworks */ = {isa = PBXBuildFile; productRef = 8D4817AEF4CBFA0CA3E5F16C /* GoogleUserMessagingPlatform */; };
@@ -111,7 +110,7 @@
 		099F07A4A6819A8A5140AE1C /* GameCommunitySection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameCommunitySection.swift; sourceTree = "<group>"; };
 		0EC489D313BD99C7ABBC180E /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		0F23ED6F5E47ACB660717337 /* AIStyleProfiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIStyleProfiles.swift; sourceTree = "<group>"; };
-		14B2FAB06B0026871A745C41 /* PokerAITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PokerAITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		14B2FAB06B0026871A745C41 /* PokerAITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = PokerAITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		18C3AD1AC58DB95965E1C1A1 /* Hand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Hand.swift; sourceTree = "<group>"; };
 		18D019BC9F9DE38DA4B02B21 /* PokerEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PokerEngineTests.swift; sourceTree = "<group>"; };
 		194C5D0EC34CA39F5F002061 /* GameRecordRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameRecordRepositoryTests.swift; sourceTree = "<group>"; };
@@ -132,9 +131,8 @@
 		420F8632303E7C766DC48EAB /* StatisticsTabSelectorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatisticsTabSelectorView.swift; sourceTree = "<group>"; };
 		49A3C1A73D6DA105A1DAD82E /* StatisticsAIProfileCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatisticsAIProfileCardView.swift; sourceTree = "<group>"; };
 		4C1BCD39B237C92CFF4C0415 /* HandTypeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandTypeTests.swift; sourceTree = "<group>"; };
-		4D969E959A47D0D27973E54B /* PokerAI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PokerAI.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4D969E959A47D0D27973E54B /* PokerAI.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PokerAI.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4E50456B1679DFF580414913 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		4F6A2A8DAA1177F8E21C11B1 /* AvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarView.swift; sourceTree = "<group>"; };
 		506F27EC459CA69DF758C983 /* GameRecordRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameRecordRepository.swift; sourceTree = "<group>"; };
 		54EF97628F7D2B7EDBC17824 /* AIPatternRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIPatternRepository.swift; sourceTree = "<group>"; };
 		57A4B11892F7278F4ED1A87F /* GamePlayerSeatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GamePlayerSeatView.swift; sourceTree = "<group>"; };
@@ -154,7 +152,6 @@
 		74EECA09C25E73B6235A1964 /* GameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameView.swift; sourceTree = "<group>"; };
 		764A0685F22497199552B475 /* PokerEngine+Settlement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PokerEngine+Settlement.swift"; sourceTree = "<group>"; };
 		76916C5A1170EB7752120BF3 /* GameViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameViewModel.swift; sourceTree = "<group>"; };
-		772C569166F0D0DF3BD3DB49 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		82C131C36FE7DAB2A46E98A2 /* ChipStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChipStorage.swift; sourceTree = "<group>"; };
 		842F687D9CB382280336CD76 /* Player.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Player.swift; sourceTree = "<group>"; };
 		88B8AD5F6733D215F3C62262 /* GameViewModel+PlayerActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GameViewModel+PlayerActions.swift"; sourceTree = "<group>"; };
@@ -163,7 +160,7 @@
 		8B3EB6C2C558AF7E772408B5 /* PreFlopHandTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreFlopHandTable.swift; sourceTree = "<group>"; };
 		9465195A4009A032D76D699A /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
 		94BE2A516204DC6429819030 /* Position.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Position.swift; sourceTree = "<group>"; };
-		986DC473A4E83130B33D0AE3 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		986DC473A4E83130B33D0AE3 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		9CF5B80FC6B56A440ADAFD0B /* GameOpponentsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameOpponentsSection.swift; sourceTree = "<group>"; };
 		A28BFD5B4F034D8A99648151 /* AIPattern.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIPattern.swift; sourceTree = "<group>"; };
 		A2EEBC082AD1FE0F3AC670E5 /* StatisticsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatisticsViewModel.swift; sourceTree = "<group>"; };
@@ -191,6 +188,7 @@
 		E938E9F65A78F81C2528931A /* GameArchiveManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameArchiveManager.swift; sourceTree = "<group>"; };
 		EB6608F2507ED09AE0B3A240 /* PokerEngine+State.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PokerEngine+State.swift"; sourceTree = "<group>"; };
 		EDF317BD961DF189CCD9964D /* GameViewModel+Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GameViewModel+Persistence.swift"; sourceTree = "<group>"; };
+		F47FE9BBB5A8D18B9C9A64AD /* AvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarView.swift; sourceTree = "<group>"; };
 		FC3E61AE9BDA6C7D05CD339F /* PokerEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PokerEngine.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -228,7 +226,6 @@
 		1BD9DD63E674A94F31B9A496 = {
 			isa = PBXGroup;
 			children = (
-				772C569166F0D0DF3BD3DB49 /* GoogleService-Info.plist */,
 				9D4132E60893C79398E1C689 /* PokerAI */,
 				2C941058B6B11EF300E2BE1F /* src */,
 				F5377F1BAF89563D261DA04D /* Tests */,
@@ -463,7 +460,7 @@
 		C6A241EFA7B63DA0E2C80CEE /* Components */ = {
 			isa = PBXGroup;
 			children = (
-				4F6A2A8DAA1177F8E21C11B1 /* AvatarView.swift */,
+				F47FE9BBB5A8D18B9C9A64AD /* AvatarView.swift */,
 				B2A89FC65242C268E9F912BF /* CardView.swift */,
 				3829E3CE2E5712EDA2C6C52D /* ChipLabel.swift */,
 			);
@@ -607,7 +604,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				326E6382F5D6F2061CFBBD53 /* Assets.xcassets in Resources */,
-				482727F08D87B0471B3D1FBF /* GoogleService-Info.plist in Resources */,
 				C756A499F5E1683808964D3B /* InfoPlist.strings in Resources */,
 				A303C576158F7A71CC9E9074 /* Localizable.strings in Resources */,
 				AC0900090781A6E27E4F6859 /* PrivacyInfo.xcprivacy in Resources */,
@@ -651,7 +647,7 @@
 				21FB25E26CB3BACBAC439C51 /* AdMobService.swift in Sources */,
 				F59F156978141EF43706952E /* AnalyticsEvent.swift in Sources */,
 				710595D762E75DE8A882277F /* AnalyticsService.swift in Sources */,
-				4F6A2A8EAA1177F8E21C11B1 /* AvatarView.swift in Sources */,
+				8E0D1A4C76DE9FD8664D5CF0 /* AvatarView.swift in Sources */,
 				43AF9326D0FF71FCBC1CA789 /* Card.swift in Sources */,
 				BB8D42AA38C22AFC2FB390F3 /* CardView.swift in Sources */,
 				BD4F08D98EE42C8A6B71CADB /* ChipLabel.swift in Sources */,
@@ -744,7 +740,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				DEVELOPMENT_TEAM = X9SL8P6R8V;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -754,7 +749,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.pokerai.trainer.tests;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.9;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PokerAI.app/PokerAI";
 			};
 			name = Release;
@@ -763,7 +758,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				DEVELOPMENT_TEAM = X9SL8P6R8V;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -773,7 +767,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.pokerai.trainer.tests;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.9;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PokerAI.app/PokerAI";
 			};
 			name = Debug;
@@ -919,7 +913,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = X9SL8P6R8V;
 				INFOPLIST_FILE = PokerAI/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "德扑AI训练器";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -929,7 +922,7 @@
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.pokerai.trainer;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -939,7 +932,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = X9SL8P6R8V;
 				INFOPLIST_FILE = PokerAI/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "德扑AI训练器";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -949,7 +941,7 @@
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.pokerai.trainer;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};

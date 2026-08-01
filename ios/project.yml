@@ -34,7 +34,6 @@ targets:
       - src
       - PokerAI/Assets.xcassets
       - PokerAI/PrivacyInfo.xcprivacy
-      - GoogleService-Info.plist
     dependencies:
       - package: Firebase
         product: FirebaseAnalytics
@@ -63,6 +62,7 @@ targets:
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
+        UIRequiresFullScreen: true
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
 

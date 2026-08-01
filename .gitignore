@@ -15,8 +15,8 @@ xcuserdata/
 *.moved-aside
 
 # Project workspace user data
-PokerAI.xcodeproj/project.xcworkspace/xcuserdata/
-PokerAI.xcodeproj/xcuserdata/
+ios/PokerAI.xcodeproj/project.xcworkspace/xcuserdata/
+ios/PokerAI.xcodeproj/xcuserdata/
 
 # Local tooling state
 .claude/
@@ -26,7 +26,7 @@ PokerAI.xcodeproj/xcuserdata/
 .obsidian/
 
 # Local reports / media artifacts
-docs/test-reports/
+ios/docs/test-reports/
 
 # Temporary files
 *.log
