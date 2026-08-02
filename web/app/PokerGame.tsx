@@ -12,11 +12,27 @@ import type { CSSProperties, ReactNode } from "react";
 import {
   loadSoundPreference,
   playDealSequence,
+  playGameEventSound,
   playGameSound,
   saveSoundPreference,
   unlockGameAudio,
   type GameSound,
 } from "./gameAudio";
+import {
+  characterGestureLabel,
+  performancesForEvent,
+  type CharacterPerformance,
+} from "./characterPresentation";
+import {
+  buildPublicPresentationSnapshot,
+  derivePresentationEvents,
+  type PresentationEvent,
+} from "../core/presentation";
+import {
+  choosePersonaDialogue,
+  type DialogueChoice,
+  type DialogueTrigger,
+} from "../core/dialogue";
 import { AI_ENGINE_NAMES, chooseAIAction } from "../core/ai";
 import {
   currentAIExplorationRate,
@@ -68,15 +84,6 @@ import type { ActionType, Card, GameState, Player } from "../core/types";
 
 const HUMAN_ID = 0;
 const EMPTY_THINKING_STEPS: readonly string[] = [];
-const SAFE_TABLE_TELLS = [
-  "扫了一眼下注线",
-  "轻轻整理面前的筹码",
-  "目光回到公共牌",
-  "在牌边停了一下",
-  "重新坐稳",
-  "看了看还在牌局里的人",
-] as const;
-
 const SUIT_NAMES: Record<Card["suit"], string> = {
   spades: "黑桃",
   hearts: "红桃",
@@ -117,6 +124,20 @@ function describeEvaluatedHand(hand: EvaluatedHand): string {
   }
 }
 
+function evaluateRecordedHand(
+  holeCards: Card[],
+  communityCards: Card[],
+): EvaluatedHand | null {
+  const cards = [...holeCards, ...communityCards];
+  return holeCards.length === 2 && cards.length >= 5 && cards.length <= 7
+    ? evaluateBest(cards)
+    : null;
+}
+
+function formatSignedChips(value: number): string {
+  return `${value >= 0 ? "+" : ""}${value.toLocaleString()}`;
+}
+
 function seededRandom(seed: number): () => number {
   let value = seed >>> 0;
   return () => {
@@ -135,6 +156,23 @@ function aiTurnSeed(game: GameState, playerId: number, stream: number): number {
     Math.imul(playerId + 1, 65_537) ^
     stream
   ) >>> 0;
+}
+
+function stableTextSeed(value: string): number {
+  let hash = 2_166_136_261;
+  for (const character of value) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16_777_619);
+  }
+  return hash >>> 0;
+}
+
+function actionSound(type: ActionType): GameSound {
+  if (type === "fold") return "fold";
+  if (type === "check") return "check";
+  if (type === "call") return "call";
+  if (type === "all-in") return "all-in";
+  return "raise";
 }
 const AVATAR_SOURCES: Record<number, string> = {
   0: "/characters/portraits/golden-player.webp",
@@ -525,14 +563,29 @@ function PlayerAvatar({
     const character =
       CAT_CHARACTER_PROFILES[player.id] ?? CAT_CHARACTER_PROFILES[0];
     return (
-      <span className={`player-avatar avatar-${size} avatar-table`} aria-hidden="true">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          className="seat-character-material"
-          src={character.seatAsset}
-          alt=""
-          draggable={false}
-        />
+      <span
+        className={`player-avatar avatar-${size} avatar-table character-stage`}
+        aria-hidden="true"
+      >
+        <span className="character-floor-shadow" />
+        <span className="character-rim-light" />
+        {(["body", "head", "paws"] as const).map((layer) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            className={`seat-character-material character-layer character-${layer}`}
+            src={character.seatAsset}
+            alt=""
+            draggable={false}
+            key={layer}
+          />
+        ))}
+        <span className="character-expression" />
+        <span className="character-reaction-mark" />
+        <span className="character-chip-sparks" aria-hidden="true">
+          <i />
+          <i />
+          <i />
+        </span>
       </span>
     );
   }
@@ -602,6 +655,8 @@ function Seat({
   reveal,
   dealOrder,
   dealSeatCount,
+  performance,
+  reactionLabel,
 }: {
   player: Player;
   active: boolean;
@@ -611,6 +666,8 @@ function Seat({
   reveal: boolean;
   dealOrder: number;
   dealSeatCount: number;
+  performance: CharacterPerformance | null;
+  reactionLabel: string | null;
 }) {
   const hiddenCards = !player.isHuman && !reveal;
   const character =
@@ -622,11 +679,15 @@ function Seat({
         active ? "is-active" : ""
       } ${player.status === "folded" ? "is-folded" : ""} ${
         player.status === "out" ? "is-out" : ""
-      } ${thinkingMode ? `is-thinking thinking-${thinkingMode}` : ""}`}
+      } ${thinkingMode ? `is-thinking thinking-${thinkingMode}` : ""} ${
+        performance ? `has-performance gesture-${performance.gesture}` : ""
+      }`}
+      data-persona={player.style?.key ?? "human"}
       aria-label={`${player.name}，${player.position}，${player.chips} 猫粮`}
     >
       <SeatPositionBadges player={player} dealer={dealer} />
       <button
+        key={performance?.eventId ?? "idle-character"}
         className="seat-character-button"
         aria-label={`查看${player.name}的猫咪角色`}
         aria-expanded={showCharacter}
@@ -689,11 +750,20 @@ function Seat({
             <i />
             <i />
           </span>
-          {thinkingLabel}
+          {reactionLabel ?? thinkingLabel}
+        </span>
+      ) : reactionLabel ? (
+        <span className="thought-bubble thought-reaction" aria-live="polite">
+          {reactionLabel}
         </span>
       ) : player.lastAction ? (
         <span key={player.lastAction} className="last-action">
           {player.lastAction}
+        </span>
+      ) : null}
+      {performance ? (
+        <span className="sr-only" aria-live="polite">
+          {player.name}{characterGestureLabel(performance.gesture)}
         </span>
       ) : null}
     </article>
@@ -873,6 +943,39 @@ function StatisticsScreen({
   const totalHands = profile.history.length;
   const wins = profile.history.filter((record) => record.humanDelta > 0).length;
   const net = profile.history.reduce((sum, record) => sum + record.humanDelta, 0);
+  const chronologicalHistory = [...profile.history].reverse();
+  const recentFive = chronologicalHistory.slice(-5);
+  const recentFiveNet = recentFive.reduce(
+    (sum, record) => sum + record.humanDelta,
+    0,
+  );
+  const winningHands = profile.history.filter((record) => record.humanDelta > 0);
+  const losingHands = profile.history.filter((record) => record.humanDelta < 0);
+  const averageWin = winningHands.length
+    ? Math.round(
+        winningHands.reduce((sum, record) => sum + record.humanDelta, 0) /
+          winningHands.length,
+      )
+    : 0;
+  const averageLoss = losingHands.length
+    ? Math.round(
+        losingHands.reduce((sum, record) => sum + record.humanDelta, 0) /
+          losingHands.length,
+      )
+    : 0;
+  let runningProfit = 0;
+  let profitPeak = 0;
+  let maximumDrawdown = 0;
+  chronologicalHistory.forEach((record) => {
+    runningProfit += record.humanDelta;
+    profitPeak = Math.max(profitPeak, runningProfit);
+    maximumDrawdown = Math.min(maximumDrawdown, runningProfit - profitPeak);
+  });
+  const largestLoss = losingHands.reduce<HandHistoryRecord | null>(
+    (worst, record) =>
+      !worst || record.humanDelta < worst.humanDelta ? record : worst,
+    null,
+  );
   const profiles = players
     .filter((player) => !player.isHuman)
     .map((player) => {
@@ -962,6 +1065,59 @@ function StatisticsScreen({
               value={`+${Math.max(0, ...profile.history.map((record) => record.humanDelta))}`}
             />
           </div>
+          <ProfitTrendChart records={chronologicalHistory} />
+          <section className="reflection-dashboard">
+            <header>
+              <div>
+                <h2>近期状态与复盘</h2>
+                <p>把盈亏拆成趋势和波动，避免只看最终总数。</p>
+              </div>
+              <strong className={recentFiveNet >= 0 ? "positive" : "negative"}>
+                近 {recentFive.length || 0} 手 {formatSignedChips(recentFiveNet)}
+              </strong>
+            </header>
+            <div className="reflection-metrics">
+              <span>
+                <small>盈利手平均</small>
+                <b className="positive">{formatSignedChips(averageWin)}</b>
+              </span>
+              <span>
+                <small>亏损手平均</small>
+                <b className="negative">{formatSignedChips(averageLoss)}</b>
+              </span>
+              <span>
+                <small>最大回撤</small>
+                <b className={maximumDrawdown < 0 ? "negative" : ""}>
+                  {formatSignedChips(maximumDrawdown)}
+                </b>
+              </span>
+              <span>
+                <small>盈利手占比</small>
+                <b>{percentage(wins, totalHands)}</b>
+              </span>
+            </div>
+            {largestLoss ? (
+              <button
+                type="button"
+                className="review-hand-callout"
+                onClick={() => setSelectedHistory(largestLoss)}
+              >
+                <span>
+                  <small>优先复盘</small>
+                  <strong>第 {largestLoss.handNumber} 手 · 最大单手亏损</strong>
+                  <p>{largestLoss.detail}</p>
+                </span>
+                <b className="negative">
+                  {formatSignedChips(largestLoss.humanDelta)}
+                </b>
+                <span className="history-detail-cue">
+                  <AppIcon name="detail" /> 查看明细
+                </span>
+              </button>
+            ) : (
+              <p className="reflection-empty">完成更多牌局后，这里会给出优先复盘建议。</p>
+            )}
+          </section>
           <section className="learning-summary">
             <h2>训练进度</h2>
             <p>
@@ -1017,7 +1173,15 @@ function StatisticsScreen({
       {tab === "recent" ? (
         <section key="recent" className="statistics-content recent-list">
           {profile.history.length ? (
-            profile.history.map((record) => (
+            profile.history.map((record) => {
+              const humanParticipant = record.participants.find(
+                (participant) => participant.isHuman,
+              );
+              const humanHand = evaluateRecordedHand(
+                record.holeCards,
+                record.communityCards,
+              );
+              return (
               <button
                 type="button"
                 key={record.id}
@@ -1029,6 +1193,21 @@ function StatisticsScreen({
                   <small>第 {record.handNumber} 手</small>
                   <strong>{record.title}</strong>
                   <p>{record.detail}</p>
+                  <p className="history-readable-cards">
+                    手牌：{readableCardsLabel(record.holeCards)}
+                  </p>
+                  <p className="history-readable-board">
+                    公共牌：{record.communityCards.length
+                      ? readableCardsLabel(record.communityCards)
+                      : "未发公共牌"}
+                  </p>
+                  <p className="history-readable-result">
+                    {humanHand
+                      ? `${describeEvaluatedHand(humanHand)} · 最佳五张：${readableCardsLabel(humanHand.cards)}`
+                      : humanParticipant?.status === "folded"
+                        ? "本手已弃牌，未形成五张牌型"
+                        : "未进入完整牌面"}
+                  </p>
                 </div>
                 <div className="history-cards">
                   {record.holeCards.map((card, index) => (
@@ -1049,7 +1228,8 @@ function StatisticsScreen({
                   明细
                 </span>
               </button>
-            ))
+              );
+            })
           ) : (
             <div className="empty-state">
               <span className="empty-card-mark" aria-hidden="true">
@@ -1207,6 +1387,7 @@ function HistoryDetailModal({
                 />
               ))}
             </b>
+            <em>{readableCardsLabel(record.holeCards)}</em>
           </span>
           <span>
             <small>公共牌</small>
@@ -1221,6 +1402,19 @@ function HistoryDetailModal({
                   ))
                 : "未发公共牌"}
             </b>
+            <em>
+              {record.communityCards.length
+                ? `翻牌：${readableCardsLabel(record.communityCards.slice(0, 3))}${
+                    record.communityCards[3]
+                      ? ` · 转牌：${readableCardLabel(record.communityCards[3])}`
+                      : ""
+                  }${
+                    record.communityCards[4]
+                      ? ` · 河牌：${readableCardLabel(record.communityCards[4])}`
+                      : ""
+                  }`
+                : "本手未发公共牌"}
+            </em>
           </span>
         </section>
 
@@ -1231,6 +1425,10 @@ function HistoryDetailModal({
               <ol className="history-settlement">
                 {settlementParticipants.map((participant) => {
                   const player = players[participant.playerId];
+                  const participantHand = evaluateRecordedHand(
+                    participant.holeCards,
+                    record.communityCards,
+                  );
                   return (
                     <li
                       key={participant.playerId}
@@ -1248,13 +1446,20 @@ function HistoryDetailModal({
                         </strong>
                         <span>
                           {participant.holeCards.length
-                            ? participant.holeCards.map((card, index) => (
+                            ? <>
+                              <span className="history-hole-card-art" aria-hidden="true">
+                                {participant.holeCards.map((card, index) => (
                                 <PlayingCard
                                   key={`${card.suit}-${card.rank}-${index}`}
                                   card={card}
                                   compact
                                 />
-                              ))
+                                ))}
+                              </span>
+                              <small className="history-hole-card-text">
+                                手牌：{readableCardsLabel(participant.holeCards)}
+                              </small>
+                            </>
                             : participant.contribution === 0
                               ? "未参与"
                               : participant.status === "folded"
@@ -1264,7 +1469,9 @@ function HistoryDetailModal({
                       </div>
                       <p>
                         <strong>
-                          {participant.handName ??
+                          {participantHand
+                            ? describeEvaluatedHand(participantHand)
+                            : participant.handName ??
                             (participant.isWinner
                               ? "未摊牌获胜"
                               : participant.contribution === 0
@@ -1273,6 +1480,11 @@ function HistoryDetailModal({
                                   ? "已弃牌"
                                   : "未亮牌")}
                         </strong>
+                        {participantHand ? (
+                          <small className="history-best-five">
+                            最佳五张：{readableCardsLabel(participantHand.cards)}
+                          </small>
+                        ) : null}
                         <small>
                           投入 {participant.contribution.toLocaleString()} ·
                           获得 {participant.payout.toLocaleString()}
@@ -1360,6 +1572,125 @@ function Metric({
   );
 }
 
+function ProfitTrendChart({ records }: { records: HandHistoryRecord[] }) {
+  const width = 960;
+  const height = 250;
+  const padding = { top: 22, right: 22, bottom: 34, left: 68 };
+  const cumulative = [0];
+  records.forEach((record) => {
+    cumulative.push(cumulative[cumulative.length - 1] + record.humanDelta);
+  });
+  const rawMinimum = Math.min(0, ...cumulative);
+  const rawMaximum = Math.max(0, ...cumulative);
+  const range = Math.max(100, rawMaximum - rawMinimum);
+  const minimum = rawMinimum - range * 0.12;
+  const maximum = rawMaximum + range * 0.12;
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+  const x = (index: number) =>
+    padding.left + (index / Math.max(1, cumulative.length - 1)) * chartWidth;
+  const y = (value: number) =>
+    padding.top + ((maximum - value) / (maximum - minimum)) * chartHeight;
+  const points = cumulative.map((value, index) => ({
+    value,
+    x: x(index),
+    y: y(value),
+  }));
+  const linePath = points
+    .map((point, index) => `${index === 0 ? "M" : "L"}${point.x},${point.y}`)
+    .join(" ");
+  const zeroY = y(0);
+  const areaPath = `${linePath} L${points.at(-1)?.x ?? padding.left},${zeroY} L${padding.left},${zeroY} Z`;
+  const ticks = [rawMaximum, (rawMaximum + rawMinimum) / 2, rawMinimum];
+
+  return (
+    <section className="profit-trend-card">
+      <header>
+        <div>
+          <h2>累计盈亏曲线</h2>
+          <p>按完成顺序展示最近 {records.length} 手，零线以上代表累计盈利。</p>
+        </div>
+        <strong className={(cumulative.at(-1) ?? 0) >= 0 ? "positive" : "negative"}>
+          {formatSignedChips(cumulative.at(-1) ?? 0)}
+        </strong>
+      </header>
+      {records.length ? (
+        <>
+          <div className="profit-chart-scroll">
+            <svg
+              className="profit-chart"
+              viewBox={`0 0 ${width} ${height}`}
+              role="img"
+              aria-label={`最近 ${records.length} 手累计盈亏曲线，当前 ${formatSignedChips(cumulative.at(-1) ?? 0)}`}
+            >
+              <defs>
+                <linearGradient id="profit-area-fill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stopColor="#2f6aea" stopOpacity="0.24" />
+                  <stop offset="1" stopColor="#2f6aea" stopOpacity="0.02" />
+                </linearGradient>
+              </defs>
+              {ticks.map((tick, index) => (
+                <g key={`${tick}-${index}`}>
+                  <line
+                    x1={padding.left}
+                    x2={width - padding.right}
+                    y1={y(tick)}
+                    y2={y(tick)}
+                    className="profit-grid-line"
+                  />
+                  <text x={padding.left - 12} y={y(tick) + 4} textAnchor="end">
+                    {Math.round(tick).toLocaleString()}
+                  </text>
+                </g>
+              ))}
+              <line
+                x1={padding.left}
+                x2={width - padding.right}
+                y1={zeroY}
+                y2={zeroY}
+                className="profit-zero-line"
+              />
+              <path d={areaPath} fill="url(#profit-area-fill)" />
+              <path d={linePath} className="profit-line" />
+              {points.slice(1).map((point, index) => (
+                <circle
+                  key={records[index].id}
+                  cx={point.x}
+                  cy={point.y}
+                  r={index === records.length - 1 ? 5 : 3}
+                  className="profit-point"
+                >
+                  <title>
+                    第 {records[index].handNumber} 手：本手 {formatSignedChips(records[index].humanDelta)}，累计 {formatSignedChips(point.value)}
+                  </title>
+                </circle>
+              ))}
+              <text x={padding.left} y={height - 9}>开始</text>
+              <text x={width - padding.right} y={height - 9} textAnchor="end">
+                第 {records.at(-1)?.handNumber} 手
+              </text>
+            </svg>
+          </div>
+          <details className="trend-data-table">
+            <summary>查看曲线逐手数据</summary>
+            <ol>
+              {records.map((record, index) => (
+                <li key={record.id}>
+                  <span>第 {record.handNumber} 手</span>
+                  <span>本手 {formatSignedChips(record.humanDelta)}</span>
+                  <b>累计 {formatSignedChips(cumulative[index + 1])}</b>
+                </li>
+              ))}
+            </ol>
+          </details>
+        </>
+      ) : (
+        <p className="chart-empty">完成第一手后，这里会开始绘制盈亏曲线。</p>
+      )}
+    </section>
+  );
+}
+
 function AIProfileCard({
   profile,
   player,
@@ -1380,6 +1711,39 @@ function AIProfileCard({
       : profile.handsPlayed < 30
         ? "学习中"
         : "画像稳定";
+  const read = profile.learning.humanRead;
+  const readRate = (value: number, total: number) =>
+    total > 0 ? percentage(value, total) : "待观察";
+  const humanAggression = readRate(read.aggressiveActions, read.totalActions);
+  const foldToPressure = readRate(
+    read.foldsToAggression,
+    read.pressureOpportunities,
+  );
+  const snapshots = profile.learning.snapshots;
+  const latestSnapshot = snapshots.at(-1);
+  const previousSnapshot = snapshots.at(-2);
+  const latestProfit = latestSnapshot
+    ? latestSnapshot.totalProfit - (previousSnapshot?.totalProfit ?? 0)
+    : 0;
+  const foldRate =
+    read.pressureOpportunities > 0
+      ? read.foldsToAggression / read.pressureOpportunities
+      : 0;
+  const continueRate =
+    read.pressureOpportunities > 0
+      ? read.continuesVsAggression / read.pressureOpportunities
+      : 0;
+  const vpipRate = read.vpipHands / Math.max(1, read.handsObserved);
+  const aggressionRate = read.aggressiveActions / Math.max(1, read.totalActions);
+  const counterMoves: string[] = [];
+  if (foldRate > 0.48) counterMoves.push("你面对压力弃牌偏多，它会增加主动施压");
+  if (continueRate > 0.52) counterMoves.push("你面对下注继续偏多，它会减少纯诈唬、偏向价值下注");
+  if (vpipRate > 0.58) counterMoves.push("你入池范围较宽，它会用更强的范围向你取价值");
+  if (vpipRate < 0.28 && read.handsObserved >= 3)
+    counterMoves.push("你选牌偏紧，它会更积极争夺无人进入的底池");
+  if (aggressionRate > 0.4) counterMoves.push("你行动较主动，它会收紧边缘牌的继续范围");
+  if (!counterMoves.length)
+    counterMoves.push("当前没有足够强的单一特征，它会维持原风格并继续观察");
 
   return (
     <article className="ai-profile-card">
@@ -1456,25 +1820,173 @@ function AIProfileCard({
             </b>
           </span>
           <span>
-            <small>记住的牌局情境</small>
-            <b>{Object.keys(profile.learning.contextPolicies).length} 类</b>
+            <small>学习曲线记录</small>
+            <b>{profile.learning.snapshots.length} 手</b>
           </span>
           <span>
             <small>观察你的行动</small>
             <b>{profile.learning.humanRead.handsObserved} 手</b>
           </span>
+          <span>
+            <small>最近一手结果</small>
+            <b className={latestProfit >= 0 ? "positive" : "negative"}>
+              {formatSignedChips(latestProfit)}
+            </b>
+          </span>
         </div>
-        <p className="opponent-read">
-          <b>它对你的判断：</b>{" "}
-          {describeHumanRead(profile.learning.humanRead).replace("对你的判断：", "")}
-        </p>
+        <section className="opponent-model">
+          <header>
+            <div>
+              <h3>它目前怎样看你</h3>
+              <p>{describeHumanRead(read).replace("对你的判断：", "")}</p>
+            </div>
+            <span>{read.handsObserved < 8 ? "初步判断" : "持续更新"}</span>
+          </header>
+          <div className="opponent-model-metrics">
+            <span>
+              <small>你的入池率</small>
+              <b>{readRate(read.vpipHands, read.handsObserved)}</b>
+            </span>
+            <span>
+              <small>你的翻前加注率</small>
+              <b>{readRate(read.pfrHands, read.handsObserved)}</b>
+            </span>
+            <span>
+              <small>你的行动主动率</small>
+              <b>{humanAggression}</b>
+            </span>
+            <span>
+              <small>面对压力弃牌</small>
+              <b>{foldToPressure}</b>
+            </span>
+          </div>
+          <div className="opponent-response">
+            <small>因此它倾向于</small>
+            <ul>
+              {counterMoves.slice(0, 2).map((move) => (
+                <li key={move}>{move}</li>
+              ))}
+            </ul>
+            <p>
+              判断依据：观察 {read.handsObserved} 手、{read.totalActions} 次行动
+              {read.pressureOpportunities
+                ? `、${read.pressureOpportunities} 次面对下注压力`
+                : ""}
+              。样本增加后会继续修正。
+            </p>
+          </div>
+        </section>
       </section>
     </article>
   );
 }
 
+function formatLearningDelta(value: number): string {
+  const percent = value * 100;
+  if (Math.abs(percent) < 0.05 && Math.abs(percent) > 0.0001) {
+    return `${percent >= 0 ? "+" : "−"}<0.1%`;
+  }
+  return `${percent >= 0 ? "+" : ""}${percent.toFixed(1)}%`;
+}
+
+function LearningChangeChart({
+  snapshots,
+}: {
+  snapshots: AIProfileStats["learning"]["snapshots"];
+}) {
+  const source = snapshots.slice(-30);
+  const width = 900;
+  const height = 210;
+  const padding = { top: 28, right: 28, bottom: 34, left: 55 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+  const maximumMagnitude = Math.max(
+    0.002,
+    ...source.flatMap((snapshot) => [
+      Math.abs(snapshot.aggressionBias),
+      Math.abs(snapshot.tightnessBias),
+      Math.abs(snapshot.bluffBias),
+    ]),
+  );
+  const x = (index: number) =>
+    padding.left + (index / Math.max(1, source.length - 1)) * chartWidth;
+  const y = (value: number) =>
+    padding.top +
+    ((maximumMagnitude - value) / (maximumMagnitude * 2)) * chartHeight;
+  const series = [
+    { key: "aggressionBias" as const, label: "主动进攻", className: "aggression" },
+    { key: "tightnessBias" as const, label: "起手牌范围", className: "tightness" },
+    { key: "bluffBias" as const, label: "诈唬倾向", className: "bluff" },
+  ];
+
+  return (
+    <section className="learning-change-chart">
+      <header>
+        <div>
+          <h4>多局学习变化</h4>
+          <p>曲线展示最近 {source.length} 手相对原始性格的变化，零线表示原始打法。</p>
+        </div>
+        <div className="learning-chart-legend" aria-label="曲线图例">
+          {series.map((item) => (
+            <span className={`is-${item.className}`} key={item.key}>
+              <i aria-hidden="true" /> {item.label}
+            </span>
+          ))}
+        </div>
+      </header>
+      <div className="learning-chart-scroll">
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          role="img"
+          aria-label={`AI 最近 ${source.length} 手的学习调整趋势`}
+        >
+          <line
+            x1={padding.left}
+            x2={width - padding.right}
+            y1={y(0)}
+            y2={y(0)}
+            className="learning-zero-line"
+          />
+          <text x={padding.left - 10} y={y(maximumMagnitude) + 4} textAnchor="end">
+            +{(maximumMagnitude * 100).toFixed(1)}%
+          </text>
+          <text x={padding.left - 10} y={y(0) + 4} textAnchor="end">0</text>
+          <text x={padding.left - 10} y={y(-maximumMagnitude) + 4} textAnchor="end">
+            −{(maximumMagnitude * 100).toFixed(1)}%
+          </text>
+          {series.map((item) => {
+            const path = source
+              .map(
+                (snapshot, index) =>
+                  `${index === 0 ? "M" : "L"}${x(index)},${y(snapshot[item.key])}`,
+              )
+              .join(" ");
+            const latest = source.at(-1);
+            return (
+              <g className={`learning-series is-${item.className}`} key={item.key}>
+                <path d={path} />
+                {latest ? (
+                  <circle cx={x(source.length - 1)} cy={y(latest[item.key])} r="5">
+                    <title>{item.label}：{formatLearningDelta(latest[item.key])}</title>
+                  </circle>
+                ) : null}
+              </g>
+            );
+          })}
+          <text x={padding.left} y={height - 8}>
+            第 {source[0]?.handIndex} 手
+          </text>
+          <text x={width - padding.right} y={height - 8} textAnchor="end">
+            第 {source.at(-1)?.handIndex} 手
+          </text>
+        </svg>
+      </div>
+    </section>
+  );
+}
+
 function LearningSparkline({ profile }: { profile: AIProfileStats }) {
-  const source = profile.learning.snapshots.slice(-24);
+  const source = profile.learning.snapshots.slice(-30);
   const baselineTarget = 8;
 
   if (source.length < baselineTarget) {
@@ -1533,18 +2045,19 @@ function LearningSparkline({ profile }: { profile: AIProfileStats }) {
   ];
 
   return (
-    <div className="learning-tracks" aria-label="相对原始性格的策略调整">
+    <>
+      <LearningChangeChart snapshots={source} />
+      <div className="learning-tracks" aria-label="相对原始性格的当前策略调整">
       {tracks.map((track) => {
         const current = source[source.length - 1][track.key];
-        const rounded = Math.round(current * 100);
-        const isNeutral = Math.abs(current) < 0.025;
+        const isNeutral = Math.abs(current) < 0.0005;
         const status = isNeutral
-          ? "基本不变"
+          ? "当前持平"
           : current > 0
             ? track.positiveEnd
             : track.negativeEnd;
         const description = isNeutral
-          ? track.neutralText
+          ? `多局信号暂时相互抵消，${track.neutralText}`
           : current > 0
             ? track.positiveText
             : track.negativeText;
@@ -1559,7 +2072,7 @@ function LearningSparkline({ profile }: { profile: AIProfileStats }) {
             <div
               className="learning-comparison"
               role="img"
-              aria-label={`${track.label}：${status}，相对原始性格 ${rounded >= 0 ? "+" : ""}${rounded}%`}
+              aria-label={`${track.label}：${status}，相对原始性格 ${formatLearningDelta(current)}`}
             >
               <small>{track.negativeEnd}</small>
               <div className="learning-scale">
@@ -1572,12 +2085,13 @@ function LearningSparkline({ profile }: { profile: AIProfileStats }) {
               <small>{track.positiveEnd}</small>
             </div>
             <span className="learning-delta">
-              相对原始性格 {rounded >= 0 ? "+" : ""}{rounded}%
+              当前相对原始性格 {formatLearningDelta(current)}
             </span>
           </div>
         );
       })}
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -1962,6 +2476,25 @@ function GameScreen({
   const [recentThinkingSteps, setRecentThinkingSteps] = useState<
     Record<number, string[]>
   >({});
+  const [performanceBySeat, setPerformanceBySeat] = useState<
+    Record<number, CharacterPerformance>
+  >({});
+  const [dialogueBySeat, setDialogueBySeat] = useState<Record<number, string>>(
+    {},
+  );
+  const [resultVisibleHand, setResultVisibleHand] = useState<string | null>(
+    game.phase === "playing" ? null : game.handId,
+  );
+  const [dialogueMemory, setDialogueMemory] = useState<
+    Record<number, { ids: string[]; families: string[] }>
+  >({});
+  const performanceTimersRef = useRef<Record<number, number>>({});
+  const dialogueTimersRef = useRef<Record<number, number>>({});
+  const resultTimerRef = useRef<number | null>(null);
+  const presentationTimersRef = useRef<number[]>([]);
+  const previousPresentationRef = useRef(
+    buildPublicPresentationSnapshot(game),
+  );
   const [dismissedRebuyHand, setDismissedRebuyHand] = useState<number | null>(
     null,
   );
@@ -1993,6 +2526,28 @@ function GameScreen({
     },
     [aiProfiles, game, thinkingId],
   );
+  const thinkingDialogueChoices: DialogueChoice[] = useMemo(() => {
+    if (thinkingId === null) return [];
+    const player = game.players[thinkingId];
+    const memory = dialogueMemory[thinkingId] ?? {
+      ids: [],
+      families: [],
+    };
+    return Array.from({ length: 3 }, (_, index) =>
+      choosePersonaDialogue({
+        archetype: player.style?.key ?? "balanced",
+        trigger: "turn",
+        seed: aiTurnSeed(game, thinkingId, 0x7e11 + index * 97),
+        recentIds: [
+          ...memory.ids,
+          ...Array.from({ length: index }, (_, inner) =>
+            `${player.style?.key ?? "balanced"}:turn:${inner}`,
+          ),
+        ],
+        recentFamilies: memory.families,
+      }),
+    ).filter((choice): choice is DialogueChoice => choice !== null);
+  }, [dialogueMemory, game, thinkingId]);
   const thinkingPlan: AIThinkingPlan | null = useMemo(() => {
     if (thinkingId === null || !pendingAIAction) return null;
     const random = seededRandom(aiTurnSeed(game, thinkingId, 0x51f15e));
@@ -2003,21 +2558,24 @@ function GameScreen({
       aiProfiles[thinkingId]?.learning,
       recentStepsForThinkingPlayer,
     );
-    const start = Math.floor(random() * SAFE_TABLE_TELLS.length);
     return {
       ...plan,
-      // Live bubbles are observable physical beats only. Strategy explanations
-      // are reserved for post-hand traces, so the table never fabricates an
-      // internal calculation that the policy did not perform.
-      steps: plan.steps.map(
-        (_, index) => SAFE_TABLE_TELLS[(start + index) % SAFE_TABLE_TELLS.length],
-      ),
+      steps: plan.steps.map((stateLine, index) => {
+        if (index % 2 === 1 || thinkingDialogueChoices.length === 0) {
+          return stateLine;
+        }
+        return (
+          thinkingDialogueChoices[index % thinkingDialogueChoices.length]?.text ??
+          stateLine
+        );
+      }),
     };
   }, [
     aiProfiles,
     game,
     pendingAIAction,
     recentStepsForThinkingPlayer,
+    thinkingDialogueChoices,
     thinkingId,
   ]);
   const thinkingKey =
@@ -2055,25 +2613,9 @@ function GameScreen({
   const dealOrderById = new Map(
     dealSeatIds.map((playerId, index) => [playerId, index]),
   );
-  const dealCardCount = dealSeatIds.length * 2;
-  const previousAudioState = useRef({
-    handNumber: game.handNumber,
-    communityCards: game.communityCards.length,
-    currentActor: game.currentActor,
-    phase: game.phase,
-  });
-
-  function actionSound(type: ActionType): GameSound {
-    if (type === "fold") return "fold";
-    if (type === "check") return "check";
-    if (type === "all-in") return "all-in";
-    return "chips";
-  }
-
   function act(type: ActionType, amount?: number) {
     setShowQuickBet(false);
     unlockGameAudio(soundEnabled);
-    playGameSound(actionSound(type), soundEnabled);
     onGameChange(applyAction(game, { playerId: HUMAN_ID, type, amount }));
   }
 
@@ -2108,6 +2650,22 @@ function GameScreen({
       });
     const timer = window.setTimeout(() => {
       const action = pendingAIAction;
+      setDialogueMemory((current) => {
+        const actorMemory = current[actorId] ?? { ids: [], families: [] };
+        return {
+          ...current,
+          [actorId]: {
+            ids: [
+              ...actorMemory.ids,
+              ...thinkingDialogueChoices.map((choice) => choice.id),
+            ].slice(-24),
+            families: [
+              ...actorMemory.families,
+              ...thinkingDialogueChoices.map((choice) => choice.family),
+            ].slice(-8),
+          },
+        };
+      });
       setRecentThinkingSteps((current) => ({
         ...current,
         [actorId]: [
@@ -2115,7 +2673,6 @@ function GameScreen({
           ...thinkingPlan.steps,
         ].slice(-36),
       }));
-      playGameSound(actionSound(action.type), soundEnabled);
       onGameChange(applyAction(game, action));
     }, thinkingPlan.totalMs);
     return () => {
@@ -2133,6 +2690,7 @@ function GameScreen({
     thinkingId,
     thinkingKey,
     thinkingPlan,
+    thinkingDialogueChoices,
     pendingAIAction,
   ]);
 
@@ -2146,37 +2704,188 @@ function GameScreen({
   }, [game.handNumber, rebuyNoticeText]);
 
   useEffect(() => {
-    const previous = previousAudioState.current;
-    if (game.handNumber !== previous.handNumber) {
-      playDealSequence(dealCardCount, soundEnabled);
-    } else if (game.communityCards.length > previous.communityCards) {
-      playDealSequence(
-        game.communityCards.length - previous.communityCards,
-        soundEnabled,
-        0.085,
+    const performanceTimers = performanceTimersRef.current;
+    const presentationTimers = presentationTimersRef.current;
+    return () => {
+      Object.values(performanceTimers).forEach((timer) =>
+        window.clearTimeout(timer),
       );
-    }
-
-    if (previous.phase === "playing" && game.phase !== "playing" && game.result) {
-      playGameSound(
-        game.result.winnerIds.includes(HUMAN_ID) ? "win" : "lose",
-        soundEnabled,
-      );
-    } else if (
-      previous.currentActor !== HUMAN_ID &&
-      game.currentActor === HUMAN_ID &&
-      game.phase === "playing"
-    ) {
-      playGameSound("turn", soundEnabled);
-    }
-
-    previousAudioState.current = {
-      handNumber: game.handNumber,
-      communityCards: game.communityCards.length,
-      currentActor: game.currentActor,
-      phase: game.phase,
+      if (resultTimerRef.current) window.clearTimeout(resultTimerRef.current);
+      presentationTimers.forEach((timer) => window.clearTimeout(timer));
     };
-  }, [dealCardCount, game, soundEnabled]);
+  }, []);
+
+  useEffect(() => {
+    const nextSnapshot = buildPublicPresentationSnapshot(game);
+    const events = derivePresentationEvents(
+      previousPresentationRef.current,
+      nextSnapshot,
+    );
+    previousPresentationRef.current = nextSnapshot;
+    if (!events.length) return;
+
+    const schedulePresentation = (callback: () => void, delayMs: number) => {
+      const timer = window.setTimeout(() => {
+        const timerIndex = presentationTimersRef.current.indexOf(timer);
+        if (timerIndex >= 0) presentationTimersRef.current.splice(timerIndex, 1);
+        callback();
+      }, delayMs);
+      presentationTimersRef.current.push(timer);
+      return timer;
+    };
+
+    const rememberChoice = (seatId: number, choice: DialogueChoice) => {
+      setDialogueMemory((current) => {
+        const memory = current[seatId] ?? { ids: [], families: [] };
+        return {
+          ...current,
+          [seatId]: {
+            ids: [...memory.ids, choice.id].slice(-24),
+            families: [...memory.families, choice.family].slice(-8),
+          },
+        };
+      });
+    };
+    const phraseFor = (
+      seatId: number,
+      trigger: DialogueTrigger,
+      eventId: string,
+    ) => {
+      const player = game.players[seatId];
+      if (!player) return null;
+      if (player.isHuman) {
+        const humanFeedback: Record<DialogueTrigger, string> = {
+          turn: "轮到你了",
+          check: "轻敲桌面，先看后续",
+          call: "筹码入池，继续这一手",
+          raise: "你把压力推回桌面",
+          "all-in": "全部筹码已经入池",
+          fold: "收起底牌，先观察这一局",
+          win: "这一池筹码归你",
+          lose: "角色重新坐稳，准备下一手",
+        };
+        return humanFeedback[trigger];
+      }
+      if (!player.style) return null;
+      const memory = dialogueMemory[seatId] ?? {
+        ids: [],
+        families: [],
+      };
+      const choice = choosePersonaDialogue({
+        archetype: player.style.key,
+        trigger,
+        seed: stableTextSeed(`${eventId}:${seatId}`),
+        recentIds: memory.ids,
+        recentFamilies: memory.families,
+      });
+      if (choice) rememberChoice(seatId, choice);
+      return choice?.text ?? null;
+    };
+    const present = (event: PresentationEvent, delayMs = 0) => {
+      const performances = performancesForEvent(event);
+      Object.entries(performances).forEach(([seatKey, performance]) => {
+        const seatId = Number(seatKey);
+        const player = game.players[seatId];
+        if (
+          performance.gesture === "loss" &&
+          !player?.isHuman &&
+          (player?.status === "folded" || player?.status === "out")
+        ) {
+          return;
+        }
+        schedulePresentation(() => {
+          const existingTimer = performanceTimersRef.current[seatId];
+          if (existingTimer) window.clearTimeout(existingTimer);
+          setPerformanceBySeat((current) => ({
+            ...current,
+            [seatId]: performance,
+          }));
+          const trigger: DialogueTrigger =
+            event.kind === "action"
+              ? event.action
+              : performance.gesture === "win"
+                ? "win"
+                : "lose";
+          const phrase = phraseFor(seatId, trigger, performance.eventId);
+          if (phrase) {
+            setDialogueBySeat((current) => ({ ...current, [seatId]: phrase }));
+            const existingDialogueTimer = dialogueTimersRef.current[seatId];
+            if (existingDialogueTimer) window.clearTimeout(existingDialogueTimer);
+            dialogueTimersRef.current[seatId] = window.setTimeout(() => {
+              setDialogueBySeat((current) => {
+                if (current[seatId] !== phrase) return current;
+                const next = { ...current };
+                delete next[seatId];
+                return next;
+              });
+            }, Math.max(1_650, performance.durationMs));
+          }
+          const feedbackDuration = player?.isHuman
+            ? Math.max(1_100, performance.durationMs)
+            : performance.durationMs;
+          performanceTimersRef.current[seatId] = window.setTimeout(() => {
+            setPerformanceBySeat((current) => {
+              if (current[seatId]?.eventId !== performance.eventId) return current;
+              const next = { ...current };
+              delete next[seatId];
+              return next;
+            });
+          }, feedbackDuration);
+        }, delayMs);
+      });
+    };
+
+    const hasImmediateAllIn = events.some(
+      (event) => event.kind === "action" && event.action === "all-in",
+    );
+
+    events.forEach((event) => {
+      if (event.kind === "deal") {
+        setResultVisibleHand(null);
+        playDealSequence(event.cardCount, soundEnabled);
+        return;
+      }
+      if (event.kind === "action") {
+        playGameEventSound(event.id, actionSound(event.action), soundEnabled);
+        present(event);
+        return;
+      }
+      if (event.kind === "street") {
+        const streetSound: GameSound =
+          event.street === "flop"
+            ? "flop"
+            : event.street === "turn"
+              ? "street-turn"
+              : "river";
+        playGameEventSound(event.id, streetSound, soundEnabled);
+        return;
+      }
+      if (event.kind === "your-turn") {
+        playGameEventSound(event.id, "your-turn", soundEnabled);
+        return;
+      }
+      const resultDelay = hasImmediateAllIn ? 420 : 0;
+      present(event, resultDelay);
+      if (event.showdown) {
+        playGameEventSound(`${event.id}:showdown`, "showdown", soundEnabled);
+      }
+      schedulePresentation(() => {
+        playGameEventSound(`${event.id}:pot`, "pot-award", soundEnabled);
+      }, resultDelay + 160);
+      schedulePresentation(() => {
+        playGameEventSound(
+          `${event.id}:outcome`,
+          event.humanDelta > 0 ? "win" : "lose",
+          soundEnabled,
+        );
+      }, resultDelay + 340);
+      if (resultTimerRef.current) window.clearTimeout(resultTimerRef.current);
+      resultTimerRef.current = schedulePresentation(
+        () => setResultVisibleHand(event.handId),
+        resultDelay + 1_500,
+      );
+    });
+  }, [dialogueMemory, game, soundEnabled]);
 
   useEffect(() => {
     function handleKey(event: KeyboardEvent) {
@@ -2293,6 +3002,8 @@ function GameScreen({
                   reveal={revealOpponents && player.status !== "folded"}
                   dealOrder={dealOrderById.get(player.id) ?? 0}
                   dealSeatCount={dealSeatIds.length}
+                  performance={performanceBySeat[player.id] ?? null}
+                  reactionLabel={dialogueBySeat[player.id] ?? null}
                 />
               ),
             )}
@@ -2313,6 +3024,8 @@ function GameScreen({
                 reveal={revealOpponents && player.status !== "folded"}
                 dealOrder={dealOrderById.get(player.id) ?? 0}
                 dealSeatCount={dealSeatIds.length}
+                performance={performanceBySeat[player.id] ?? null}
+                reactionLabel={dialogueBySeat[player.id] ?? null}
               />
             ))}
           </div>
@@ -2331,6 +3044,8 @@ function GameScreen({
           reveal
           dealOrder={dealOrderById.get(human.id) ?? 0}
           dealSeatCount={dealSeatIds.length}
+          performance={performanceBySeat[human.id] ?? null}
+          reactionLabel={dialogueBySeat[human.id] ?? null}
         />
 
         {game.phase === "playing" ? (
@@ -2386,11 +3101,24 @@ function GameScreen({
         ) : null}
       </section>
 
+      {game.result && resultVisibleHand !== game.handId ? (
+        <div className="table-result-beat" role="status" aria-live="assertive">
+          <small>{game.result.showdown ? "摊牌时刻" : "底池归属"}</small>
+          <strong>
+            {game.result.winnerIds
+              .map((playerId) => game.players[playerId]?.name)
+              .filter(Boolean)
+              .join("、")}赢下这一手
+          </strong>
+          <span>{game.result.detail}</span>
+        </div>
+      ) : null}
+
       {showActionLog ? (
         <ActionDrawer game={game} onClose={() => setShowActionLog(false)} />
       ) : null}
 
-      {game.result ? (
+      {game.result && resultVisibleHand === game.handId ? (
         <HandResultModal
           game={game}
           onExit={onExit}

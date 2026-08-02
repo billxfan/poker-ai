@@ -40,6 +40,9 @@ export type HandHistoryParticipant = {
   net: number;
   holeCards: Card[];
   handName: string | null;
+  handCategory?: number;
+  handValues?: number[];
+  bestCards?: Card[];
   isWinner: boolean;
   status?: string;
 };
@@ -287,6 +290,9 @@ export function recordCompletedHand(
           net: payout - player.totalContribution,
           holeCards: revealCards ? [...player.holeCards] : [],
           handName: hand?.categoryName ?? null,
+          handCategory: hand?.category,
+          handValues: hand ? [...hand.values] : undefined,
+          bestCards: hand ? [...hand.cards] : undefined,
           isWinner: game.result?.winnerIds.includes(player.id) ?? false,
           status: player.status,
         };

@@ -12,6 +12,71 @@ goal is “recurring rivals, not visible algorithms”: memory and adaptation ap
 as restrained character knowledge, while live solver scores, equity meters and
 debug traces stay out of the active hand.
 
+## Table Theatre v0.3 extension
+
+The reference is a compact character-driven bluffing table, adapted to the
+existing cat cast rather than copied literally. The visual archetype is a
+**Z-axis stage**: each seat is a small physical scene made of independent floor
+shadow, rim light, body, clipped head/paw duplicates, reaction effects and
+dialogue. Depth comes from parallax, occlusion, light and gesture timing.
+
+### Seat layer stack
+
+| Layer | Role | Allowed animation |
+|---|---|---|
+| floor shadow | contact and weight | scale + opacity |
+| rim/aura | active, pressure and result focus | scale + opacity |
+| body | breathing and torso posture | translate/rotate/scale |
+| clipped head | gaze, recoil and personality | rotate/translate |
+| clipped paws | check/call/raise/fold gesture | translate/rotate |
+| reaction FX | blink, sweat, sparks, loss lines | opacity/transform |
+| bubble/badge | accessible public language | opacity/transform |
+
+The same source art may be layered and clipped for pseudo-3D. An animation that
+only rocks the entire cutout fails this specification.
+
+### Gesture matrix
+
+| State | Shared meaning | Persona variation |
+|---|---|---|
+| idle | slow breath, rare blink | different breath amplitude and gaze |
+| thinking | looks between board and chips | 老 K precise, 小马 restless, 大叔 double-checks, 小鱼 leans in, 狐狸 becomes still |
+| check/call | small paw beat toward felt | speed and overshoot follow persona |
+| raise | paws/chips travel forward, seat light tightens | 小马 snaps, 老 K presses, 狐狸 glides |
+| all-in | stronger forward move and table shock ring | 850–1100ms, no result colour yet |
+| fold | cards/seat move away, body recoils | 500–700ms, then persistent muted posture |
+| win | gold collection arc and uplift | restrained to exuberant by persona |
+| loss | lowered light and posture | no humiliation; folded players stay quietly folded |
+
+### Motion physics
+
+- Animate transform/opacity only with `cubic-bezier(.22,.8,.2,1)` for weighted
+  entry and `cubic-bezier(.34,1.56,.64,1)` only for elastic persona accents.
+- Public-action response starts within 150ms. Normal gestures finish within
+  900ms; result choreography within 1800ms.
+- Desktop travel is 6–18px; mobile travel is 3–10px. Nothing may cross the
+  community board, pot price or human action bar.
+- Reduced motion disables travel, shake and parallax while retaining rim light,
+  an expression badge and 120–180ms opacity feedback.
+
+### Dialogue and results
+
+- Speech is a short post-action bark, not a thought transcript: at most two
+  lines and 18 Han characters.
+- `turn-tell` uses neutral felt glass; `after-action` receives a persona accent;
+  `result` uses gold for a win and desaturated plum for a loss.
+- The result modal waits for a short table beat. Winners receive a gold rim and
+  pot-collection arc; showdown losers lower posture and light. A compact center
+  banner announces the public result before details cover the table.
+- Never show percentages, ranges, hand names or claims about hidden cards.
+
+### Audio signature
+
+The table uses dry card cloth/noise, warm wood/chip transients and restrained
+musical intervals. Call, raise and all-in never share one cue. Flop, turn,
+river, showdown and pot award each have their own temporal signature. High-
+frequency cues use deterministic micro-variations.
+
 ## Humanlike core experience
 
 ### Rival memory

@@ -12,6 +12,11 @@ reinforcement learning.
 This is a game first and a training instrument second. It must feel like a table
 of recurring characters, not a solver UI and not five difficulty sliders.
 
+The table must also read as a small character theatre. A player should recognise
+who checked, attacked, folded, won or lost from posture, motion, voice and sound
+before reading the action log. Static portraits with generic status labels do
+not satisfy the experience promise.
+
 ## Primary user
 
 A desktop or mobile poker player who wants 10–30 minute private sessions,
@@ -27,23 +32,26 @@ real-money feature is required.
    history.
 3. Take one legal poker action.
 4. Watch opponents deliberate and act at distinct, context-sensitive rhythms.
-5. Reach fold resolution or showdown with correct main/side-pot settlement.
-6. See a concise hand result and optional post-hand table read.
-7. Opponents update bounded beliefs and action values from the completed hand.
-8. Rotate the button and continue, preserving stacks, memories and identities.
+5. Hear a short, persona-specific public bark after meaningful actions while
+   the character performs a matching physical reaction.
+6. Reach fold resolution or showdown with correct main/side-pot settlement.
+7. See and hear winners collect the pot and losers react before the concise
+   hand result appears.
+8. Opponents update bounded beliefs and action values from the completed hand.
+9. Rotate the button and continue, preserving stacks, memories and identities.
 
 ## The five opponents
 
 Each opponent has immutable identity anchors plus learnable parameters bounded
 inside an identity envelope.
 
-| Opponent | Identity anchor | Characteristic pressure | Adaptation ceiling |
+| Opponent | Identity anchor | Visible language and movement | Adaptation ceiling |
 |---|---|---|---|
-| 老 K | disciplined tight-aggressive regular | strong ranges, delayed traps, value pressure | medium |
-| 小马 | loose-aggressive tempo player | steals, isolation raises, multi-street pressure | medium-high |
-| 大叔 | risk-averse nit | position discipline, pot control, rare credible aggression | low |
-| 小鱼 | curious calling station | wide calls, sticky pairs/draws, little bluffing | low |
-| 狐狸 | balanced exploitative regular | changes sizing and bluff/value mix from table reads | high |
+| 老 K | disciplined tight-aggressive regular | sparse formal phrases, measured chip alignment, restrained victory | medium |
+| 小马 | loose-aggressive tempo player | fast teasing phrases, forward lunges and energetic raises | medium-high |
+| 大叔 | risk-averse nit | cautious self-talk, repeated checking and relieved folds | low |
+| 小鱼 | curious calling station | warm curious phrases, eager calls and surprised reactions | low |
+| 狐狸 | balanced exploitative regular | elliptical humour, still gaze and theatrical pressure | high |
 
 Success requires distributional separation, not different labels over one
 shared threshold function.
@@ -83,6 +91,31 @@ Every action returns an inspectable decision trace containing public factors,
 persona factors, considered action scores, selected action and seed cursor.
 Production UI exposes only a safe post-hand summary, not hidden live reasoning.
 
+## Character theatre and dialogue
+
+Presentation is derived only after a public action is accepted or a result is
+settled. It never drives policy and never predicts the pending action.
+
+- Every opponent supports idle, thinking, check/call, raise/all-in, fold, win
+  and loss presentation states.
+- A state combines pseudo-3D posture, face/eye treatment, gesture, light, short
+  dialogue and an accessible text equivalent.
+- Turn-time tells are observable physical behaviour only. Spoken action barks
+  occur after the action is public; result reactions occur only after settlement.
+- Each persona owns separate phrase families, motion curves and reaction
+  intensity. Recent phrase and semantic-family cooldowns prevent repetition.
+- Momentum and player reads may flavour language only after adequate public
+  evidence and must use uncertain wording such as “最近” or “看起来”.
+- Reduced-motion mode replaces large movement with opacity, light and badges.
+
+## Audio direction
+
+Audio has separate table, alert, outcome and ambience layers. At minimum, deal,
+check, call, raise, fold, all-in, flop, turn, river, showdown, pot award,
+your-turn, win and loss are distinguishable. High-frequency sounds have subtle
+deterministic variants; an event ID can play at most once. Audio is never the
+only feedback and nothing auto-plays before the user's first gesture.
+
 ## Local reinforcement learning
 
 MVP learning is a deterministic, persisted contextual-bandit system rather than
@@ -112,6 +145,10 @@ and personality.
 - Deterministic headless simulation harness
 - Humanlike turn cadence tied to decision complexity
 - Post-hand decision/story summary and opponent memory indicators
+- Public-event presentation layer and seven-state character controller
+- Persona-specific physical tells, action barks and result reactions
+- Pseudo-3D layered character lighting, posture and gesture animation
+- Four-bus procedural audio director with event deduplication
 - Browser-local save, reset-table and reset-memories controls
 - Responsive, accessible Web/PWA table
 
@@ -153,6 +190,13 @@ and personality.
   are fast and high-pressure river decisions are visibly slower.
 - The table is usable at 360 px mobile width and standard desktop widths with
   keyboard, touch and reduced-motion support.
+- In a fixed check → raise → fold → all-in → showdown path, every public event
+  produces matching character, table, text and sound feedback within 150 ms.
+- Five opponents remain recognisable with profile panels closed: no two share
+  the same phrase catalog, primary gesture or result-reaction curve.
+- Dialogue never appears before its triggering public event, never references
+  hidden cards or pending decisions, and does not repeat within its cooldown.
+- All key states remain readable with sound muted and with reduced motion.
 
 ## Release bar
 
@@ -174,7 +218,7 @@ impact and a vNext owner.
 
 - v0.2 Humanlike Core: observation boundary, distinct policies, deterministic
   contextual learning, replay harness and safe post-hand explanations.
-- v0.3 Table Life: richer physical tells, dialogue restraint, session arcs and
-  longitudinal opponent profile views.
+- v0.3 Table Theatre: persona language, public-event presentation states,
+  pseudo-3D gestures, result choreography and layered procedural audio.
 - v1.0: calibrated large-sample policies, migration-safe saves, cross-browser
   performance and accessibility release gate.

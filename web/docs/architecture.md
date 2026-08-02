@@ -1,4 +1,4 @@
-# Poker AI Humanlike Core — Technical Architecture
+# Poker AI Humanlike Core + Table Theatre — Technical Architecture
 
 ## Architecture derivation
 
@@ -31,6 +31,21 @@ hand-complete public record + private episode ──> learning reducer
 
 simulation/critic harness depends on every core contract; core never depends on UI.
 ```
+
+Table Theatre adds a parallel, one-way presentation path:
+
+```text
+previous public snapshot + next public snapshot
+                    │
+                    ▼
+          presentation event reducer
+             │        │        │
+             ▼        ▼        ▼
+       character    dialogue   audio
+          state      phrase   director
+```
+
+No arrow returns from the presentation path to the engine or bot policy.
 
 ## Modules
 
@@ -112,6 +127,34 @@ it.
 owns long-running seeded simulations and behavioural metric reports. A failing
 case serializes seed plus transition/decision trace so it is directly replayable.
 
+### `core/presentation.ts` — public-event derivation
+
+Creates an allowlisted `PublicPresentationSnapshot` and derives stable action,
+street, turn and settlement events by comparing snapshots. Event IDs use hand
+and action sequence identity, making React Strict Mode and repeated renders
+idempotent. It cannot represent deck, hole cards or decision traces.
+
+### `core/dialogue.ts` — persona language
+
+Consumes a presentation event or safe turn context plus persona and explicit
+seed. Phrase catalogs are separated by persona and phase. Selection applies
+phrase-ID and semantic-family cooldowns; a missing candidate means silence.
+Dialogue has no dependency on `ai.ts` and cannot inspect a pending decision.
+
+### `app/characterPresentation.ts` — character controller
+
+Maps public state and the latest transient event to posture, gesture, affect and
+CSS variables. The character image is treated as a cutout in a layered stage:
+shadow, rim light, body transform, expression overlay, gesture particles and
+speech bubble animate independently. This is deliberately performant pseudo-3D,
+not a heavy WebGL character runtime.
+
+### `app/gameAudio.ts` — four-bus procedural audio director
+
+Retains the local WebAudio approach but adds semantic cues, deterministic
+variants, master compression, event-ID deduplication and table/alert/outcome/
+ambience gain buses. Sounds are dispatched only after accepted public events.
+
 ## Decision request contract
 
 ```ts
@@ -190,6 +233,21 @@ Accepted. Existing responsive assets and table work are useful. Core contracts
 are replaced first; visual changes follow only where they improve decisions,
 memory visibility and humanlike cadence.
 
+### ADR-006 — Event-driven pseudo-3D over a WebGL character runtime
+
+Accepted for Table Theatre MVP. Existing high-quality transparent cutouts can
+gain convincing depth through separate shadow, light, body, face-effect and
+particle layers with GPU-safe transforms. A full rigged 3D cast would multiply
+asset, animation, download and mobile performance costs before the character
+direction is validated.
+
+### ADR-007 — Presentation events are derived, not stored in GameState
+
+Accepted. Emotion, animation and sound are ephemeral views of public facts.
+Storing them in the poker state would pollute deterministic saves, invite stale
+timers and couple rules to presentation. Stable derived IDs provide replay and
+deduplication without changing engine ownership.
+
 ## Explicitly deferred
 
 - CFR/GTO solving, neural-network training and WebGPU
@@ -197,4 +255,5 @@ memory visibility and humanlike cadence.
 - IndexedDB hand-history warehouse and third-party imports
 - Multiplayer and server-authoritative anti-cheat
 - iOS parity during the Humanlike Core milestone
-
+- Rigged 3D models, facial blend shapes, WebGL lighting and cinematic camera cuts
+- Recorded voice acting; MVP dialogue is text plus non-verbal procedural voice texture
