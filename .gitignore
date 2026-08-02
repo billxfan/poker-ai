@@ -1,0 +1,36 @@
+# macOS
+.DS_Store
+
+# Xcode / SwiftPM build artifacts
+.build/
+DerivedData/
+*.swiftpm/
+Packages/
+
+# Xcode user-specific files
+xcuserdata/
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint
+*.moved-aside
+
+# Project workspace user data
+ios/PokerAI.xcodeproj/project.xcworkspace/xcuserdata/
+ios/PokerAI.xcodeproj/xcuserdata/
+
+# Local tooling state
+.claude/
+.claudian/
+
+# Obsidian local workspace state
+.obsidian/
+
+# Local reports / media artifacts
+ios/docs/test-reports/
+
+# Temporary files
+*.log
+*.tmp
+
+# Firebase configuration (contains API keys)
+GoogleService-Info.plist

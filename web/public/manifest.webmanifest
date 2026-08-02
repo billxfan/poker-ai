@@ -1,0 +1,19 @@
+{
+  "name": "Poker AI Web",
+  "short_name": "Poker AI",
+  "description": "离线优先的单机德州扑克 AI 训练游戏",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#071714",
+  "theme_color": "#071714",
+  "lang": "zh-CN",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/poker-ai-icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

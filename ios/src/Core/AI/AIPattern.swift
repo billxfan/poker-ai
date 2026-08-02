@@ -1,0 +1,1021 @@
+import Foundation
+
+struct AIPattern: Codable {
+    /// 入池次数（用于计算 VPIP = vpipCount / handsPlayed）
+    var vpipCount: Int = 0
+    /// 翻牌前加注次数（用于计算 PFR = pfrCount / handsPlayed）
+    var pfrCount: Int = 0
+    /// 3-bet 次数
+    var threeBetCount: Int = 0
+    /// 激进动作次数（用于计算 AF = afCount / handsPlayed）
+    var afCount: Int = 0
+    /// 总参与手数
+    var handsPlayed: Int = 0
+
+    /// 累计盈亏（结果驱动学习的核心反馈）
+    var totalProfit: Int = 0
+    /// 摊牌赢/输次数
+    var showdownWins: Int = 0
+    var showdownLosses: Int = 0
+    /// 非摊牌赢/输次数（代表施压成功/失败）
+    var nonShowdownWins: Int = 0
+    var nonShowdownLosses: Int = 0
+    /// 激进行动参与并赢/输的手数
+    var aggressiveWins: Int = 0
+    var aggressiveLosses: Int = 0
+    /// 近似诈唬/施压成功与失败
+    var bluffSuccessCount: Int = 0
+    var bluffPunishedCount: Int = 0
+    /// 归一化学习偏移（最终应用时再乘风格 cap）
+    var learnedAggressionBias: Double = 0
+    var learnedTightnessBias: Double = 0
+    var learnedBluffBias: Double = 0
+    /// AI 观察到的对手画像（人类与其他机器人）
+    var observedOpponents: [Int: AIOpponentProfile] = [:]
+    /// 按决策上下文沉淀的动作偏好
+    var contextPolicies: [String: AIContextPolicy] = [:]
+    /// 按手沉淀的学习快照，用于趋势展示
+    var learningSnapshots: [AILearningSnapshot] = []
+
+    var lastUpdated: Date = Date()
+
+    private enum CodingKeys: String, CodingKey {
+        case vpipCount
+        case pfrCount
+        case threeBetCount
+        case afCount
+        case handsPlayed
+        case totalProfit
+        case showdownWins
+        case showdownLosses
+        case nonShowdownWins
+        case nonShowdownLosses
+        case aggressiveWins
+        case aggressiveLosses
+        case bluffSuccessCount
+        case bluffPunishedCount
+        case learnedAggressionBias
+        case learnedTightnessBias
+        case learnedBluffBias
+        case observedOpponents
+        case contextPolicies
+        case learningSnapshots
+        case lastUpdated
+    }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        vpipCount = try container.decodeIfPresent(Int.self, forKey: .vpipCount) ?? 0
+        pfrCount = try container.decodeIfPresent(Int.self, forKey: .pfrCount) ?? 0
+        threeBetCount = try container.decodeIfPresent(Int.self, forKey: .threeBetCount) ?? 0
+        afCount = try container.decodeIfPresent(Int.self, forKey: .afCount) ?? 0
+        handsPlayed = try container.decodeIfPresent(Int.self, forKey: .handsPlayed) ?? 0
+        totalProfit = try container.decodeIfPresent(Int.self, forKey: .totalProfit) ?? 0
+        showdownWins = try container.decodeIfPresent(Int.self, forKey: .showdownWins) ?? 0
+        showdownLosses = try container.decodeIfPresent(Int.self, forKey: .showdownLosses) ?? 0
+        nonShowdownWins = try container.decodeIfPresent(Int.self, forKey: .nonShowdownWins) ?? 0
+        nonShowdownLosses = try container.decodeIfPresent(Int.self, forKey: .nonShowdownLosses) ?? 0
+        aggressiveWins = try container.decodeIfPresent(Int.self, forKey: .aggressiveWins) ?? 0
+        aggressiveLosses = try container.decodeIfPresent(Int.self, forKey: .aggressiveLosses) ?? 0
+        bluffSuccessCount = try container.decodeIfPresent(Int.self, forKey: .bluffSuccessCount) ?? 0
+        bluffPunishedCount = try container.decodeIfPresent(Int.self, forKey: .bluffPunishedCount) ?? 0
+        learnedAggressionBias = try container.decodeIfPresent(Double.self, forKey: .learnedAggressionBias) ?? 0
+        learnedTightnessBias = try container.decodeIfPresent(Double.self, forKey: .learnedTightnessBias) ?? 0
+        learnedBluffBias = try container.decodeIfPresent(Double.self, forKey: .learnedBluffBias) ?? 0
+        observedOpponents = try container.decodeIfPresent([Int: AIOpponentProfile].self, forKey: .observedOpponents) ?? [:]
+        contextPolicies = try container.decodeIfPresent([String: AIContextPolicy].self, forKey: .contextPolicies) ?? [:]
+        learningSnapshots = try container.decodeIfPresent([AILearningSnapshot].self, forKey: .learningSnapshots) ?? []
+        lastUpdated = try container.decodeIfPresent(Date.self, forKey: .lastUpdated) ?? Date()
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(vpipCount, forKey: .vpipCount)
+        try container.encode(pfrCount, forKey: .pfrCount)
+        try container.encode(threeBetCount, forKey: .threeBetCount)
+        try container.encode(afCount, forKey: .afCount)
+        try container.encode(handsPlayed, forKey: .handsPlayed)
+        try container.encode(totalProfit, forKey: .totalProfit)
+        try container.encode(showdownWins, forKey: .showdownWins)
+        try container.encode(showdownLosses, forKey: .showdownLosses)
+        try container.encode(nonShowdownWins, forKey: .nonShowdownWins)
+        try container.encode(nonShowdownLosses, forKey: .nonShowdownLosses)
+        try container.encode(aggressiveWins, forKey: .aggressiveWins)
+        try container.encode(aggressiveLosses, forKey: .aggressiveLosses)
+        try container.encode(bluffSuccessCount, forKey: .bluffSuccessCount)
+        try container.encode(bluffPunishedCount, forKey: .bluffPunishedCount)
+        try container.encode(learnedAggressionBias, forKey: .learnedAggressionBias)
+        try container.encode(learnedTightnessBias, forKey: .learnedTightnessBias)
+        try container.encode(learnedBluffBias, forKey: .learnedBluffBias)
+        try container.encode(observedOpponents, forKey: .observedOpponents)
+        try container.encode(contextPolicies, forKey: .contextPolicies)
+        try container.encode(learningSnapshots, forKey: .learningSnapshots)
+        try container.encode(lastUpdated, forKey: .lastUpdated)
+    }
+
+    var vpip: Double { handsPlayed > 0 ? Double(vpipCount) / Double(handsPlayed) : 0 }
+    var pfr: Double { handsPlayed > 0 ? Double(pfrCount) / Double(handsPlayed) : 0 }
+    var threeBet: Double { pfrCount > 0 ? Double(threeBetCount) / Double(pfrCount) : 0 }
+    /// 激进频率：激进动作占比
+    var af: Double { handsPlayed > 0 ? Double(afCount) / Double(handsPlayed) : 0 }
+    var aggressionFactor: Double { clamp(af + learnedAggressionBias * 0.15, min: 0, max: 1) }
+    var showdownWinRate: Double {
+        let total = showdownWins + showdownLosses
+        return total > 0 ? Double(showdownWins) / Double(total) : 0
+    }
+    var nonShowdownWinRate: Double {
+        let total = nonShowdownWins + nonShowdownLosses
+        return total > 0 ? Double(nonShowdownWins) / Double(total) : 0
+    }
+    var averageProfitPerHand: Double {
+        handsPlayed > 0 ? Double(totalProfit) / Double(handsPlayed) : 0
+    }
+
+    func sampleConfidence(for style: AIStyle) -> Double {
+        let window = max(1, style.learningProfile.memoryWindow)
+        return clamp(Double(handsPlayed) / Double(window), min: 0, max: 1)
+    }
+
+    func currentLearningRate(for style: AIStyle) -> Double {
+        let profile = style.learningProfile
+        let decaySteps = handsPlayed / max(1, profile.memoryWindow)
+        return profile.learningRate * pow(0.9, Double(decaySteps))
+    }
+
+    func explorationRate(for style: AIStyle) -> Double {
+        let profile = style.learningProfile
+        let decaySteps = handsPlayed / max(1, profile.memoryWindow)
+        let raw = profile.initialEpsilon * pow(profile.explorationDecayMultiplier, Double(decaySteps))
+        return max(profile.minimumEpsilon, raw)
+    }
+
+    func decisionTuning(for style: AIStyle) -> AIDecisionTuning {
+        let profile = style.learningProfile
+        let confidence = sampleConfidence(for: style)
+        let cap = profile.adjustmentCap * confidence
+
+        let aggressionBias = learnedAggressionBias * cap
+        let tightnessBias = learnedTightnessBias * cap
+        let bluffBias = learnedBluffBias * cap
+
+        return AIDecisionTuning(
+            aggressiveThreshold: clamp(
+                profile.aggressiveThreshold - aggressionBias * 0.60 + tightnessBias * 0.90,
+                min: 0.08,
+                max: 0.95
+            ),
+            passiveThreshold: clamp(
+                profile.passiveThreshold - aggressionBias * 0.25 + tightnessBias * 0.70,
+                min: 0.05,
+                max: 0.90
+            ),
+            aggressionChance: clamp(
+                profile.aggressionChance + aggressionBias * 1.40 - tightnessBias * 0.45,
+                min: 0.02,
+                max: 0.98
+            ),
+            continueChance: clamp(
+                profile.continueChance + aggressionBias * 0.30 - tightnessBias * 0.95,
+                min: 0.05,
+                max: 0.98
+            ),
+            bluffThreshold: clamp(
+                profile.bluffThreshold - bluffBias * 0.80 + tightnessBias * 0.25,
+                min: 0.0,
+                max: 0.75
+            ),
+            bluffChance: clamp(
+                profile.bluffChance + bluffBias * 1.40 + aggressionBias * 0.25 - tightnessBias * 0.40,
+                min: 0.0,
+                max: 0.80
+            )
+        )
+    }
+
+    func decisionTuning(
+        for style: AIStyle,
+        against opponents: [Player],
+        actionLog: [Action],
+        street: Street,
+        selfPlayerId: Int,
+        communityCards: [Card] = [],
+        playerPosition: Position = .utg,
+        learningContext: AILearningContext? = nil
+    ) -> AIDecisionTuning {
+        let baseTuning = decisionTuning(for: style)
+        let learnedAdjustment = contextualPolicyAdjustment(for: learningContext)
+        let adjustment = opponentAdjustment(
+            against: opponents,
+            actionLog: actionLog,
+            street: street,
+            selfPlayerId: selfPlayerId
+        )
+        let contextualAdjustment = strategicAdjustment(
+            against: opponents,
+            actionLog: actionLog,
+            street: street,
+            selfPlayerId: selfPlayerId,
+            communityCards: communityCards,
+            playerPosition: playerPosition
+        )
+        let combinedAdjustment = learnedAdjustment
+            .adding(adjustment)
+            .adding(contextualAdjustment)
+
+        return AIDecisionTuning(
+            aggressiveThreshold: clamp(
+                baseTuning.aggressiveThreshold + combinedAdjustment.aggressiveThresholdDelta,
+                min: 0.08,
+                max: 0.95
+            ),
+            passiveThreshold: clamp(
+                baseTuning.passiveThreshold + combinedAdjustment.passiveThresholdDelta,
+                min: 0.05,
+                max: 0.90
+            ),
+            aggressionChance: clamp(
+                baseTuning.aggressionChance + combinedAdjustment.aggressionChanceDelta,
+                min: 0.02,
+                max: 0.98
+            ),
+            continueChance: clamp(
+                baseTuning.continueChance + combinedAdjustment.continueChanceDelta,
+                min: 0.05,
+                max: 0.98
+            ),
+            bluffThreshold: clamp(
+                baseTuning.bluffThreshold + combinedAdjustment.bluffThresholdDelta,
+                min: 0.0,
+                max: 0.75
+            ),
+            bluffChance: clamp(
+                baseTuning.bluffChance + combinedAdjustment.bluffChanceDelta,
+                min: 0.0,
+                max: 0.80
+            )
+        )
+    }
+
+    func observedProfile(for opponentId: Int) -> AIOpponentProfile? {
+        observedOpponents[opponentId]
+    }
+
+    func contextPolicy(for context: AILearningContext) -> AIContextPolicy? {
+        contextPolicies[context.storageKey]
+    }
+
+    func recentLearningSnapshots(limit: Int = 20) -> [AILearningSnapshot] {
+        Array(learningSnapshots.suffix(max(0, limit)))
+    }
+
+    private mutating func appendLearningSnapshot(for style: AIStyle) {
+        let effectiveCap = style.learningProfile.adjustmentCap * sampleConfidence(for: style)
+        let observedHuman = observedOpponents[Player.humanPlayerId]
+        let snapshot = AILearningSnapshot(
+            handIndex: handsPlayed,
+            totalProfit: totalProfit,
+            aggressionBias: learnedAggressionBias * effectiveCap,
+            tightnessBias: learnedTightnessBias * effectiveCap,
+            bluffBias: learnedBluffBias * effectiveCap,
+            explorationRate: explorationRate(for: style),
+            observedHumanVPIP: observedHuman?.vpip,
+            observedHumanPFR: observedHuman?.pfr,
+            observedHumanFoldToAggression: observedHuman?.foldToAggressionRate,
+            observedHumanBluffRate: observedHuman?.bluffRate,
+            createdAt: Date()
+        )
+
+        learningSnapshots.append(snapshot)
+
+        let maxSnapshots = 60
+        if learningSnapshots.count > maxSnapshots {
+            learningSnapshots.removeFirst(learningSnapshots.count - maxSnapshots)
+        }
+    }
+
+    private func opponentAdjustment(
+        against opponents: [Player],
+        actionLog: [Action],
+        street: Street,
+        selfPlayerId: Int
+    ) -> AIOpponentDecisionAdjustment {
+        let activeProfiles = opponents.compactMap { player -> AIOpponentProfile? in
+            guard let profile = observedOpponents[player.id], profile.sampleConfidence > 0 else { return nil }
+            return profile
+        }
+
+        guard !activeProfiles.isEmpty else {
+            return AIOpponentDecisionAdjustment()
+        }
+
+        func weightedAverage(_ value: (AIOpponentProfile) -> Double) -> Double {
+            let totalWeight = activeProfiles.reduce(0.0) { $0 + $1.sampleConfidence }
+            guard totalWeight > 0 else { return 0 }
+
+            let totalValue = activeProfiles.reduce(0.0) { partial, profile in
+                partial + value(profile) * profile.sampleConfidence
+            }
+            return totalValue / totalWeight
+        }
+
+        var adjustment = AIOpponentDecisionAdjustment()
+        let averageFoldToAggression = weightedAverage(\.foldToAggressionRate)
+        let averageContinueVsAggression = weightedAverage(\.continueFacingAggressionRate)
+        let averageAggression = weightedAverage(\.aggressionRate)
+        let averageBluff = weightedAverage(\.bluffRate)
+
+        if averageFoldToAggression > 0.48 {
+            let strength = (averageFoldToAggression - 0.48) * 0.45
+            adjustment.bluffChanceDelta += strength
+            adjustment.bluffThresholdDelta -= strength * 0.55
+            adjustment.aggressionChanceDelta += strength * 0.30
+        }
+
+        if averageContinueVsAggression > 0.52 {
+            let strength = (averageContinueVsAggression - 0.52) * 0.45
+            adjustment.bluffChanceDelta -= strength
+            adjustment.bluffThresholdDelta += strength * 0.60
+            adjustment.aggressiveThresholdDelta += strength * 0.28
+        }
+
+        if averageBluff > 0.38 {
+            let strength = (averageBluff - 0.38) * 0.35
+            adjustment.passiveThresholdDelta -= strength * 0.65
+            adjustment.continueChanceDelta += strength
+        }
+
+        if averageAggression > 0.40, averageBluff < 0.22 {
+            let strength = (averageAggression - 0.40) * 0.25
+            adjustment.passiveThresholdDelta += strength * 0.35
+            adjustment.continueChanceDelta -= strength * 0.65
+        }
+
+        if let aggressorId = actionLog
+            .last(where: { $0.street == street && [.raise, .bet, .allIn].contains($0.type) && $0.playerId != selfPlayerId })?
+            .playerId,
+           let aggressorProfile = observedOpponents[aggressorId]
+        {
+            let confidence = aggressorProfile.sampleConfidence
+
+            if aggressorProfile.bluffRate > 0.42 {
+                let strength = (aggressorProfile.bluffRate - 0.42) * confidence
+                adjustment.passiveThresholdDelta -= strength * 0.10
+                adjustment.continueChanceDelta += strength * 0.22
+            }
+
+            if aggressorProfile.aggressionRate > 0.42, aggressorProfile.bluffRate < 0.20 {
+                let strength = (aggressorProfile.aggressionRate - 0.42) * confidence
+                adjustment.passiveThresholdDelta += strength * 0.05
+                adjustment.continueChanceDelta -= strength * 0.14
+            }
+        }
+
+        return adjustment
+    }
+
+    private func strategicAdjustment(
+        against opponents: [Player],
+        actionLog: [Action],
+        street: Street,
+        selfPlayerId: Int,
+        communityCards: [Card],
+        playerPosition: Position
+    ) -> AIOpponentDecisionAdjustment {
+        let context = buildStrategicContext(
+            against: opponents,
+            actionLog: actionLog,
+            street: street,
+            selfPlayerId: selfPlayerId,
+            communityCards: communityCards,
+            playerPosition: playerPosition
+        )
+
+        var adjustment = AIOpponentDecisionAdjustment()
+
+        if context.isLatePositionStealSpot {
+            let positionStrength: Double
+            switch context.playerPosition {
+            case .btn: positionStrength = 0.12
+            case .co: positionStrength = 0.09
+            case .sb: positionStrength = 0.06
+            default: positionStrength = 0.0
+            }
+
+            adjustment.aggressiveThresholdDelta -= positionStrength * 0.45
+            adjustment.aggressionChanceDelta += positionStrength
+            adjustment.bluffThresholdDelta -= positionStrength * 0.22
+            adjustment.bluffChanceDelta += positionStrength * 0.48
+        }
+
+        if context.isContinuationBetSpot, let boardTexture = context.boardTexture {
+            let headsUpFactor = context.isHeadsUp ? 1.0 : 0.65
+
+            if boardTexture.rangeAdvantageScore > 0.42 {
+                let strength = (boardTexture.rangeAdvantageScore - 0.42) * 0.60 * headsUpFactor
+                adjustment.aggressiveThresholdDelta -= strength * 0.35
+                adjustment.aggressionChanceDelta += strength * 0.60
+                adjustment.bluffChanceDelta += strength * 0.72
+            }
+
+            if boardTexture.isDryHighCard {
+                adjustment.aggressionChanceDelta += 0.04 * headsUpFactor
+                adjustment.bluffChanceDelta += 0.06 * headsUpFactor
+            }
+
+            if boardTexture.wetness > 0.52 {
+                let strength = (boardTexture.wetness - 0.52) * (context.isHeadsUp ? 0.38 : 0.62)
+                adjustment.bluffChanceDelta -= strength
+                adjustment.bluffThresholdDelta += strength * 0.62
+                adjustment.aggressiveThresholdDelta += strength * 0.18
+            }
+        }
+
+        if context.isTurnBarrelSpot, let boardTexture = context.boardTexture {
+            let previousPressure = context.previousBoardTexture?.boardPressureScore ?? 0
+            let pressureDelta = max(0, boardTexture.boardPressureScore - previousPressure)
+
+            if pressureDelta > 0.05 {
+                let strength = (pressureDelta - 0.05) * 0.85
+                adjustment.aggressionChanceDelta += strength * 0.55
+                adjustment.bluffChanceDelta += strength * 0.78
+                adjustment.bluffThresholdDelta -= strength * 0.26
+            } else if boardTexture.wetness > 0.65 {
+                let strength = (boardTexture.wetness - 0.65) * 0.55
+                adjustment.bluffChanceDelta -= strength
+                adjustment.bluffThresholdDelta += strength * 0.65
+            }
+        }
+
+        return adjustment
+    }
+
+    private func buildStrategicContext(
+        against opponents: [Player],
+        actionLog: [Action],
+        street: Street,
+        selfPlayerId: Int,
+        communityCards: [Card],
+        playerPosition: Position
+    ) -> AIStrategicContext {
+        let aggressiveTypes: Set<ActionType> = [.raise, .bet, .allIn]
+        let lastAggressorOnStreet = actionLog.last {
+            $0.street == street && aggressiveTypes.contains($0.type)
+        }?.playerId
+        let preFlopAggressor = actionLog.last {
+            $0.street == .preFlop && aggressiveTypes.contains($0.type)
+        }?.playerId
+        let flopAggressor = actionLog.last {
+            $0.street == .flop && aggressiveTypes.contains($0.type)
+        }?.playerId
+
+        let boardTexture = AIBoardTexture.analyze(communityCards: communityCards)
+        let previousBoardTexture: AIBoardTexture? = {
+            guard communityCards.count > 3 else { return nil }
+            return AIBoardTexture.analyze(communityCards: Array(communityCards.dropLast()))
+        }()
+
+        return AIStrategicContext(
+            street: street,
+            playerPosition: playerPosition,
+            isHeadsUp: opponents.count == 1,
+            isLatePositionStealSpot: street == .preFlop
+                && lastAggressorOnStreet == nil
+                && [.co, .btn, .sb].contains(playerPosition),
+            isContinuationBetSpot: street == .flop
+                && lastAggressorOnStreet == nil
+                && preFlopAggressor == selfPlayerId,
+            isTurnBarrelSpot: street == .turn
+                && lastAggressorOnStreet == nil
+                && preFlopAggressor == selfPlayerId
+                && flopAggressor == selfPlayerId,
+            boardTexture: boardTexture,
+            previousBoardTexture: previousBoardTexture
+        )
+    }
+
+    mutating func updateAfterHand(
+        playerId: Int,
+        style: AIStyle,
+        playerActions: [Action],
+        allActions: [Action],
+        players: [Player],
+        profit: Int,
+        didWin: Bool,
+        showdown: Bool,
+        shownHandType: HandType?,
+        winningPlayerIds: Set<Int>,
+        shownHandTypes: [Int: HandType],
+        potSize: Int,
+        decisionPoints: [AILearningDecisionPoint] = []
+    ) {
+        handsPlayed += 1
+        totalProfit += profit
+
+        let preFlopActions = playerActions.filter { $0.street == .preFlop }
+        let aggressiveTypes: Set<ActionType> = [.raise, .bet, .allIn]
+        let voluntaryTypes: Set<ActionType> = [.call, .raise, .bet, .allIn]
+
+        let enteredPotVoluntarily = preFlopActions.contains { voluntaryTypes.contains($0.type) }
+        let wasAggressivePreFlop = preFlopActions.contains { aggressiveTypes.contains($0.type) }
+        let wasAggressiveOverall = playerActions.contains { aggressiveTypes.contains($0.type) }
+
+        if enteredPotVoluntarily {
+            vpipCount += 1
+        }
+
+        if wasAggressivePreFlop {
+            pfrCount += 1
+        }
+
+        let preFlopAggressions = allActions.filter { $0.street == .preFlop && aggressiveTypes.contains($0.type) }
+        if let firstAggressionIndex = preFlopAggressions.firstIndex(where: { $0.playerId == playerId }), firstAggressionIndex > 0 {
+            threeBetCount += 1
+        }
+
+        afCount += playerActions.filter { aggressiveTypes.contains($0.type) }.count
+
+        if showdown {
+            if didWin {
+                showdownWins += 1
+            } else {
+                showdownLosses += 1
+            }
+        } else {
+            if didWin {
+                nonShowdownWins += 1
+            } else if profit < 0 {
+                nonShowdownLosses += 1
+            }
+        }
+
+        if wasAggressiveOverall {
+            if profit > 0 {
+                aggressiveWins += 1
+            } else if profit < 0 {
+                aggressiveLosses += 1
+            }
+        }
+
+        if wasAggressiveOverall && !showdown {
+            if didWin {
+                bluffSuccessCount += 1
+            } else if profit < 0 {
+                bluffPunishedCount += 1
+            }
+        }
+
+        let learningRate = currentLearningRate(for: style)
+        let normalizedProfit = clamp(
+            Double(profit) / Double(max(potSize, GameConstants.bigBlind * 4)),
+            min: -1,
+            max: 1
+        )
+
+        let signedOutcome: Double
+        if profit > 0 {
+            signedOutcome = max(0.25, abs(normalizedProfit))
+        } else if profit < 0 {
+            signedOutcome = -max(0.25, abs(normalizedProfit))
+        } else if didWin {
+            signedOutcome = 0.10
+        } else {
+            signedOutcome = -0.10
+        }
+
+        let shownStrength = shownHandType?.aiStrengthScore ?? 0.0
+        let weakShowdownLossPenalty = showdown && !didWin && shownStrength > 0 && shownStrength < 0.45 ? 0.25 : 0.0
+        let strongValueWinBonus = showdown && didWin && shownStrength >= 0.72 ? 0.12 : 0.0
+
+        if decisionPoints.isEmpty {
+            if wasAggressiveOverall {
+                learnedAggressionBias = clamp(
+                    learnedAggressionBias + (signedOutcome + strongValueWinBonus) * learningRate * 0.55,
+                    min: -1,
+                    max: 1
+                )
+            }
+
+            if enteredPotVoluntarily {
+                let tightnessSignal = (-signedOutcome + weakShowdownLossPenalty - strongValueWinBonus * 0.5) * learningRate * 0.50
+                learnedTightnessBias = clamp(
+                    learnedTightnessBias + tightnessSignal,
+                    min: -1,
+                    max: 1
+                )
+            }
+
+            if wasAggressiveOverall {
+                let bluffSignal: Double
+                if !showdown {
+                    bluffSignal = signedOutcome
+                } else if shownStrength < 0.45 {
+                    bluffSignal = signedOutcome * 0.70
+                } else {
+                    bluffSignal = signedOutcome * 0.15
+                }
+
+                learnedBluffBias = clamp(
+                    learnedBluffBias + bluffSignal * learningRate * 0.45,
+                    min: -1,
+                    max: 1
+                )
+            }
+        } else {
+            applyContextualLearning(
+                decisionPoints: decisionPoints,
+                style: style,
+                learningRate: learningRate,
+                signedOutcome: signedOutcome,
+                didWin: didWin,
+                showdown: showdown,
+                shownStrength: shownStrength,
+                potSize: potSize
+            )
+            refreshLegacyBiases()
+        }
+
+        let visibleActions = actionsVisibleToObserver(playerId: playerId, allActions: allActions)
+        let groupedActions = Dictionary(grouping: visibleActions, by: \.playerId)
+        for opponent in players where opponent.id != playerId {
+            let opponentActions = groupedActions[opponent.id] ?? []
+            let observerActions = groupedActions[playerId] ?? []
+            let opponentShownHandType = shownHandTypes[opponent.id]
+            let opponentReachedShowdown = showdown && opponentShownHandType != nil
+            let opponentDidWin = winningPlayerIds.contains(opponent.id)
+
+            if !shouldUpdateObservedProfile(
+                observerActions: observerActions,
+                opponentActions: opponentActions,
+                opponentDidWin: opponentDidWin,
+                opponentReachedShowdown: opponentReachedShowdown
+            ) {
+                continue
+            }
+
+            var observed = observedOpponents[opponent.id] ?? AIOpponentProfile()
+            observed.observeHand(
+                playerId: opponent.id,
+                playerActions: opponentActions,
+                allActions: visibleActions,
+                didWin: opponentDidWin,
+                showdown: opponentReachedShowdown,
+                shownHandType: opponentShownHandType
+            )
+            observedOpponents[opponent.id] = observed
+        }
+
+        appendLearningSnapshot(for: style)
+        lastUpdated = Date()
+    }
+
+    private mutating func applyContextualLearning(
+        decisionPoints: [AILearningDecisionPoint],
+        style: AIStyle,
+        learningRate: Double,
+        signedOutcome: Double,
+        didWin: Bool,
+        showdown: Bool,
+        shownStrength: Double,
+        potSize: Int
+    ) {
+        let profile = style.learningProfile
+
+        for point in decisionPoints {
+            var reward = signedOutcome
+
+            switch point.actionKind {
+            case .fold:
+                reward = foldReward(for: point, signedOutcome: signedOutcome)
+            case .passive:
+                reward = passiveReward(
+                    for: point,
+                    signedOutcome: signedOutcome,
+                    didWin: didWin
+                )
+            case .aggressive:
+                reward = aggressiveReward(
+                    for: point,
+                    signedOutcome: signedOutcome,
+                    didWin: didWin,
+                    showdown: showdown,
+                    shownStrength: shownStrength
+                )
+            }
+
+            reward += showdownQualityAdjustment(
+                for: point,
+                didWin: didWin,
+                showdown: showdown,
+                shownStrength: shownStrength
+            )
+
+            reward *= decisionImportanceMultiplier(
+                for: point,
+                potSize: potSize
+            )
+            reward *= actionLearningWeight(
+                for: point.actionKind,
+                profile: profile
+            )
+
+            if point.usedExploration {
+                reward *= profile.explorationFeedbackDiscount
+            }
+
+            reward = clamp(reward, min: -1, max: 1)
+
+            var policy = contextPolicies[point.context.storageKey] ?? AIContextPolicy()
+            policy.applyFeedback(
+                for: point.actionKind,
+                reward: reward,
+                learningRate: learningRate
+            )
+            contextPolicies[point.context.storageKey] = policy
+        }
+    }
+
+    private func actionLearningWeight(
+        for actionKind: AILearningActionKind,
+        profile: AIStyleLearningProfile
+    ) -> Double {
+        switch actionKind {
+        case .fold:
+            return profile.foldLearningWeight
+        case .passive:
+            return profile.passiveLearningWeight
+        case .aggressive:
+            return profile.aggressiveLearningWeight
+        }
+    }
+
+    private func decisionImportanceMultiplier(
+        for point: AILearningDecisionPoint,
+        potSize: Int
+    ) -> Double {
+        let streetWeight: Double
+        switch point.context.street {
+        case .preFlop: streetWeight = 0.85
+        case .flop: streetWeight = 1.00
+        case .turn: streetWeight = 1.12
+        case .river: streetWeight = 1.20
+        }
+
+        let pressureWeight: Double
+        switch point.context.pressure {
+        case .unopened: pressureWeight = 0.96
+        case .facingBet: pressureWeight = 1.02
+        case .facingRaise: pressureWeight = 1.10
+        }
+
+        let commitmentRatio = Double(max(0, point.committedAmount))
+            / Double(max(potSize, GameConstants.bigBlind * 2))
+        let commitmentWeight = clamp(0.70 + commitmentRatio * 1.15, min: 0.70, max: 1.55)
+
+        return streetWeight * pressureWeight * commitmentWeight
+    }
+
+    private func showdownQualityAdjustment(
+        for point: AILearningDecisionPoint,
+        didWin: Bool,
+        showdown: Bool,
+        shownStrength: Double
+    ) -> Double {
+        guard showdown, shownStrength > 0 else { return 0 }
+
+        let estimateGap = shownStrength - point.handStrength
+
+        switch point.actionKind {
+        case .aggressive:
+            if !didWin, estimateGap < -0.18 {
+                return -0.16
+            }
+            if didWin, estimateGap > 0.18 {
+                return 0.08
+            }
+        case .passive:
+            if !didWin, estimateGap > 0.18 {
+                return -0.08
+            }
+            if didWin, abs(estimateGap) < 0.10 {
+                return 0.04
+            }
+        case .fold:
+            if estimateGap > 0.22 {
+                return -0.14
+            }
+            if estimateGap < -0.18 {
+                return 0.06
+            }
+        }
+
+        return 0
+    }
+
+    private func foldReward(
+        for point: AILearningDecisionPoint,
+        signedOutcome: Double
+    ) -> Double {
+        var reward = 0.04
+
+        switch point.context.strengthBucket {
+        case .weak:
+            reward += 0.18
+        case .marginal:
+            reward += 0.08
+        case .strong:
+            reward -= 0.10
+        case .premium:
+            reward -= 0.24
+        }
+
+        switch point.context.pressure {
+        case .facingRaise:
+            reward += 0.05
+        case .facingBet:
+            reward += 0.02
+        case .unopened:
+            reward -= 0.05
+        }
+
+        reward += (-signedOutcome) * 0.12
+        return clamp(reward, min: -1, max: 1)
+    }
+
+    private func passiveReward(
+        for point: AILearningDecisionPoint,
+        signedOutcome: Double,
+        didWin: Bool
+    ) -> Double {
+        var reward = signedOutcome * 0.55
+
+        if didWin, point.context.strengthBucket == .strong || point.context.strengthBucket == .premium {
+            reward += 0.08
+        }
+
+        if point.context.strengthBucket.isWeakOrMarginal, point.context.pressure == .facingRaise {
+            reward -= 0.05
+        }
+
+        return clamp(reward, min: -1, max: 1)
+    }
+
+    private func aggressiveReward(
+        for point: AILearningDecisionPoint,
+        signedOutcome: Double,
+        didWin: Bool,
+        showdown: Bool,
+        shownStrength: Double
+    ) -> Double {
+        var reward = signedOutcome
+
+        if point.context.strengthBucket.isWeakOrMarginal {
+            if !showdown, didWin {
+                reward += 0.10
+            }
+
+            if showdown, shownStrength >= HandType.straight.aiStrengthScore {
+                reward *= 0.25
+            }
+        } else if didWin, point.context.strengthBucket == .premium {
+            reward += 0.05
+        }
+
+        return clamp(reward, min: -1, max: 1)
+    }
+
+    private func contextualPolicyAdjustment(for context: AILearningContext?) -> AIOpponentDecisionAdjustment {
+        guard let context,
+              let policy = contextPolicies[context.storageKey],
+              policy.sampleCount > 0
+        else {
+            return AIOpponentDecisionAdjustment()
+        }
+
+        let confidence = clamp(Double(policy.sampleCount) / 8.0, min: 0, max: 1)
+        let aggressiveEdge = (policy.aggressiveScore - max(policy.passiveScore, policy.foldScore)) * confidence
+        let foldEdge = (policy.foldScore - max(policy.passiveScore, policy.aggressiveScore)) * confidence
+        let passiveEdge = (policy.passiveScore - max(policy.foldScore, policy.aggressiveScore)) * confidence
+
+        var adjustment = AIOpponentDecisionAdjustment()
+        adjustment.aggressiveThresholdDelta -= aggressiveEdge * 0.14
+        adjustment.aggressionChanceDelta += aggressiveEdge * 0.18
+        adjustment.passiveThresholdDelta += foldEdge * 0.12 - aggressiveEdge * 0.05
+        adjustment.continueChanceDelta += passiveEdge * 0.08 - foldEdge * 0.16
+
+        if context.strengthBucket.isWeakOrMarginal, context.street != .preFlop {
+            let bluffEdge = aggressiveEdge - foldEdge * 0.25
+            adjustment.bluffChanceDelta += bluffEdge * 0.20
+            adjustment.bluffThresholdDelta -= bluffEdge * 0.10
+        }
+
+        return adjustment
+    }
+
+    private mutating func refreshLegacyBiases() {
+        guard !contextPolicies.isEmpty else {
+            learnedAggressionBias = 0
+            learnedTightnessBias = 0
+            learnedBluffBias = 0
+            return
+        }
+
+        var aggressionTotal = 0.0
+        var aggressionWeight = 0.0
+        var tightnessTotal = 0.0
+        var tightnessWeight = 0.0
+        var bluffTotal = 0.0
+        var bluffWeight = 0.0
+
+        for (key, policy) in contextPolicies {
+            guard let context = AILearningContext.from(storageKey: key) else { continue }
+            let weight = max(1.0, Double(policy.sampleCount))
+            let aggressiveEdge = policy.aggressiveScore - max(policy.passiveScore, policy.foldScore)
+            let foldEdge = policy.foldScore - max(policy.passiveScore, policy.aggressiveScore)
+
+            aggressionTotal += aggressiveEdge * weight
+            aggressionWeight += weight
+
+            let tightnessSignal = {
+                if context.street == .preFlop {
+                    return foldEdge - aggressiveEdge * 0.35
+                }
+                return foldEdge * 0.35
+            }()
+            tightnessTotal += tightnessSignal * weight
+            tightnessWeight += weight
+
+            if context.street != .preFlop, context.strengthBucket.isWeakOrMarginal {
+                bluffTotal += aggressiveEdge * weight
+                bluffWeight += weight
+            }
+        }
+
+        learnedAggressionBias = aggressionWeight > 0
+            ? clamp(aggressionTotal / aggressionWeight, min: -1, max: 1)
+            : 0
+        learnedTightnessBias = tightnessWeight > 0
+            ? clamp(tightnessTotal / tightnessWeight, min: -1, max: 1)
+            : 0
+        learnedBluffBias = bluffWeight > 0
+            ? clamp(bluffTotal / bluffWeight, min: -1, max: 1)
+            : 0
+    }
+
+    private func actionsVisibleToObserver(playerId: Int, allActions: [Action]) -> [Action] {
+        var visibleActions: [Action] = []
+        var observerFolded = false
+
+        for action in allActions {
+            guard !observerFolded else { break }
+            visibleActions.append(action)
+
+            if action.playerId == playerId, action.type == .fold {
+                observerFolded = true
+            }
+        }
+
+        return visibleActions
+    }
+
+    private func shouldUpdateObservedProfile(
+        observerActions: [Action],
+        opponentActions: [Action],
+        opponentDidWin: Bool,
+        opponentReachedShowdown: Bool
+    ) -> Bool {
+        guard !opponentActions.isEmpty || opponentReachedShowdown || opponentDidWin else {
+            return false
+        }
+
+        let aggressiveTypes: Set<ActionType> = [.raise, .bet, .allIn]
+        let opponentFoldedToPressure = didOpponentFoldAfterObserverAggression(
+            observerActions: observerActions,
+            opponentActions: opponentActions
+        )
+        let opponentWasAggressive = opponentActions.contains { aggressiveTypes.contains($0.type) }
+
+        // Observation collection should be consistent across AI styles.
+        // Style differences belong in how the AI reacts to the profile,
+        // not whether it records visible signals in the first place.
+        return !opponentActions.isEmpty || opponentReachedShowdown || opponentDidWin || opponentFoldedToPressure || opponentWasAggressive
+    }
+
+    private func didOpponentFoldAfterObserverAggression(
+        observerActions: [Action],
+        opponentActions: [Action]
+    ) -> Bool {
+        let aggressiveTypes: Set<ActionType> = [.raise, .bet, .allIn]
+
+        for opponentAction in opponentActions where opponentAction.type == .fold {
+            if observerActions.contains(where: { action in
+                action.street == opponentAction.street && aggressiveTypes.contains(action.type)
+            }) {
+                return true
+            }
+        }
+
+        return false
+    }
+}
