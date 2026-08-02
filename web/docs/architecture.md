@@ -144,16 +144,17 @@ Dialogue has no dependency on `ai.ts` and cannot inspect a pending decision.
 ### `app/characterPresentation.ts` — character controller
 
 Maps public state and the latest transient event to posture, gesture, affect and
-CSS variables. The character image is treated as a cutout in a layered stage:
-shadow, rim light, body transform, expression overlay, gesture particles and
-speech bubble animate independently. This is deliberately performant pseudo-3D,
-not a heavy WebGL character runtime.
+CSS variables. The unsegmented character art remains one connected cutout;
+shadow, rim light, whole-puppet transform, expression overlay, gesture particles
+and speech bubble provide the layered stage. This avoids exposed crop seams while
+remaining performant pseudo-3D rather than a heavy WebGL character runtime.
 
 ### `app/gameAudio.ts` — four-bus procedural audio director
 
 Retains the local WebAudio approach but adds semantic cues, deterministic
 variants, master compression, event-ID deduplication and table/alert/outcome/
-ambience gain buses. Sounds are dispatched only after accepted public events.
+ambience gain buses. One user-facing sound toggle controls all buses. Sounds are
+dispatched only after accepted public events.
 
 ## Decision request contract
 
@@ -236,8 +237,8 @@ memory visibility and humanlike cadence.
 ### ADR-006 — Event-driven pseudo-3D over a WebGL character runtime
 
 Accepted for Table Theatre MVP. Existing high-quality transparent cutouts can
-gain convincing depth through separate shadow, light, body, face-effect and
-particle layers with GPU-safe transforms. A full rigged 3D cast would multiply
+gain convincing depth through a connected puppet plus separate shadow, light,
+face-effect and particle layers with GPU-safe transforms. A full rigged 3D cast would multiply
 asset, animation, download and mobile performance costs before the character
 direction is validated.
 

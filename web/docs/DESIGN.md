@@ -16,9 +16,10 @@ debug traces stay out of the active hand.
 
 The reference is a compact character-driven bluffing table, adapted to the
 existing cat cast rather than copied literally. The visual archetype is a
-**Z-axis stage**: each seat is a small physical scene made of independent floor
-shadow, rim light, body, clipped head/paw duplicates, reaction effects and
-dialogue. Depth comes from parallax, occlusion, light and gesture timing.
+**Z-axis stage**: each seat is a small physical scene made of a connected
+whole-character puppet, floor shadow, rim light, expression overlay, reaction
+effects and dialogue. Depth comes from whole-body perspective, light, scale and
+gesture timing without breaking the silhouette.
 
 ### Seat layer stack
 
@@ -26,14 +27,16 @@ dialogue. Depth comes from parallax, occlusion, light and gesture timing.
 |---|---|---|
 | floor shadow | contact and weight | scale + opacity |
 | rim/aura | active, pressure and result focus | scale + opacity |
-| body | breathing and torso posture | translate/rotate/scale |
-| clipped head | gaze, recoil and personality | rotate/translate |
-| clipped paws | check/call/raise/fold gesture | translate/rotate |
+| connected puppet | breathing, lean, recoil and personality | translate/rotate/scale as one rigid silhouette |
+| expression overlay | brows, blink and mouth state | opacity/transform |
 | reaction FX | blink, sweat, sparks, loss lines | opacity/transform |
 | bubble/badge | accessible public language | opacity/transform |
 
-The same source art may be layered and clipped for pseudo-3D. An animation that
-only rocks the entire cutout fails this specification.
+The supplied source art is a single painted cutout, not a segmented rig. It must
+never be duplicated into independently moving head or limb crops: doing so
+reveals the original parts underneath and creates dismemberment. All posture
+motion keeps the silhouette connected; expression, light and particles add the
+secondary performance.
 
 ### Gesture matrix
 
@@ -41,8 +44,8 @@ only rocks the entire cutout fails this specification.
 |---|---|---|
 | idle | slow breath, rare blink | different breath amplitude and gaze |
 | thinking | looks between board and chips | 老 K precise, 小马 restless, 大叔 double-checks, 小鱼 leans in, 狐狸 becomes still |
-| check/call | small paw beat toward felt | speed and overshoot follow persona |
-| raise | paws/chips travel forward, seat light tightens | 小马 snaps, 老 K presses, 狐狸 glides |
+| check/call | small connected-body beat toward felt | speed and overshoot follow persona |
+| raise | whole puppet leans forward as chips travel, seat light tightens | 小马 snaps, 老 K presses, 狐狸 glides |
 | all-in | stronger forward move and table shock ring | 850–1100ms, no result colour yet |
 | fold | cards/seat move away, body recoils | 500–700ms, then persistent muted posture |
 | win | gold collection arc and uplift | restrained to exuberant by persona |

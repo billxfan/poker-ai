@@ -1,21 +1,19 @@
 import type { PresentationEvent } from "../core/presentation";
 
 export type CharacterGesture =
-  | "check"
-  | "call"
-  | "raise"
-  | "all-in"
-  | "fold"
-  | "win"
-  | "loss";
+  "check" | "call" | "raise" | "all-in" | "fold" | "win" | "loss";
 
 export type CharacterPerformance = {
   eventId: string;
   gesture: CharacterGesture;
   durationMs: number;
+  actionLabel?: string;
 };
 
-const ACTION_DURATIONS: Record<Exclude<CharacterGesture, "win" | "loss">, number> = {
+const ACTION_DURATIONS: Record<
+  Exclude<CharacterGesture, "win" | "loss">,
+  number
+> = {
   check: 360,
   call: 460,
   raise: 680,
@@ -32,6 +30,17 @@ export function performancesForEvent(
         eventId: event.id,
         gesture: event.action,
         durationMs: ACTION_DURATIONS[event.action],
+        actionLabel:
+          event.label ??
+          (event.action === "check"
+            ? "过牌"
+            : event.action === "fold"
+              ? "弃牌"
+              : event.action === "all-in"
+                ? `全下 ${event.amount}`
+                : event.action === "call"
+                  ? `跟注 ${event.amount}`
+                  : `加注 ${event.amount}`),
       },
     };
   }

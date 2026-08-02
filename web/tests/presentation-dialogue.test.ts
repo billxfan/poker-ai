@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { gameSoundsForPresentationEvent } from "../app/gameAudio.ts";
+import {
+  gameSoundsForPresentationEvent,
+  outcomeSoundForHumanDelta,
+} from "../app/gameAudio.ts";
 import { performancesForEvent } from "../app/characterPresentation.ts";
 import {
   choosePersonaDialogue,
@@ -66,11 +69,21 @@ test("an accepted action emits one stable public event and a rejected action emi
   assert.equal(accepted.length, 1);
   assert.equal(accepted[0].id, acceptedGame.actionLog[0].id);
   assert.equal(accepted[0].kind === "action" && accepted[0].action, "fold");
+  assert.equal(accepted[0].kind === "action" && accepted[0].label, "弃牌");
+  if (accepted[0].kind === "action") {
+    assert.equal(
+      performancesForEvent(accepted[0])[accepted[0].seatId]?.actionLabel,
+      "弃牌",
+    );
+  }
 
   const rejectedGame = applyAction(game, { playerId: 0, type: "fold" });
   assert.equal(rejectedGame, game);
   assert.deepEqual(
-    derivePresentationEvents(before, buildPublicPresentationSnapshot(rejectedGame)),
+    derivePresentationEvents(
+      before,
+      buildPublicPresentationSnapshot(rejectedGame),
+    ),
     [],
   );
 });
@@ -84,7 +97,10 @@ test("win and loss presentation cannot exist before public settlement", () => {
       previous,
       buildPublicPresentationSnapshot(game),
     );
-    assert.equal(events.some((event) => event.kind === "result"), false);
+    assert.equal(
+      events.some((event) => event.kind === "result"),
+      false,
+    );
     previous = buildPublicPresentationSnapshot(game);
   }
   game = applyAction(game, { playerId: 0, type: "fold" });
@@ -131,6 +147,7 @@ test("five persona catalogs are substantial, distinct, safe, and deterministic",
         });
         assert.deepEqual(first, second);
         if (!first) continue;
+        assert.equal(first.kind, "speech");
         assert.ok([...first.text].length <= 18);
         FORBIDDEN_LIVE_DIALOGUE_TERMS.forEach((term) =>
           assert.equal(first.text.includes(term), false),
@@ -230,4 +247,11 @@ test("presentation events cover fourteen distinguishable semantic audio cues", (
       "your-turn",
     ].sort(),
   );
+});
+
+test("win jingles scale with the size of the human result", () => {
+  assert.equal(outcomeSoundForHumanDelta(-1), "lose");
+  assert.equal(outcomeSoundForHumanDelta(120), "win");
+  assert.equal(outcomeSoundForHumanDelta(480), "win-medium");
+  assert.equal(outcomeSoundForHumanDelta(1_200), "win-big");
 });

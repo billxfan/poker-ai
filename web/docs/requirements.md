@@ -45,13 +45,13 @@ real-money feature is required.
 Each opponent has immutable identity anchors plus learnable parameters bounded
 inside an identity envelope.
 
-| Opponent | Identity anchor | Visible language and movement | Adaptation ceiling |
-|---|---|---|---|
-| 老 K | disciplined tight-aggressive regular | sparse formal phrases, measured chip alignment, restrained victory | medium |
-| 小马 | loose-aggressive tempo player | fast teasing phrases, forward lunges and energetic raises | medium-high |
-| 大叔 | risk-averse nit | cautious self-talk, repeated checking and relieved folds | low |
-| 小鱼 | curious calling station | warm curious phrases, eager calls and surprised reactions | low |
-| 狐狸 | balanced exploitative regular | elliptical humour, still gaze and theatrical pressure | high |
+| Opponent | Identity anchor                      | Visible language and movement                                      | Adaptation ceiling |
+| -------- | ------------------------------------ | ------------------------------------------------------------------ | ------------------ |
+| 老 K     | disciplined tight-aggressive regular | sparse formal phrases, measured chip alignment, restrained victory | medium             |
+| 小马     | loose-aggressive tempo player        | fast teasing phrases, forward lunges and energetic raises          | medium-high        |
+| 大叔     | risk-averse nit                      | cautious self-talk, repeated checking and relieved folds           | low                |
+| 小鱼     | curious calling station              | warm curious phrases, eager calls and surprised reactions          | low                |
+| 狐狸     | balanced exploitative regular        | elliptical humour, still gaze and theatrical pressure              | high               |
 
 Success requires distributional separation, not different labels over one
 shared threshold function.
@@ -114,7 +114,8 @@ Audio has separate table, alert, outcome and ambience layers. At minimum, deal,
 check, call, raise, fold, all-in, flop, turn, river, showdown, pot award,
 your-turn, win and loss are distinguishable. High-frequency sounds have subtle
 deterministic variants; an event ID can play at most once. Audio is never the
-only feedback and nothing auto-plays before the user's first gesture.
+only feedback and nothing auto-plays before the user's first gesture. A single
+sound preference controls every layer, including table ambience.
 
 ## Local reinforcement learning
 

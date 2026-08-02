@@ -11,10 +11,12 @@ import {
 import type { CSSProperties, ReactNode } from "react";
 import {
   loadSoundPreference,
+  outcomeSoundForHumanDelta,
   playDealSequence,
   playGameEventSound,
   playGameSound,
   saveSoundPreference,
+  syncTableAmbience,
   unlockGameAudio,
   type GameSound,
 } from "./gameAudio";
@@ -151,11 +153,12 @@ function seededRandom(seed: number): () => number {
 
 function aiTurnSeed(game: GameState, playerId: number, stream: number): number {
   return (
-    Math.imul(game.handNumber + 1, 1_000_003) ^
-    Math.imul(game.actionSequence + 1, 97_409) ^
-    Math.imul(playerId + 1, 65_537) ^
-    stream
-  ) >>> 0;
+    (Math.imul(game.handNumber + 1, 1_000_003) ^
+      Math.imul(game.actionSequence + 1, 97_409) ^
+      Math.imul(playerId + 1, 65_537) ^
+      stream) >>>
+    0
+  );
 }
 
 function stableTextSeed(value: string): number {
@@ -427,10 +430,34 @@ function PlayingCard({
         <span className="card-back-pattern" aria-hidden="true">
           <svg viewBox="0 0 32 32">
             <ellipse cx="16" cy="20.2" rx="7.2" ry="6.1" />
-            <ellipse cx="7.6" cy="14.1" rx="3.2" ry="4" transform="rotate(-24 7.6 14.1)" />
-            <ellipse cx="13.2" cy="8.7" rx="3.1" ry="4.1" transform="rotate(-7 13.2 8.7)" />
-            <ellipse cx="19.2" cy="8.7" rx="3.1" ry="4.1" transform="rotate(7 19.2 8.7)" />
-            <ellipse cx="24.6" cy="14.1" rx="3.2" ry="4" transform="rotate(24 24.6 14.1)" />
+            <ellipse
+              cx="7.6"
+              cy="14.1"
+              rx="3.2"
+              ry="4"
+              transform="rotate(-24 7.6 14.1)"
+            />
+            <ellipse
+              cx="13.2"
+              cy="8.7"
+              rx="3.1"
+              ry="4.1"
+              transform="rotate(-7 13.2 8.7)"
+            />
+            <ellipse
+              cx="19.2"
+              cy="8.7"
+              rx="3.1"
+              ry="4.1"
+              transform="rotate(7 19.2 8.7)"
+            />
+            <ellipse
+              cx="24.6"
+              cy="14.1"
+              rx="3.2"
+              ry="4"
+              transform="rotate(24 24.6 14.1)"
+            />
           </svg>
         </span>
       </span>
@@ -450,7 +477,9 @@ function PlayingCard({
       } ${catArtSource ? "card-illustrated" : ""} ${isRed ? "card-red" : ""} ${
         compact ? "card-compact" : ""
       } ${canPreview ? "is-previewable" : ""} ${motionClass}`}
-      aria-label={canPreview ? `${accessibleLabel}，点击查看大图` : accessibleLabel}
+      aria-label={
+        canPreview ? `${accessibleLabel}，点击查看大图` : accessibleLabel
+      }
       role={canPreview ? "button" : undefined}
       tabIndex={canPreview ? 0 : undefined}
       title={canPreview ? "点击查看大牌面" : undefined}
@@ -569,18 +598,15 @@ function PlayerAvatar({
       >
         <span className="character-floor-shadow" />
         <span className="character-rim-light" />
-        {(["body", "head", "paws"] as const).map((layer) => (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            className={`seat-character-material character-layer character-${layer}`}
-            src={character.seatAsset}
-            alt=""
-            draggable={false}
-            key={layer}
-          />
-        ))}
-        <span className="character-expression" />
-        <span className="character-reaction-mark" />
+        {/* A single connected puppet. The source art is not a segmented rig, so
+            duplicating and moving clipped limbs creates visible seams. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          className="seat-character-material character-layer character-body"
+          src={character.seatAsset}
+          alt=""
+          draggable={false}
+        />
         <span className="character-chip-sparks" aria-hidden="true">
           <i />
           <i />
@@ -672,6 +698,7 @@ function Seat({
   const hiddenCards = !player.isHuman && !reveal;
   const character =
     CAT_CHARACTER_PROFILES[player.id] ?? CAT_CHARACTER_PROFILES[0];
+  const systemActionLabel = performance?.actionLabel ?? player.lastAction;
   const [showCharacter, setShowCharacter] = useState(false);
   return (
     <article
@@ -731,7 +758,10 @@ function Seat({
         className="seat-contribution"
       >
         {player.bet > 0 ? (
-          <span className="cat-food-bet" aria-label={`本轮投入 ${player.bet} 猫粮`}>
+          <span
+            className="cat-food-bet"
+            aria-label={`本轮投入 ${player.bet} 猫粮`}
+          >
             <CatFoodIcon />
             <b>{player.bet}</b>
           </span>
@@ -740,30 +770,33 @@ function Seat({
           <small>累计 {player.totalContribution}</small>
         ) : null}
       </span>
-      {thinkingLabel ? (
+      {thinkingLabel || reactionLabel ? (
         <span
-          className={`thought-bubble thought-${thinkingMode ?? "measured"}`}
+          className={`thought-bubble ${reactionLabel ? "thought-reaction" : `thought-${thinkingMode ?? "measured"}`}`}
           aria-live="polite"
         >
-          <span className="thinking-dots" aria-hidden="true">
-            <i />
-            <i />
-            <i />
-          </span>
+          {!reactionLabel ? (
+            <span className="thinking-dots" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+            </span>
+          ) : null}
           {reactionLabel ?? thinkingLabel}
         </span>
-      ) : reactionLabel ? (
-        <span className="thought-bubble thought-reaction" aria-live="polite">
-          {reactionLabel}
-        </span>
-      ) : player.lastAction ? (
-        <span key={player.lastAction} className="last-action">
-          {player.lastAction}
+      ) : null}
+      {systemActionLabel ? (
+        <span
+          key={`${performance?.eventId ?? "state"}:${systemActionLabel}`}
+          className="last-action"
+        >
+          {systemActionLabel}
         </span>
       ) : null}
       {performance ? (
         <span className="sr-only" aria-live="polite">
-          {player.name}{characterGestureLabel(performance.gesture)}
+          {player.name}
+          {characterGestureLabel(performance.gesture)}
         </span>
       ) : null}
     </article>
@@ -830,19 +863,30 @@ function HomeScreen({
           disabled={!canContinue}
           onClick={onContinue}
         >
-          <span><AppIcon name="play" /></span>
+          <span>
+            <AppIcon name="play" />
+          </span>
           <b>{canContinue ? "继续游戏" : "暂无存档"}</b>
         </button>
         <button className="home-action action-new" onClick={onNewGame}>
-          <span><AppIcon name="refresh" /></span>
+          <span>
+            <AppIcon name="refresh" />
+          </span>
           <b>新开始</b>
         </button>
         <button className="home-action action-welfare" onClick={onWelfare}>
-          <span><AppIcon name="gift" /></span>
+          <span>
+            <AppIcon name="gift" />
+          </span>
           <b>福利中心</b>
         </button>
-        <button className="home-action action-statistics" onClick={onStatistics}>
-          <span><AppIcon name="history" /></span>
+        <button
+          className="home-action action-statistics"
+          onClick={onStatistics}
+        >
+          <span>
+            <AppIcon name="history" />
+          </span>
           <b>历史统计</b>
         </button>
       </nav>
@@ -850,13 +894,7 @@ function HomeScreen({
   );
 }
 
-function PageHeader({
-  title,
-  onBack,
-}: {
-  title: string;
-  onBack: () => void;
-}) {
+function PageHeader({ title, onBack }: { title: string; onBack: () => void }) {
   return (
     <header className="subpage-header">
       <button aria-label="返回" onClick={onBack}>
@@ -901,7 +939,9 @@ function WelfareScreen({
           <p>每日 {DAILY_FREE_CHIPS.toLocaleString()} 积分</p>
           <small>每天 10:00 自动到账</small>
         </div>
-        <b className="benefit-state">{dailyClaimed ? "✓ 今日已到账" : "等待到账"}</b>
+        <b className="benefit-state">
+          {dailyClaimed ? "✓ 今日已到账" : "等待到账"}
+        </b>
       </section>
       <section className="benefit-card">
         <div className="benefit-icon benefit-red">✓</div>
@@ -911,7 +951,9 @@ function WelfareScreen({
           <small>每天可领取一次</small>
         </div>
         <button disabled={signedIn} onClick={signIn}>
-          {signedIn ? "今日已签到" : `签到 +${DAILY_SIGN_IN_BONUS.toLocaleString()}`}
+          {signedIn
+            ? "今日已签到"
+            : `签到 +${DAILY_SIGN_IN_BONUS.toLocaleString()}`}
         </button>
       </section>
     </main>
@@ -942,14 +984,19 @@ function StatisticsScreen({
   const [showMemoryReset, setShowMemoryReset] = useState(false);
   const totalHands = profile.history.length;
   const wins = profile.history.filter((record) => record.humanDelta > 0).length;
-  const net = profile.history.reduce((sum, record) => sum + record.humanDelta, 0);
+  const net = profile.history.reduce(
+    (sum, record) => sum + record.humanDelta,
+    0,
+  );
   const chronologicalHistory = [...profile.history].reverse();
   const recentFive = chronologicalHistory.slice(-5);
   const recentFiveNet = recentFive.reduce(
     (sum, record) => sum + record.humanDelta,
     0,
   );
-  const winningHands = profile.history.filter((record) => record.humanDelta > 0);
+  const winningHands = profile.history.filter(
+    (record) => record.humanDelta > 0,
+  );
   const losingHands = profile.history.filter((record) => record.humanDelta < 0);
   const averageWin = winningHands.length
     ? Math.round(
@@ -997,7 +1044,8 @@ function StatisticsScreen({
         }
       );
     });
-  const activeProfile = profiles.find((item) => item.playerId === selectedAI) ?? profiles[0];
+  const activeProfile =
+    profiles.find((item) => item.playerId === selectedAI) ?? profiles[0];
 
   useEffect(() => {
     if (!glossaryToast) return;
@@ -1073,7 +1121,8 @@ function StatisticsScreen({
                 <p>把盈亏拆成趋势和波动，避免只看最终总数。</p>
               </div>
               <strong className={recentFiveNet >= 0 ? "positive" : "negative"}>
-                近 {recentFive.length || 0} 手 {formatSignedChips(recentFiveNet)}
+                近 {recentFive.length || 0} 手{" "}
+                {formatSignedChips(recentFiveNet)}
               </strong>
             </header>
             <div className="reflection-metrics">
@@ -1115,7 +1164,9 @@ function StatisticsScreen({
                 </span>
               </button>
             ) : (
-              <p className="reflection-empty">完成更多牌局后，这里会给出优先复盘建议。</p>
+              <p className="reflection-empty">
+                完成更多牌局后，这里会给出优先复盘建议。
+              </p>
             )}
           </section>
           <section className="learning-summary">
@@ -1182,52 +1233,55 @@ function StatisticsScreen({
                 record.communityCards,
               );
               return (
-              <button
-                type="button"
-                key={record.id}
-                className="history-record"
-                onClick={() => setSelectedHistory(record)}
-                aria-label={`查看第 ${record.handNumber} 手明细`}
-              >
-                <div>
-                  <small>第 {record.handNumber} 手</small>
-                  <strong>{record.title}</strong>
-                  <p>{record.detail}</p>
-                  <p className="history-readable-cards">
-                    手牌：{readableCardsLabel(record.holeCards)}
-                  </p>
-                  <p className="history-readable-board">
-                    公共牌：{record.communityCards.length
-                      ? readableCardsLabel(record.communityCards)
-                      : "未发公共牌"}
-                  </p>
-                  <p className="history-readable-result">
-                    {humanHand
-                      ? `${describeEvaluatedHand(humanHand)} · 最佳五张：${readableCardsLabel(humanHand.cards)}`
-                      : humanParticipant?.status === "folded"
-                        ? "本手已弃牌，未形成五张牌型"
-                        : "未进入完整牌面"}
-                  </p>
-                </div>
-                <div className="history-cards">
-                  {record.holeCards.map((card, index) => (
-                    <PlayingCard
-                      key={`${card.suit}-${card.rank}-${index}`}
-                      card={card}
-                      compact
-                      previewable={false}
-                    />
-                  ))}
-                </div>
-                <b className={record.humanDelta >= 0 ? "positive" : "negative"}>
-                  {record.humanDelta >= 0 ? "+" : ""}
-                  {record.humanDelta}
-                </b>
-                <span className="history-detail-cue">
-                  <AppIcon name="detail" />
-                  明细
-                </span>
-              </button>
+                <button
+                  type="button"
+                  key={record.id}
+                  className="history-record"
+                  onClick={() => setSelectedHistory(record)}
+                  aria-label={`查看第 ${record.handNumber} 手明细`}
+                >
+                  <div>
+                    <small>第 {record.handNumber} 手</small>
+                    <strong>{record.title}</strong>
+                    <p>{record.detail}</p>
+                    <p className="history-readable-cards">
+                      手牌：{readableCardsLabel(record.holeCards)}
+                    </p>
+                    <p className="history-readable-board">
+                      公共牌：
+                      {record.communityCards.length
+                        ? readableCardsLabel(record.communityCards)
+                        : "未发公共牌"}
+                    </p>
+                    <p className="history-readable-result">
+                      {humanHand
+                        ? `${describeEvaluatedHand(humanHand)} · 最佳五张：${readableCardsLabel(humanHand.cards)}`
+                        : humanParticipant?.status === "folded"
+                          ? "本手已弃牌，未形成五张牌型"
+                          : "未进入完整牌面"}
+                    </p>
+                  </div>
+                  <div className="history-cards">
+                    {record.holeCards.map((card, index) => (
+                      <PlayingCard
+                        key={`${card.suit}-${card.rank}-${index}`}
+                        card={card}
+                        compact
+                        previewable={false}
+                      />
+                    ))}
+                  </div>
+                  <b
+                    className={record.humanDelta >= 0 ? "positive" : "negative"}
+                  >
+                    {record.humanDelta >= 0 ? "+" : ""}
+                    {record.humanDelta}
+                  </b>
+                  <span className="history-detail-cue">
+                    <AppIcon name="detail" />
+                    明细
+                  </span>
+                </button>
               );
             })
           ) : (
@@ -1316,21 +1370,22 @@ function HistoryDetailModal({
   }, [onClose]);
 
   const settlementParticipants = players
-    .map((player) =>
-      record.participants.find(
-        (participant) => participant.playerId === player.id,
-      ) ?? {
-        playerId: player.id,
-        name: player.name,
-        isHuman: player.isHuman,
-        contribution: 0,
-        payout: 0,
-        net: 0,
-        holeCards: [],
-        handName: null,
-        isWinner: false,
-        status: "out",
-      },
+    .map(
+      (player) =>
+        record.participants.find(
+          (participant) => participant.playerId === player.id,
+        ) ?? {
+          playerId: player.id,
+          name: player.name,
+          isHuman: player.isHuman,
+          contribution: 0,
+          payout: 0,
+          net: 0,
+          holeCards: [],
+          handName: null,
+          isWinner: false,
+          status: "out",
+        },
     )
     .sort(
       (left, right) =>
@@ -1445,44 +1500,51 @@ function HistoryDetailModal({
                           {participant.isHuman ? "（你）" : ""}
                         </strong>
                         <span>
-                          {participant.holeCards.length
-                            ? <>
-                              <span className="history-hole-card-art" aria-hidden="true">
+                          {participant.holeCards.length ? (
+                            <>
+                              <span
+                                className="history-hole-card-art"
+                                aria-hidden="true"
+                              >
                                 {participant.holeCards.map((card, index) => (
-                                <PlayingCard
-                                  key={`${card.suit}-${card.rank}-${index}`}
-                                  card={card}
-                                  compact
-                                />
+                                  <PlayingCard
+                                    key={`${card.suit}-${card.rank}-${index}`}
+                                    card={card}
+                                    compact
+                                  />
                                 ))}
                               </span>
                               <small className="history-hole-card-text">
-                                手牌：{readableCardsLabel(participant.holeCards)}
+                                手牌：
+                                {readableCardsLabel(participant.holeCards)}
                               </small>
                             </>
-                            : participant.contribution === 0
-                              ? "未参与"
-                              : participant.status === "folded"
-                                ? "已弃牌"
-                                : "未亮牌"}
+                          ) : participant.contribution === 0 ? (
+                            "未参与"
+                          ) : participant.status === "folded" ? (
+                            "已弃牌"
+                          ) : (
+                            "未亮牌"
+                          )}
                         </span>
                       </div>
                       <p>
                         <strong>
                           {participantHand
                             ? describeEvaluatedHand(participantHand)
-                            : participant.handName ??
-                            (participant.isWinner
-                              ? "未摊牌获胜"
-                              : participant.contribution === 0
-                                ? "未参与底池"
-                                : participant.status === "folded"
-                                  ? "已弃牌"
-                                  : "未亮牌")}
+                            : (participant.handName ??
+                              (participant.isWinner
+                                ? "未摊牌获胜"
+                                : participant.contribution === 0
+                                  ? "未参与底池"
+                                  : participant.status === "folded"
+                                    ? "已弃牌"
+                                    : "未亮牌"))}
                         </strong>
                         {participantHand ? (
                           <small className="history-best-five">
-                            最佳五张：{readableCardsLabel(participantHand.cards)}
+                            最佳五张：
+                            {readableCardsLabel(participantHand.cards)}
                           </small>
                         ) : null}
                         <small>
@@ -1490,7 +1552,11 @@ function HistoryDetailModal({
                           获得 {participant.payout.toLocaleString()}
                         </small>
                       </p>
-                      <b className={participant.net >= 0 ? "positive" : "negative"}>
+                      <b
+                        className={
+                          participant.net >= 0 ? "positive" : "negative"
+                        }
+                      >
                         {participant.net >= 0 ? "+" : ""}
                         {participant.net.toLocaleString()}
                       </b>
@@ -1610,7 +1676,9 @@ function ProfitTrendChart({ records }: { records: HandHistoryRecord[] }) {
           <h2>累计盈亏曲线</h2>
           <p>按完成顺序展示最近 {records.length} 手，零线以上代表累计盈利。</p>
         </div>
-        <strong className={(cumulative.at(-1) ?? 0) >= 0 ? "positive" : "negative"}>
+        <strong
+          className={(cumulative.at(-1) ?? 0) >= 0 ? "positive" : "negative"}
+        >
           {formatSignedChips(cumulative.at(-1) ?? 0)}
         </strong>
       </header>
@@ -1624,7 +1692,13 @@ function ProfitTrendChart({ records }: { records: HandHistoryRecord[] }) {
               aria-label={`最近 ${records.length} 手累计盈亏曲线，当前 ${formatSignedChips(cumulative.at(-1) ?? 0)}`}
             >
               <defs>
-                <linearGradient id="profit-area-fill" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient
+                  id="profit-area-fill"
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="1"
+                >
                   <stop offset="0" stopColor="#2f6aea" stopOpacity="0.24" />
                   <stop offset="1" stopColor="#2f6aea" stopOpacity="0.02" />
                 </linearGradient>
@@ -1661,11 +1735,15 @@ function ProfitTrendChart({ records }: { records: HandHistoryRecord[] }) {
                   className="profit-point"
                 >
                   <title>
-                    第 {records[index].handNumber} 手：本手 {formatSignedChips(records[index].humanDelta)}，累计 {formatSignedChips(point.value)}
+                    第 {records[index].handNumber} 手：本手{" "}
+                    {formatSignedChips(records[index].humanDelta)}，累计{" "}
+                    {formatSignedChips(point.value)}
                   </title>
                 </circle>
               ))}
-              <text x={padding.left} y={height - 9}>开始</text>
+              <text x={padding.left} y={height - 9}>
+                开始
+              </text>
               <text x={width - padding.right} y={height - 9} textAnchor="end">
                 第 {records.at(-1)?.handNumber} 手
               </text>
@@ -1734,14 +1812,19 @@ function AIProfileCard({
       ? read.continuesVsAggression / read.pressureOpportunities
       : 0;
   const vpipRate = read.vpipHands / Math.max(1, read.handsObserved);
-  const aggressionRate = read.aggressiveActions / Math.max(1, read.totalActions);
+  const aggressionRate =
+    read.aggressiveActions / Math.max(1, read.totalActions);
   const counterMoves: string[] = [];
-  if (foldRate > 0.48) counterMoves.push("你面对压力弃牌偏多，它会增加主动施压");
-  if (continueRate > 0.52) counterMoves.push("你面对下注继续偏多，它会减少纯诈唬、偏向价值下注");
-  if (vpipRate > 0.58) counterMoves.push("你入池范围较宽，它会用更强的范围向你取价值");
+  if (foldRate > 0.48)
+    counterMoves.push("你面对压力弃牌偏多，它会增加主动施压");
+  if (continueRate > 0.52)
+    counterMoves.push("你面对下注继续偏多，它会减少纯诈唬、偏向价值下注");
+  if (vpipRate > 0.58)
+    counterMoves.push("你入池范围较宽，它会用更强的范围向你取价值");
   if (vpipRate < 0.28 && read.handsObserved >= 3)
     counterMoves.push("你选牌偏紧，它会更积极争夺无人进入的底池");
-  if (aggressionRate > 0.4) counterMoves.push("你行动较主动，它会收紧边缘牌的继续范围");
+  if (aggressionRate > 0.4)
+    counterMoves.push("你行动较主动，它会收紧边缘牌的继续范围");
   if (!counterMoves.length)
     counterMoves.push("当前没有足够强的单一特征，它会维持原风格并继续观察");
 
@@ -1753,8 +1836,8 @@ function AIProfileCard({
           <h2>{profile.name}</h2>
           <span className="profile-style-tag">{profile.styleName}</span>
           <p>
-            {sampleLabel} · {style ? AI_ENGINE_NAMES[style.key] : "自适应引擎"} ·
-            样本 {profile.handsPlayed} 手
+            {sampleLabel} · {style ? AI_ENGINE_NAMES[style.key] : "自适应引擎"}{" "}
+            · 样本 {profile.handsPlayed} 手
           </p>
         </div>
       </header>
@@ -1793,9 +1876,7 @@ function AIProfileCard({
         <div className="learning-title">
           <div>
             <h3>最近学到的调整</h3>
-            <p>
-              相对“{profile.styleName}”原始性格，看看它最近有没有改变打法
-            </p>
+            <p>相对“{profile.styleName}”原始性格，看看它最近有没有改变打法</p>
           </div>
           <span className="learning-confidence">
             <small>样本进度</small>
@@ -1914,8 +1995,16 @@ function LearningChangeChart({
     padding.top +
     ((maximumMagnitude - value) / (maximumMagnitude * 2)) * chartHeight;
   const series = [
-    { key: "aggressionBias" as const, label: "主动进攻", className: "aggression" },
-    { key: "tightnessBias" as const, label: "起手牌范围", className: "tightness" },
+    {
+      key: "aggressionBias" as const,
+      label: "主动进攻",
+      className: "aggression",
+    },
+    {
+      key: "tightnessBias" as const,
+      label: "起手牌范围",
+      className: "tightness",
+    },
     { key: "bluffBias" as const, label: "诈唬倾向", className: "bluff" },
   ];
 
@@ -1924,7 +2013,10 @@ function LearningChangeChart({
       <header>
         <div>
           <h4>多局学习变化</h4>
-          <p>曲线展示最近 {source.length} 手相对原始性格的变化，零线表示原始打法。</p>
+          <p>
+            曲线展示最近 {source.length}{" "}
+            手相对原始性格的变化，零线表示原始打法。
+          </p>
         </div>
         <div className="learning-chart-legend" aria-label="曲线图例">
           {series.map((item) => (
@@ -1947,11 +2039,21 @@ function LearningChangeChart({
             y2={y(0)}
             className="learning-zero-line"
           />
-          <text x={padding.left - 10} y={y(maximumMagnitude) + 4} textAnchor="end">
+          <text
+            x={padding.left - 10}
+            y={y(maximumMagnitude) + 4}
+            textAnchor="end"
+          >
             +{(maximumMagnitude * 100).toFixed(1)}%
           </text>
-          <text x={padding.left - 10} y={y(0) + 4} textAnchor="end">0</text>
-          <text x={padding.left - 10} y={y(-maximumMagnitude) + 4} textAnchor="end">
+          <text x={padding.left - 10} y={y(0) + 4} textAnchor="end">
+            0
+          </text>
+          <text
+            x={padding.left - 10}
+            y={y(-maximumMagnitude) + 4}
+            textAnchor="end"
+          >
             −{(maximumMagnitude * 100).toFixed(1)}%
           </text>
           {series.map((item) => {
@@ -1963,11 +2065,20 @@ function LearningChangeChart({
               .join(" ");
             const latest = source.at(-1);
             return (
-              <g className={`learning-series is-${item.className}`} key={item.key}>
+              <g
+                className={`learning-series is-${item.className}`}
+                key={item.key}
+              >
                 <path d={path} />
                 {latest ? (
-                  <circle cx={x(source.length - 1)} cy={y(latest[item.key])} r="5">
-                    <title>{item.label}：{formatLearningDelta(latest[item.key])}</title>
+                  <circle
+                    cx={x(source.length - 1)}
+                    cy={y(latest[item.key])}
+                    r="5"
+                  >
+                    <title>
+                      {item.label}：{formatLearningDelta(latest[item.key])}
+                    </title>
                   </circle>
                 ) : null}
               </g>
@@ -1994,19 +2105,22 @@ function LearningSparkline({ profile }: { profile: AIProfileStats }) {
       <div className="learning-baseline" role="status">
         <div>
           <strong>正在建立行为基线</strong>
-          <span>
-            再观察 {baselineTarget - source.length} 手后生成可靠趋势
-          </span>
+          <span>再观察 {baselineTarget - source.length} 手后生成可靠趋势</span>
         </div>
         <div
           className="learning-baseline-progress"
           aria-label={`基线样本 ${source.length}/${baselineTarget} 手`}
         >
           {Array.from({ length: baselineTarget }, (_, index) => (
-            <i className={index < source.length ? "is-filled" : ""} key={index} />
+            <i
+              className={index < source.length ? "is-filled" : ""}
+              key={index}
+            />
           ))}
         </div>
-        <small>{source.length} / {baselineTarget} 手</small>
+        <small>
+          {source.length} / {baselineTarget} 手
+        </small>
       </div>
     );
   }
@@ -2048,48 +2162,56 @@ function LearningSparkline({ profile }: { profile: AIProfileStats }) {
     <>
       <LearningChangeChart snapshots={source} />
       <div className="learning-tracks" aria-label="相对原始性格的当前策略调整">
-      {tracks.map((track) => {
-        const current = source[source.length - 1][track.key];
-        const isNeutral = Math.abs(current) < 0.0005;
-        const status = isNeutral
-          ? "当前持平"
-          : current > 0
-            ? track.positiveEnd
-            : track.negativeEnd;
-        const description = isNeutral
-          ? `多局信号暂时相互抵消，${track.neutralText}`
-          : current > 0
-            ? track.positiveText
-            : track.negativeText;
-        const markerPosition = 50 + Math.max(-0.3, Math.min(0.3, current)) * 150;
-        return (
-          <div className={`learning-track is-${track.className}`} key={track.key}>
-            <div className="learning-track-copy">
-              <strong>{track.label}</strong>
-              <span className={isNeutral ? "is-neutral" : ""}>{status}</span>
-              <small>{description}</small>
-            </div>
+        {tracks.map((track) => {
+          const current = source[source.length - 1][track.key];
+          const isNeutral = Math.abs(current) < 0.0005;
+          const status = isNeutral
+            ? "当前持平"
+            : current > 0
+              ? track.positiveEnd
+              : track.negativeEnd;
+          const description = isNeutral
+            ? `多局信号暂时相互抵消，${track.neutralText}`
+            : current > 0
+              ? track.positiveText
+              : track.negativeText;
+          const markerPosition =
+            50 + Math.max(-0.3, Math.min(0.3, current)) * 150;
+          return (
             <div
-              className="learning-comparison"
-              role="img"
-              aria-label={`${track.label}：${status}，相对原始性格 ${formatLearningDelta(current)}`}
+              className={`learning-track is-${track.className}`}
+              key={track.key}
             >
-              <small>{track.negativeEnd}</small>
-              <div className="learning-scale">
-                <i aria-hidden="true" />
-                <b
-                  aria-hidden="true"
-                  style={{ "--marker-position": `${markerPosition}%` } as CSSProperties}
-                />
+              <div className="learning-track-copy">
+                <strong>{track.label}</strong>
+                <span className={isNeutral ? "is-neutral" : ""}>{status}</span>
+                <small>{description}</small>
               </div>
-              <small>{track.positiveEnd}</small>
+              <div
+                className="learning-comparison"
+                role="img"
+                aria-label={`${track.label}：${status}，相对原始性格 ${formatLearningDelta(current)}`}
+              >
+                <small>{track.negativeEnd}</small>
+                <div className="learning-scale">
+                  <i aria-hidden="true" />
+                  <b
+                    aria-hidden="true"
+                    style={
+                      {
+                        "--marker-position": `${markerPosition}%`,
+                      } as CSSProperties
+                    }
+                  />
+                </div>
+                <small>{track.positiveEnd}</small>
+              </div>
+              <span className="learning-delta">
+                当前相对原始性格 {formatLearningDelta(current)}
+              </span>
             </div>
-            <span className="learning-delta">
-              当前相对原始性格 {formatLearningDelta(current)}
-            </span>
-          </div>
-        );
-      })}
+          );
+        })}
       </div>
     </>
   );
@@ -2122,11 +2244,7 @@ function QuickBetPanel({
   const potAfterCall = game.pot + Math.min(callAmount, human.chips);
 
   return (
-    <div
-      className="quick-bet-panel"
-      role="dialog"
-      aria-label="快捷加注尺度"
-    >
+    <div className="quick-bet-panel" role="dialog" aria-label="快捷加注尺度">
       <header>
         <div>
           <small>QUICK RAISE</small>
@@ -2138,7 +2256,8 @@ function QuickBetPanel({
       </header>
       <div>
         {options.map(([label, multiplier]) => {
-          const raw = human.bet + callAmount + Math.round(potAfterCall * multiplier);
+          const raw =
+            human.bet + callAmount + Math.round(potAfterCall * multiplier);
           const amount = Math.min(
             maxRaiseTarget,
             Math.max(minRaiseTarget, raw),
@@ -2260,13 +2379,11 @@ function HandResultModal({
     { label: "转牌", cards: game.communityCards.slice(3, 4) },
     { label: "河牌", cards: game.communityCards.slice(4, 5) },
   ].filter((street) => street.cards.length > 0);
-  const settlementPlayers = [...game.players]
-    .sort(
-      (left, right) =>
-        Number(result.winnerIds.includes(right.id)) -
-          Number(result.winnerIds.includes(left.id)) ||
-        left.id - right.id,
-    );
+  const settlementPlayers = [...game.players].sort(
+    (left, right) =>
+      Number(result.winnerIds.includes(right.id)) -
+        Number(result.winnerIds.includes(left.id)) || left.id - right.id,
+  );
 
   return (
     <div className="modal-backdrop result-backdrop">
@@ -2353,13 +2470,16 @@ function HandResultModal({
                 (result.showdown &&
                   player.status !== "folded" &&
                   player.status !== "out");
-              const hand = result.showdown && player.status !== "folded"
-                ? evaluateBest([...player.holeCards, ...game.communityCards])
-                : null;
+              const hand =
+                result.showdown && player.status !== "folded"
+                  ? evaluateBest([...player.holeCards, ...game.communityCards])
+                  : null;
 
               return (
                 <li
-                  className={isWinner ? "result-player is-winner" : "result-player"}
+                  className={
+                    isWinner ? "result-player is-winner" : "result-player"
+                  }
                   key={player.id}
                 >
                   <PlayerAvatar player={player} size="small" />
@@ -2395,14 +2515,15 @@ function HandResultModal({
                   </div>
                   <div className="result-player-hand">
                     <strong>
-                      {hand ? describeEvaluatedHand(hand) :
-                        (isWinner
+                      {hand
+                        ? describeEvaluatedHand(hand)
+                        : isWinner
                           ? "未摊牌获胜"
                           : player.totalContribution === 0
                             ? "未参与底池"
                             : player.status === "folded"
                               ? "已弃牌"
-                              : "未亮牌")}
+                              : "未亮牌"}
                     </strong>
                     {hand ? (
                       <small className="result-best-five">
@@ -2492,9 +2613,7 @@ function GameScreen({
   const dialogueTimersRef = useRef<Record<number, number>>({});
   const resultTimerRef = useRef<number | null>(null);
   const presentationTimersRef = useRef<number[]>([]);
-  const previousPresentationRef = useRef(
-    buildPublicPresentationSnapshot(game),
-  );
+  const previousPresentationRef = useRef(buildPublicPresentationSnapshot(game));
   const [dismissedRebuyHand, setDismissedRebuyHand] = useState<number | null>(
     null,
   );
@@ -2511,21 +2630,18 @@ function GameScreen({
   const recentStepsForThinkingPlayer =
     thinkingId === null
       ? EMPTY_THINKING_STEPS
-      : recentThinkingSteps[thinkingId] ?? EMPTY_THINKING_STEPS;
-  const pendingAIAction = useMemo(
-    () => {
-      if (thinkingId === null) return null;
-      const seed = aiTurnSeed(game, thinkingId, 0xa17dec);
-      return chooseAIAction(
-        game,
-        thinkingId,
-        seededRandom(seed),
-        aiProfiles[thinkingId]?.learning,
-        seed,
-      );
-    },
-    [aiProfiles, game, thinkingId],
-  );
+      : (recentThinkingSteps[thinkingId] ?? EMPTY_THINKING_STEPS);
+  const pendingAIAction = useMemo(() => {
+    if (thinkingId === null) return null;
+    const seed = aiTurnSeed(game, thinkingId, 0xa17dec);
+    return chooseAIAction(
+      game,
+      thinkingId,
+      seededRandom(seed),
+      aiProfiles[thinkingId]?.learning,
+      seed,
+    );
+  }, [aiProfiles, game, thinkingId]);
   const thinkingDialogueChoices: DialogueChoice[] = useMemo(() => {
     if (thinkingId === null) return [];
     const player = game.players[thinkingId];
@@ -2540,8 +2656,9 @@ function GameScreen({
         seed: aiTurnSeed(game, thinkingId, 0x7e11 + index * 97),
         recentIds: [
           ...memory.ids,
-          ...Array.from({ length: index }, (_, inner) =>
-            `${player.style?.key ?? "balanced"}:turn:${inner}`,
+          ...Array.from(
+            { length: index },
+            (_, inner) => `${player.style?.key ?? "balanced"}:turn:${inner}`,
           ),
         ],
         recentFamilies: memory.families,
@@ -2551,31 +2668,18 @@ function GameScreen({
   const thinkingPlan: AIThinkingPlan | null = useMemo(() => {
     if (thinkingId === null || !pendingAIAction) return null;
     const random = seededRandom(aiTurnSeed(game, thinkingId, 0x51f15e));
-    const plan = createAIThinkingPlan(
+    return createAIThinkingPlan(
       game,
       thinkingId,
       random,
       aiProfiles[thinkingId]?.learning,
       recentStepsForThinkingPlayer,
     );
-    return {
-      ...plan,
-      steps: plan.steps.map((stateLine, index) => {
-        if (index % 2 === 1 || thinkingDialogueChoices.length === 0) {
-          return stateLine;
-        }
-        return (
-          thinkingDialogueChoices[index % thinkingDialogueChoices.length]?.text ??
-          stateLine
-        );
-      }),
-    };
   }, [
     aiProfiles,
     game,
     pendingAIAction,
     recentStepsForThinkingPlayer,
-    thinkingDialogueChoices,
     thinkingId,
   ]);
   const thinkingKey =
@@ -2584,10 +2688,10 @@ function GameScreen({
       : `${game.handNumber}-${game.actionSequence}-${thinkingId}`;
   const thinkingStep =
     thinkingProgress.key === thinkingKey ? thinkingProgress.step : 0;
-  const thinkingLabel =
-    thinkingPlan?.steps[
-      Math.min(thinkingStep, thinkingPlan.steps.length - 1)
-    ] ?? null;
+  const thinkingLabel = thinkingDialogueChoices.length
+    ? (thinkingDialogueChoices[thinkingStep % thinkingDialogueChoices.length]
+        ?.text ?? null)
+    : null;
   const rebuyNoticeText = game.rebuyPlayerIds.length
     ? `${game.rebuyPlayerIds
         .map((playerId) => game.players[playerId]?.name)
@@ -2607,7 +2711,10 @@ function GameScreen({
     middleRight: game.players[5],
   };
   const dealSeatIds = game.players
-    .map((_, offset) => game.players[(game.dealerId + offset + 1) % game.players.length])
+    .map(
+      (_, offset) =>
+        game.players[(game.dealerId + offset + 1) % game.players.length],
+    )
     .filter((player) => player.holeCards.length > 0)
     .map((player) => player.id);
   const dealOrderById = new Map(
@@ -2624,9 +2731,24 @@ function GameScreen({
     onSoundToggle(next);
     if (next) {
       unlockGameAudio(true);
+      syncTableAmbience(true);
       playGameSound("ui", true);
+    } else {
+      syncTableAmbience(false);
     }
   }
+
+  useEffect(() => {
+    function syncForVisibility() {
+      syncTableAmbience(soundEnabled && document.visibilityState === "visible");
+    }
+    syncForVisibility();
+    document.addEventListener("visibilitychange", syncForVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", syncForVisibility);
+      syncTableAmbience(false);
+    };
+  }, [soundEnabled]);
 
   useEffect(() => {
     if (
@@ -2668,10 +2790,9 @@ function GameScreen({
       });
       setRecentThinkingSteps((current) => ({
         ...current,
-        [actorId]: [
-          ...(current[actorId] ?? []),
-          ...thinkingPlan.steps,
-        ].slice(-36),
+        [actorId]: [...(current[actorId] ?? []), ...thinkingPlan.steps].slice(
+          -36,
+        ),
       }));
       onGameChange(applyAction(game, action));
     }, thinkingPlan.totalMs);
@@ -2727,7 +2848,8 @@ function GameScreen({
     const schedulePresentation = (callback: () => void, delayMs: number) => {
       const timer = window.setTimeout(() => {
         const timerIndex = presentationTimersRef.current.indexOf(timer);
-        if (timerIndex >= 0) presentationTimersRef.current.splice(timerIndex, 1);
+        if (timerIndex >= 0)
+          presentationTimersRef.current.splice(timerIndex, 1);
         callback();
       }, delayMs);
       presentationTimersRef.current.push(timer);
@@ -2753,19 +2875,7 @@ function GameScreen({
     ) => {
       const player = game.players[seatId];
       if (!player) return null;
-      if (player.isHuman) {
-        const humanFeedback: Record<DialogueTrigger, string> = {
-          turn: "轮到你了",
-          check: "轻敲桌面，先看后续",
-          call: "筹码入池，继续这一手",
-          raise: "你把压力推回桌面",
-          "all-in": "全部筹码已经入池",
-          fold: "收起底牌，先观察这一局",
-          win: "这一池筹码归你",
-          lose: "角色重新坐稳，准备下一手",
-        };
-        return humanFeedback[trigger];
-      }
+      if (player.isHuman) return null;
       if (!player.style) return null;
       const memory = dialogueMemory[seatId] ?? {
         ids: [],
@@ -2810,22 +2920,29 @@ function GameScreen({
           if (phrase) {
             setDialogueBySeat((current) => ({ ...current, [seatId]: phrase }));
             const existingDialogueTimer = dialogueTimersRef.current[seatId];
-            if (existingDialogueTimer) window.clearTimeout(existingDialogueTimer);
-            dialogueTimersRef.current[seatId] = window.setTimeout(() => {
-              setDialogueBySeat((current) => {
-                if (current[seatId] !== phrase) return current;
-                const next = { ...current };
-                delete next[seatId];
-                return next;
-              });
-            }, Math.max(1_650, performance.durationMs));
+            if (existingDialogueTimer)
+              window.clearTimeout(existingDialogueTimer);
+            dialogueTimersRef.current[seatId] = window.setTimeout(
+              () => {
+                setDialogueBySeat((current) => {
+                  if (current[seatId] !== phrase) return current;
+                  const next = { ...current };
+                  delete next[seatId];
+                  return next;
+                });
+              },
+              Math.max(1_650, performance.durationMs),
+            );
           }
-          const feedbackDuration = player?.isHuman
-            ? Math.max(1_100, performance.durationMs)
-            : performance.durationMs;
+          const feedbackDuration = phrase
+            ? Math.max(1_650, performance.durationMs)
+            : player?.isHuman
+              ? Math.max(1_100, performance.durationMs)
+              : performance.durationMs;
           performanceTimersRef.current[seatId] = window.setTimeout(() => {
             setPerformanceBySeat((current) => {
-              if (current[seatId]?.eventId !== performance.eventId) return current;
+              if (current[seatId]?.eventId !== performance.eventId)
+                return current;
               const next = { ...current };
               delete next[seatId];
               return next;
@@ -2842,7 +2959,7 @@ function GameScreen({
     events.forEach((event) => {
       if (event.kind === "deal") {
         setResultVisibleHand(null);
-        playDealSequence(event.cardCount, soundEnabled);
+        playDealSequence(event.cardCount, soundEnabled, 0.062, event.id);
         return;
       }
       if (event.kind === "action") {
@@ -2875,7 +2992,7 @@ function GameScreen({
       schedulePresentation(() => {
         playGameEventSound(
           `${event.id}:outcome`,
-          event.humanDelta > 0 ? "win" : "lose",
+          outcomeSoundForHumanDelta(event.humanDelta),
           soundEnabled,
         );
       }, resultDelay + 340);
@@ -2924,12 +3041,13 @@ function GameScreen({
         <div className="game-toolbar">
           <button
             className="round-sound-button"
-            aria-label={soundEnabled ? "关闭游戏音效" : "开启游戏音效"}
+            aria-label={soundEnabled ? "关闭全部声音" : "开启全部声音"}
             aria-pressed={soundEnabled}
-            title={soundEnabled ? "关闭游戏音效" : "开启游戏音效"}
+            title={soundEnabled ? "关闭全部声音" : "开启全部声音"}
             onClick={toggleSound}
           >
             <SoundIcon enabled={soundEnabled} />
+            <span className="toolbar-button-label">音效</span>
           </button>
           <button
             className="round-menu-button"
@@ -2940,6 +3058,7 @@ function GameScreen({
             }}
           >
             <MenuIcon />
+            <span className="toolbar-button-label">记录</span>
           </button>
         </div>
       </header>
@@ -2997,7 +3116,9 @@ function GameScreen({
                     thinkingId === player.id ? thinkingLabel : null
                   }
                   thinkingMode={
-                    thinkingId === player.id ? thinkingPlan?.mode ?? null : null
+                    thinkingId === player.id
+                      ? (thinkingPlan?.mode ?? null)
+                      : null
                   }
                   reveal={revealOpponents && player.status !== "folded"}
                   dealOrder={dealOrderById.get(player.id) ?? 0}
@@ -3015,11 +3136,9 @@ function GameScreen({
                 player={player}
                 active={game.currentActor === player.id}
                 dealer={game.dealerId === player.id}
-                thinkingLabel={
-                  thinkingId === player.id ? thinkingLabel : null
-                }
+                thinkingLabel={thinkingId === player.id ? thinkingLabel : null}
                 thinkingMode={
-                  thinkingId === player.id ? thinkingPlan?.mode ?? null : null
+                  thinkingId === player.id ? (thinkingPlan?.mode ?? null) : null
                 }
                 reveal={revealOpponents && player.status !== "folded"}
                 dealOrder={dealOrderById.get(player.id) ?? 0}
@@ -3108,7 +3227,8 @@ function GameScreen({
             {game.result.winnerIds
               .map((playerId) => game.players[playerId]?.name)
               .filter(Boolean)
-              .join("、")}赢下这一手
+              .join("、")}
+            赢下这一手
           </strong>
           <span>{game.result.detail}</span>
         </div>
@@ -3124,11 +3244,7 @@ function GameScreen({
           onExit={onExit}
           onRebuy={() =>
             onGameChange(
-              rebuyHumanAndStartNextHand(
-                game,
-                STARTING_CHIPS,
-                Date.now(),
-              ),
+              rebuyHumanAndStartNextHand(game, STARTING_CHIPS, Date.now()),
             )
           }
           onNextHand={() => onGameChange(startNewHand(game, Date.now()))}
@@ -3182,7 +3298,9 @@ function PokerGameContent() {
         void navigator.serviceWorker
           .getRegistrations()
           .then((registrations) =>
-            Promise.all(registrations.map((registration) => registration.unregister())),
+            Promise.all(
+              registrations.map((registration) => registration.unregister()),
+            ),
           )
           .catch(() => undefined);
 

@@ -1,9 +1,9 @@
 project_name: Poker AI Humanlike Rethink
 project_root: /Users/kobe/Documents/pokergame/poker-ai
 tech_stack: web
-workflow_status: active
-current_stage: testing
-last_completed_stage: coding
+workflow_status: complete
+current_stage: complete
+last_completed_stage: testing
 resume_from_stage: null
 pending_user_confirmation:
   required: false
@@ -14,7 +14,7 @@ approvals:
   requirements_confirmed: true
   architecture_confirmed: false
   visual_design_confirmed: true
-  release_confirmed: false
+  release_confirmed: true
 artifacts:
   agents_md: AGENTS.md
   requirements_doc: web/docs/requirements.md
@@ -22,7 +22,6 @@ artifacts:
   architecture_doc: web/docs/architecture.md
   design_doc: web/docs/DESIGN.md
   test_report: web/docs/test-reports/
-invalidated_stages:
-  - testing
+invalidated_stages: []
 fallback_history: []
-updated_at: 2026-08-02T19:00:00+08:00
+updated_at: 2026-08-02T20:10:00+08:00
