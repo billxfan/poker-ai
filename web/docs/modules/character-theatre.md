@@ -33,9 +33,9 @@ Scenario: result never leaks early
 
 ## Persona motion signatures
 
-- 老 K: minimal head tilt, precise chip pull, restrained gold result glow
+- 老 K: minimal whole-body tilt, precise chip pull, restrained gold result glow
 - 小马: fast forward snap, energetic chip push, elastic recovery
-- 大叔: double-take, shoulder tuck, relieved backward fold
+- 大叔: connected double-take, shoulder tuck, relieved backward fold
 - 小鱼: eager lean, small bounce, wide-eye surprise
 - 狐狸: slow asymmetric lean, still gaze, controlled flourish
 
@@ -43,4 +43,3 @@ Scenario: result never leaks early
 
 - Depends on: table-presentation events and static character assets
 - Used by: game table seat rendering and accessibility live region
-

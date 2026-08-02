@@ -1,4 +1,4 @@
-const CACHE_NAME = "poker-ai-web-v7-oval-cat-table";
+const CACHE_NAME = "poker-ai-web-v8-table-theatre";
 const APP_SHELL = [
   "/",
   "/manifest.webmanifest",
@@ -17,7 +17,21 @@ const APP_SHELL = [
   "/characters/portraits/abyssinian.webp",
 ];
 const CARD_SUITS = ["spades", "hearts", "diamonds", "clubs"];
-const CARD_RANKS = ["a", "k", "q", "j", "10", "9", "8", "7", "6", "5", "4", "3", "2"];
+const CARD_RANKS = [
+  "a",
+  "k",
+  "q",
+  "j",
+  "10",
+  "9",
+  "8",
+  "7",
+  "6",
+  "5",
+  "4",
+  "3",
+  "2",
+];
 const CAT_CARD_DECK = CARD_SUITS.flatMap((suit) =>
   CARD_RANKS.map((rank) => `/cards/deck-v2/${suit}-${rank}.webp`),
 );
@@ -37,7 +51,9 @@ self.addEventListener("activate", (event) => {
       .keys()
       .then((keys) =>
         Promise.all(
-          keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)),
+          keys
+            .filter((key) => key !== CACHE_NAME)
+            .map((key) => caches.delete(key)),
         ),
       ),
   );
@@ -49,15 +65,25 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (request.method !== "GET" || url.origin !== self.location.origin) return;
 
-  if (request.mode === "navigate") {
+  const isAppCode =
+    request.mode === "navigate" ||
+    request.destination === "style" ||
+    request.destination === "script" ||
+    request.destination === "worker";
+
+  // HTML and compiled code must move forward together. Network-first prevents
+  // an old app shell from pairing with a newer character or table stylesheet.
+  if (isAppCode) {
     event.respondWith(
       fetch(request)
         .then((response) => {
           const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put("/", copy));
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
           return response;
         })
-        .catch(() => caches.match("/")),
+        .catch(() =>
+          caches.match(request).then((cached) => cached ?? caches.match("/")),
+        ),
     );
     return;
   }

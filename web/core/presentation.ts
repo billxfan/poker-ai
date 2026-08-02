@@ -62,6 +62,7 @@ export type PresentationEvent =
       seatId: number;
       action: ActionType;
       amount: number;
+      label?: string;
       street: Street;
     }
   | {
@@ -144,7 +145,8 @@ export function derivePresentationEvents(
       id: `${next.handId}:deal`,
       kind: "deal",
       handId: next.handId,
-      cardCount: next.players.filter((player) => player.status !== "out").length * 2,
+      cardCount:
+        next.players.filter((player) => player.status !== "out").length * 2,
     });
   }
 
@@ -160,6 +162,7 @@ export function derivePresentationEvents(
       seatId: next.latestAction.playerId,
       action: next.latestAction.action,
       amount: next.latestAction.amount,
+      label: next.latestAction.label,
       street: next.latestAction.street,
     });
   }
@@ -174,7 +177,10 @@ export function derivePresentationEvents(
       kind: "street",
       handId: next.handId,
       street: next.street,
-      cardCount: Math.max(1, next.communityCardCount - previous.communityCardCount),
+      cardCount: Math.max(
+        1,
+        next.communityCardCount - previous.communityCardCount,
+      ),
     });
   }
 

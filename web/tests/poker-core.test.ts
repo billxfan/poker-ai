@@ -692,7 +692,7 @@ test("AI thinking copy varies in timing, stays public, and is perceivable", () =
     first.totalMs,
     first.stepDurations.reduce((sum, value) => sum + value, 0),
   );
-  assert.ok(first.totalMs >= 260 && first.totalMs <= 2250);
+  assert.ok(first.totalMs >= 420 && first.totalMs <= 4700);
   assert.equal(
     first.steps.some((step) => /同花|对子|手牌/.test(step)),
     false,
@@ -786,8 +786,8 @@ test("AI thinking rhythm responds to pressure and remains persona-specific", () 
     .sort((left, right) => left - right);
   const percentile = (value: number) =>
     sortedPonyTimes[Math.floor((sortedPonyTimes.length - 1) * value)];
-  assert.ok(percentile(0.5) <= 910);
-  assert.ok(percentile(0.95) <= 2160);
+  assert.ok(percentile(0.5) <= 1800);
+  assert.ok(percentile(0.95) <= 4500);
 
   const humanCues = new Set(
     [...relaxedFox, ...pressuredFox].flatMap((plan) =>

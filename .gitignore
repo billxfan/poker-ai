@@ -21,6 +21,7 @@ ios/PokerAI.xcodeproj/xcuserdata/
 # Local tooling state
 .claude/
 .claudian/
+.playwright-cli/
 
 # Obsidian local workspace state
 .obsidian/

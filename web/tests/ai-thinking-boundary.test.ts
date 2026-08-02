@@ -111,7 +111,7 @@ test("thinking plans are invariant to opponent cards, deck, and private traces",
   }
 });
 
-test("thinking plan keeps the short cadence and requires explicit randomness", () => {
+test("thinking plan keeps a deliberate bounded cadence and requires explicit randomness", () => {
   const game = thinkingFixture(311);
   const observation = buildBotObservation(game, ACTOR_ID);
   const style = game.players[ACTOR_ID].style!;
@@ -125,7 +125,7 @@ test("thinking plan keeps the short cadence and requires explicit randomness", (
     const expectedMaximumSteps =
       plan.mode === "tank" ? 3 : plan.mode === "measured" ? 2 : 1;
     const expectedMaximumMs =
-      plan.mode === "tank" ? 2_160 : plan.mode === "measured" ? 910 : 460;
+      plan.mode === "tank" ? 4_700 : plan.mode === "measured" ? 2_050 : 760;
     assert.ok(plan.steps.length <= expectedMaximumSteps);
     assert.ok(plan.totalMs <= expectedMaximumMs);
   }

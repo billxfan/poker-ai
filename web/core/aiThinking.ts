@@ -354,24 +354,28 @@ function makeStepDurations(
     const finalStep = index === steps.length - 1;
     const baseline =
       mode === "snap"
-        ? 220 + random() * 250
+        ? 420 + random() * 300
         : mode === "tank"
           ? finalStep
-            ? 380 + random() * 420
-            : 540 + random() * 690
+            ? 700 + random() * 500
+            : 900 + random() * 850
           : finalStep
-            ? 300 + random() * 330
-            : 390 + random() * 510;
+            ? 560 + random() * 400
+            : 700 + random() * 650;
     const tankBonus =
-      index === tankIndex ? 620 + random() * (760 + pressure * 620) : 0;
+      index === tankIndex ? 900 + random() * (1100 + pressure * 900) : 0;
     const visibleMinimum =
-      mode === "snap" ? 260 + random() * 100 : 180;
+      mode === "snap"
+        ? 420 + random() * 100
+        : mode === "tank"
+          ? 520
+          : 420;
     return Math.round(
       Math.max(
         visibleMinimum,
         Math.min(
-          1600,
-          baseline * pace * (1 + pressure * (mode === "snap" ? 0.08 : 0.22)) +
+          2200,
+          baseline * pace * (1 + pressure * (mode === "snap" ? 0.08 : 0.3)) +
             tankBonus,
         ),
       ),
@@ -379,11 +383,18 @@ function makeStepDurations(
   });
 
   const total = durations.reduce((sum, value) => sum + value, 0);
-  const ceiling = mode === "tank" ? 2150 : mode === "measured" ? 900 : 450;
+  const baseCeiling =
+    mode === "tank" ? 3900 : mode === "measured" ? 1800 : 720;
+  const pressureStretch =
+    mode === "tank" ? 0.18 : mode === "measured" ? 0.12 : 0.05;
+  const ceiling = Math.round(baseCeiling * (1 + pressure * pressureStretch));
   if (total <= ceiling) return durations;
   const scale = ceiling / total;
   return durations.map((duration) =>
-    Math.max(mode === "snap" ? 260 : 170, Math.round(duration * scale)),
+    Math.max(
+      mode === "snap" ? 420 : mode === "tank" ? 500 : 390,
+      Math.round(duration * scale),
+    ),
   );
 }
 
