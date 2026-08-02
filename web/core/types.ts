@@ -49,7 +49,7 @@ export type AIContextPolicy = {
   sampleCount: number;
 };
 
-export type HumanOpponentRead = {
+export type OpponentRead = {
   handsObserved: number;
   vpipHands: number;
   pfrHands: number;
@@ -59,6 +59,9 @@ export type HumanOpponentRead = {
   foldsToAggression: number;
   continuesVsAggression: number;
 };
+
+// Kept as an alias because the profile screen still presents the human read.
+export type HumanOpponentRead = OpponentRead;
 
 export type AILearningSnapshot = {
   handIndex: number;
@@ -76,6 +79,7 @@ export type AILearningState = {
   tightnessBias: number;
   bluffBias: number;
   humanRead: HumanOpponentRead;
+  opponentReads: Record<number, OpponentRead>;
   contextPolicies: Record<string, AIContextPolicy>;
   snapshots: AILearningSnapshot[];
 };
@@ -85,6 +89,29 @@ export type AIDecisionTrace = {
   strengthBucket: AIHandStrengthBucket;
   actionKind: AIActionKind;
   usedExploration: boolean;
+  policyVersion?: string;
+  decisionSeed?: number;
+  publicStateDigest?: string;
+  intent?: AIActionKind;
+  explorationRate?: number;
+  explorationRoll?: number;
+  randomRolls?: number[];
+  publicFactors?: {
+    pressure: number;
+    positionBonus: number;
+    boardWetness: number;
+    stackToPotRatio: number;
+    activePlayerCount: number;
+    hasInitiative: boolean;
+  };
+  tuning?: {
+    aggressiveThreshold: number;
+    passiveThreshold: number;
+    aggressionChance: number;
+    continueChance: number;
+    bluffThreshold: number;
+    bluffChance: number;
+  };
 };
 
 export type Player = {
@@ -121,6 +148,40 @@ export type ActionLogEntry = {
   aiDecision?: AIDecisionTrace;
 };
 
+/**
+ * Public action history exposed to a bot. Decision traces are deliberately not
+ * part of this type: they contain another bot's private policy context even
+ * though the resulting table action is public.
+ */
+export type BotObservedAction = {
+  id: string;
+  playerId: number;
+  playerName: string;
+  street: Street;
+  action: ActionType;
+  amount: number;
+  label: string;
+  isBlind: boolean;
+};
+
+export type BotObservedPlayer = {
+  id: number;
+  name: string;
+  isHuman: boolean;
+  position: string;
+  chips: number;
+  status: PlayerStatus;
+  bet: number;
+  totalContribution: number;
+  lastActedBet: number | null;
+  lastAction: string;
+};
+
+export type BotSelfObservation = BotObservedPlayer & {
+  /** The only private cards present anywhere in BotObservation. */
+  holeCards: Card[];
+};
+
 export type HandResult = {
   title: string;
   detail: string;
@@ -131,6 +192,10 @@ export type HandResult = {
 };
 
 export type GameState = {
+  /** Stable identifier for one local table session. Never exposed to bot policy. */
+  sessionId: string;
+  /** Stable identifier for the current hand within the session. */
+  handId: string;
   players: Player[];
   rebuyPlayerIds: number[];
   deck: Card[];
@@ -161,4 +226,27 @@ export type LegalActions = {
   callAmount: number;
   minRaiseTarget: number;
   maxRaiseTarget: number;
+};
+
+/**
+ * Whitelisted policy input for one acting bot. It intentionally has no deck,
+ * result object, opponent hole cards, or AI decision traces.
+ */
+export type BotObservation = {
+  playerId: number;
+  self: BotSelfObservation;
+  opponents: BotObservedPlayer[];
+  communityCards: Card[];
+  street: Street;
+  phase: GamePhase;
+  pot: number;
+  currentBet: number;
+  minimumRaiseIncrement: number;
+  currentActor: number | null;
+  dealerId: number;
+  actedSinceRaise: number[];
+  handNumber: number;
+  actionSequence: number;
+  actionLog: BotObservedAction[];
+  legalActions: LegalActions;
 };

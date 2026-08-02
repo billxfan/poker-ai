@@ -1,81 +1,60 @@
-# Module: Game Table
+# Module: Deterministic Game Table
 
 ## Entry and exit
 
-- Entry: the root route restores the local session or creates a new six-seat
-  table.
-- Exit: the user may close the page at any time; the latest stable game state is
-  already persisted.
+- Entry: restore a validated stable snapshot or create a seeded six-seat table.
+- Exit: persist only after a completed legal transition; the browser may close
+  between any two actions.
 
 ## Main path
 
-1. Deal two cards clockwise from the dealer's left. On a table with three or
-   more players, the dealer's left posts the small blind and the next active
-   seat posts the big blind. Heads-up, the dealer posts the small blind.
-2. Advance through legal actors clockwise. Preflop starts left of the big
-   blind (heads-up: the dealer/small blind); flop, turn, and river start at the
-   first active seat left of the dealer (heads-up: the big blind).
-3. The human chooses fold, check/call, raise, or all-in.
-4. Each AI chooses a legal action through its own persona policy after a
-   variable, seat-local behavior sequence. The sequence mixes snap decisions,
-   normal deliberation, and rare tanks according to persona, street, price
-   pressure, public preceding actions, and learned public tendencies. Its
-   presentation corpus contains more than 250 curated public-information
-   phrases, and each seat avoids reusing its most recent 36 visible cues.
-5. When betting is closed, reveal the next board street.
-6. Resolve folds or showdown, distribute the pot, and show the result.
-7. Start the next hand while preserving stacks and rotating positions.
-8. Persist per-AI context rewards and the public-action model each AI has built
-   of the human player.
+1. Rotate the dealer across funded seats and post correct six-handed or heads-up
+   blinds.
+2. Deal unique hole cards and expose each participant only to its observation.
+3. Recompute legal actions from current commitments and raise rights.
+4. Apply one immutable action transition, append a chronological public event,
+   verify chip conservation, and select the next actor.
+5. Close the betting round, burn/deal the next street, or run out the board when
+   nobody can act.
+6. Build contribution pots, determine eligible winners, distribute odd chips
+   clockwise from the dealer, and emit a hand-complete record.
+7. Hand the public record and private per-bot episode records to learning.
 
-## Alternate path
+## Alternate paths
 
-- When every remaining opponent is all-in, run out the board without asking for
-  redundant actions.
-- When only one player remains, award the pot without showdown.
-- When a player has insufficient chips to call, treat the action as all-in.
+- One player remains: award the pot without revealing cards.
+- All remaining players are all-in: run out the board without fake delays.
+- Short all-in: increase the call price but reopen raising only after cumulative
+  short raises reach a full raise.
+- Eliminated bot: rebuy between hands without changing the current hand.
 
-## Exception path
+## Exception paths
 
-- An illegal or stale action is ignored and the legal-action set is recomputed.
-- A malformed saved table falls back to a fresh session rather than blocking
-  the page.
-- Network loss does not interrupt a loaded hand because rules and AI are local.
-- The module requests no device permissions.
+- Stale/illegal action: reject with no partial state mutation and recompute the
+  legal set.
+- Invalid save: quarantine it, create a fresh session, retain learning only if
+  its separate schema validates.
+- Invariant failure in development: stop the simulation with seed, hand and
+  transition trace; never silently continue a corrupt hand.
+- Network loss: irrelevant after initial asset load; no gameplay request exists.
 
 ## State machine
 
-`restoring → dealing → awaiting-player | ai-thinking → ai-acting →
-street-transition → showdown → hand-result → ai-learning → dealing`
+`restoring → posting-blinds → dealing → awaiting-action ↔ applying-action →
+street-transition → showdown | uncontested → hand-complete → next-hand`
 
-Terminal session states are `player-busted` and `reset`.
-
-`ai-thinking` has three presentation substates: `snap`, `measured`, and `tank`.
-They change only the visible cadence and seat-local tells; the legal action
-still comes from the independent AI policy engine.
+`awaiting-action` has `human-input` and `bot-decision` substates. Settlement is
+the only state allowed to convert contributions back into stacks.
 
 ## Dependencies
 
-- Poker core: cards, hand evaluator, legal actions, settlement
-- Local AI: five persona engines (value pressure, wide-range aggression, risk
-  control, pot-odds calling, contextual mix)
-- Local learning: per-street/position/pressure/strength/head-count policy
-  memory, exploration decay, bounded personality adjustments, and public
-  opponent observations
-- Local session storage
-- Table presentation and action controls
+- Card/deck and best-hand evaluator
+- Legal-action and settlement engine
+- Bot observation builder
+- Versioned local session
+- Replay/invariant harness
 
 ## Verification echo
 
-The MVP is a continuous local practice table, not a scripted demo. It must
-support multiple consecutive hands, legal action gating, automatic AI turns,
-all-in runouts, and deterministic hand settlement. With the same cards and
-price, the five personas must produce observably different action
-distributions. Learning may tune a persona within its configured cap but must
-not collapse all five opponents into the same strategy. Visible thinking must
-not become a fixed loading timer: low-pressure decisions may be nearly
-immediate, while river decisions and large prices may produce a longer,
-occasionally self-correcting sequence. It may react to public actions, but
-never private cards or a preselected action. Deterministic regression must lock
-the exact six-handed and heads-up blind/action sequences, including short-stack
-blind labels.
+The engine is the source of truth. UI and bots request legal options but cannot
+invent transitions, inspect future cards, or repair state opportunistically.

@@ -19,7 +19,6 @@ import {
 } from "./gameAudio";
 import { AI_ENGINE_NAMES, chooseAIAction } from "../core/ai";
 import {
-  aiLearningConfidence,
   currentAIExplorationRate,
   defaultAILearningState,
   describeHumanRead,
@@ -42,7 +41,7 @@ import {
   STARTING_CHIPS,
   STREET_LABELS,
 } from "../core/engine";
-import { evaluateBest } from "../core/evaluator";
+import { evaluateBest, type EvaluatedHand } from "../core/evaluator";
 import {
   claimDailySignIn,
   DAILY_FREE_CHIPS,
@@ -69,6 +68,74 @@ import type { ActionType, Card, GameState, Player } from "../core/types";
 
 const HUMAN_ID = 0;
 const EMPTY_THINKING_STEPS: readonly string[] = [];
+const SAFE_TABLE_TELLS = [
+  "扫了一眼下注线",
+  "轻轻整理面前的筹码",
+  "目光回到公共牌",
+  "在牌边停了一下",
+  "重新坐稳",
+  "看了看还在牌局里的人",
+] as const;
+
+const SUIT_NAMES: Record<Card["suit"], string> = {
+  spades: "黑桃",
+  hearts: "红桃",
+  diamonds: "方块",
+  clubs: "梅花",
+};
+
+function readableCardLabel(card: Card): string {
+  return `${SUIT_NAMES[card.suit]}${rankLabel(card.rank)}`;
+}
+
+function readableCardsLabel(cards: Card[]): string {
+  return cards.map(readableCardLabel).join("、");
+}
+
+function describeEvaluatedHand(hand: EvaluatedHand): string {
+  const [primary, secondary] = hand.values.map(rankLabel);
+
+  switch (hand.category) {
+    case 8:
+      return `${primary} 高同花顺`;
+    case 7:
+      return `四条 ${primary}`;
+    case 6:
+      return `${primary} 带 ${secondary} 的葫芦`;
+    case 5:
+      return `${primary} 高同花`;
+    case 4:
+      return `${primary} 高顺子`;
+    case 3:
+      return `三条 ${primary}`;
+    case 2:
+      return `两对 ${primary} 和 ${secondary}`;
+    case 1:
+      return `一对 ${primary}`;
+    default:
+      return `${primary} 高牌`;
+  }
+}
+
+function seededRandom(seed: number): () => number {
+  let value = seed >>> 0;
+  return () => {
+    value = (value + 0x6d2b79f5) >>> 0;
+    let mixed = value;
+    mixed = Math.imul(mixed ^ (mixed >>> 15), mixed | 1);
+    mixed ^= mixed + Math.imul(mixed ^ (mixed >>> 7), mixed | 61);
+    return ((mixed ^ (mixed >>> 14)) >>> 0) / 4_294_967_296;
+  };
+}
+
+function aiTurnSeed(game: GameState, playerId: number, stream: number): number {
+  return (
+    Math.imul(game.handNumber + 1, 1_000_003) ^
+    Math.imul(game.actionSequence + 1, 97_409) ^
+    Math.imul(playerId + 1, 65_537) ^
+    stream
+  ) >>> 0;
+}
 const AVATAR_SOURCES: Record<number, string> = {
   0: "/characters/portraits/golden-player.webp",
   1: "/characters/portraits/british-shorthair.webp",
@@ -115,6 +182,7 @@ const CAT_CHARACTER_PROFILES: Record<
 };
 
 type AppScreen = "home" | "game" | "welfare" | "statistics";
+const ACTIVE_SCREEN_KEY = "poker-ai-web/active-screen";
 
 const CardPreviewContext = createContext<((card: Card) => void) | null>(null);
 type StatisticsTab = "overview" | "profiles" | "recent";
@@ -789,16 +857,19 @@ function StatisticsScreen({
   profile,
   players,
   onBack,
+  onResetMemories,
 }: {
   profile: LocalProfile;
   players: Player[];
   onBack: () => void;
+  onResetMemories: () => void;
 }) {
   const [tab, setTab] = useState<StatisticsTab>("overview");
   const [selectedAI, setSelectedAI] = useState(1);
   const [glossaryToast, setGlossaryToast] = useState<GlossaryItem | null>(null);
   const [selectedHistory, setSelectedHistory] =
     useState<HandHistoryRecord | null>(null);
+  const [showMemoryReset, setShowMemoryReset] = useState(false);
   const totalHands = profile.history.length;
   const wins = profile.history.filter((record) => record.humanDelta > 0).length;
   const net = profile.history.reduce((sum, record) => sum + record.humanDelta, 0);
@@ -924,12 +995,21 @@ function StatisticsScreen({
             })}
           </div>
           {activeProfile ? (
-            <AIProfileCard
-              key={activeProfile.playerId}
-              profile={activeProfile}
-              player={players[activeProfile.playerId]}
-              onExplain={setGlossaryToast}
-            />
+            <>
+              <AIProfileCard
+                key={activeProfile.playerId}
+                profile={activeProfile}
+                player={players[activeProfile.playerId]}
+                onExplain={setGlossaryToast}
+              />
+              <button
+                type="button"
+                className="memory-reset-button"
+                onClick={() => setShowMemoryReset(true)}
+              >
+                清除五位对手的长期记忆
+              </button>
+            </>
           ) : null}
         </section>
       ) : null}
@@ -1011,6 +1091,29 @@ function StatisticsScreen({
           onClose={() => setSelectedHistory(null)}
         />
       ) : null}
+      {showMemoryReset ? (
+        <div className="modal-backdrop">
+          <section className="confirm-modal" role="dialog" aria-modal="true">
+            <small>RESET RIVAL MEMORY</small>
+            <h2>让对手重新认识你？</h2>
+            <p>
+              只会清除五位对手学到的打法画像；当前筹码、牌桌存档和最近牌局记录都会保留。
+            </p>
+            <div className="result-actions">
+              <button onClick={() => setShowMemoryReset(false)}>取消</button>
+              <button
+                className="primary"
+                onClick={() => {
+                  onResetMemories();
+                  setShowMemoryReset(false);
+                }}
+              >
+                确认清除记忆
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </main>
   );
 }
@@ -1054,6 +1157,19 @@ function HistoryDetailModal({
         Number(right.isWinner) - Number(left.isWinner) ||
         left.playerId - right.playerId,
     );
+
+  function publicDecisionSummary(entry: HandHistoryRecord["actions"][number]) {
+    const factors = entry.aiDecision?.publicFactors;
+    if (!factors) return null;
+    const cues: string[] = [];
+    if (factors.pressure >= 0.2) cues.push("跟注价格带来压力");
+    if (factors.positionBonus >= 0.05) cues.push("处在有利位置");
+    if (factors.stackToPotRatio <= 1.5) cues.push("有效筹码已经较浅");
+    if (factors.boardWetness >= 0.62) cues.push("公共牌连接较强");
+    if (factors.hasInitiative) cues.push("延续了前街主动权");
+    if (!cues.length) cues.push("当前公开行动线较简单");
+    return cues.slice(0, 2).join(" · ");
+  }
 
   return (
     <div className="modal-backdrop history-detail-backdrop" onClick={onClose}>
@@ -1181,13 +1297,19 @@ function HistoryDetailModal({
             <h3>行动过程</h3>
             {record.actions.length ? (
               <ol className="history-timeline">
-                {record.actions.map((entry) => (
-                  <li key={entry.id}>
-                    <small>{STREET_LABELS[entry.street]}</small>
-                    <strong>{entry.playerName}</strong>
-                    <span>{entry.label}</span>
-                  </li>
-                ))}
+                {record.actions.map((entry) => {
+                  const publicSummary = publicDecisionSummary(entry);
+                  return (
+                    <li key={entry.id}>
+                      <small>{STREET_LABELS[entry.street]}</small>
+                      <strong>{entry.playerName}</strong>
+                      <span>{entry.label}</span>
+                      {publicSummary ? (
+                        <em>公开线索：{publicSummary}</em>
+                      ) : null}
+                    </li>
+                  );
+                })}
               </ol>
             ) : (
               <p className="history-legacy-note">
@@ -1306,45 +1428,45 @@ function AIProfileCard({
       <section className="profile-insight">
         <div className="learning-title">
           <div>
-            <h3>学习曲线</h3>
-            <p>{style?.summary ?? "根据对局结果调整策略"}</p>
+            <h3>最近学到的调整</h3>
+            <p>
+              相对“{profile.styleName}”原始性格，看看它最近有没有改变打法
+            </p>
           </div>
           <span className="learning-confidence">
-            <small>学习置信度</small>
+            <small>样本进度</small>
             <strong>
-              {Math.round(
-                (style
-                  ? aiLearningConfidence(style, profile.learning)
-                  : 0) * 100,
-              )}
-              %
+              {style
+                ? `${Math.min(profile.handsPlayed, style.memoryWindow)}/${style.memoryWindow} 手`
+                : `${profile.handsPlayed} 手`}
             </strong>
           </span>
         </div>
         <LearningSparkline profile={profile} />
         <div className="learning-facts">
           <span>
-            <small>当前探索率</small>
+            <small>尝试新打法</small>
             <b>
               {Math.round(
                 (style
                   ? currentAIExplorationRate(style, profile.learning)
                   : 0) * 100,
               )}
-              %
+              % 概率
             </b>
           </span>
           <span>
-            <small>策略记忆</small>
-            <b>{Object.keys(profile.learning.contextPolicies).length} 种情境</b>
+            <small>记住的牌局情境</small>
+            <b>{Object.keys(profile.learning.contextPolicies).length} 类</b>
           </span>
           <span>
-            <small>观察样本</small>
+            <small>观察你的行动</small>
             <b>{profile.learning.humanRead.handsObserved} 手</b>
           </span>
         </div>
         <p className="opponent-read">
-          {describeHumanRead(profile.learning.humanRead)}
+          <b>它对你的判断：</b>{" "}
+          {describeHumanRead(profile.learning.humanRead).replace("对你的判断：", "")}
         </p>
       </section>
     </article>
@@ -1380,55 +1502,78 @@ function LearningSparkline({ profile }: { profile: AIProfileStats }) {
   const tracks = [
     {
       key: "aggressionBias" as const,
-      label: "进攻倾向",
-      hint: "主动施压",
+      label: "主动进攻",
+      negativeEnd: "更克制",
+      positiveEnd: "更主动",
+      negativeText: "比原来的进攻节奏更克制",
+      positiveText: "比原来更愿意下注和加注",
+      neutralText: "保持原来的进攻节奏",
       className: "aggression",
     },
     {
       key: "tightnessBias" as const,
-      label: "范围收紧",
-      hint: "谨慎入池",
+      label: "起手牌范围",
+      negativeEnd: "打得更宽",
+      positiveEnd: "选牌更紧",
+      negativeText: "比原来愿意多打一些起手牌",
+      positiveText: "比原来少打一些边缘起手牌",
+      neutralText: "起手牌选择基本没变",
       className: "tightness",
     },
     {
       key: "bluffBias" as const,
-      label: "诈唬倾向",
-      hint: "制造不确定性",
+      label: "诈唬频率",
+      negativeEnd: "更少",
+      positiveEnd: "更多",
+      negativeText: "比原来减少了诈唬尝试",
+      positiveText: "比原来增加了诈唬尝试",
+      neutralText: "诈唬频率基本没变",
       className: "bluff",
     },
   ];
-  const pointSet = (key: (typeof tracks)[number]["key"]) =>
-    source.map((snapshot, index) => {
-      const x = (index / Math.max(1, source.length - 1)) * 220;
-      const y = 16 - Math.max(-0.3, Math.min(0.3, snapshot[key])) * 40;
-      return { x, y };
-    });
-  const serializePoints = (items: Array<{ x: number; y: number }>) =>
-    items.map(({ x, y }) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
 
   return (
-    <div className="learning-tracks" aria-label="最近 24 手的策略调整趋势">
+    <div className="learning-tracks" aria-label="相对原始性格的策略调整">
       {tracks.map((track) => {
-        const points = pointSet(track.key);
         const current = source[source.length - 1][track.key];
-        const last = points[points.length - 1];
+        const rounded = Math.round(current * 100);
+        const isNeutral = Math.abs(current) < 0.025;
+        const status = isNeutral
+          ? "基本不变"
+          : current > 0
+            ? track.positiveEnd
+            : track.negativeEnd;
+        const description = isNeutral
+          ? track.neutralText
+          : current > 0
+            ? track.positiveText
+            : track.negativeText;
+        const markerPosition = 50 + Math.max(-0.3, Math.min(0.3, current)) * 150;
         return (
           <div className={`learning-track is-${track.className}`} key={track.key}>
-            <span>
+            <div className="learning-track-copy">
               <strong>{track.label}</strong>
-              <small>{track.hint}</small>
-            </span>
-            <svg
+              <span className={isNeutral ? "is-neutral" : ""}>{status}</span>
+              <small>{description}</small>
+            </div>
+            <div
+              className="learning-comparison"
               role="img"
-              aria-label={`${track.label}当前偏移 ${Math.round(current * 100)}%`}
-              viewBox="0 0 220 32"
-              preserveAspectRatio="none"
+              aria-label={`${track.label}：${status}，相对原始性格 ${rounded >= 0 ? "+" : ""}${rounded}%`}
             >
-              <line x1="0" y1="16" x2="220" y2="16" />
-              <polyline pathLength="1" points={serializePoints(points)} />
-              <circle cx={last.x} cy={last.y} r="3" />
-            </svg>
-            <b>{current >= 0 ? "+" : ""}{Math.round(current * 100)}%</b>
+              <small>{track.negativeEnd}</small>
+              <div className="learning-scale">
+                <i aria-hidden="true" />
+                <b
+                  aria-hidden="true"
+                  style={{ "--marker-position": `${markerPosition}%` } as CSSProperties}
+                />
+              </div>
+              <small>{track.positiveEnd}</small>
+            </div>
+            <span className="learning-delta">
+              相对原始性格 {rounded >= 0 ? "+" : ""}{rounded}%
+            </span>
           </div>
         );
       })}
@@ -1594,8 +1739,13 @@ function HandResultModal({
       ? evaluateBest([...firstWinner.holeCards, ...game.communityCards])
       : null;
   const outcomeDetail = result.showdown
-    ? `${winningHand?.categoryName ?? "最佳牌型"} · 摊牌`
+    ? `${winningHand ? describeEvaluatedHand(winningHand) : "最佳牌型"} · 摊牌胜出`
     : "其他玩家均已弃牌";
+  const boardStreets = [
+    { label: "翻牌", cards: game.communityCards.slice(0, 3) },
+    { label: "转牌", cards: game.communityCards.slice(3, 4) },
+    { label: "河牌", cards: game.communityCards.slice(4, 5) },
+  ].filter((street) => street.cards.length > 0);
   const settlementPlayers = [...game.players]
     .sort(
       (left, right) =>
@@ -1642,14 +1792,27 @@ function HandResultModal({
 
         {result.showdown ? (
           <section className="result-board" aria-label="摊牌公共牌">
-            <h3>公共牌</h3>
-            <div>
-              {game.communityCards.map((card, index) => (
-                <PlayingCard
-                  key={`${card.suit}-${card.rank}-${index}`}
-                  card={card}
-                  compact
-                />
+            <header>
+              <div>
+                <h3>公共牌</h3>
+                <small>共 {game.communityCards.length} 张</small>
+              </div>
+              <div className="result-board-cards" aria-hidden="true">
+                {game.communityCards.map((card, index) => (
+                  <PlayingCard
+                    key={`${card.suit}-${card.rank}-${index}`}
+                    card={card}
+                    compact
+                  />
+                ))}
+              </div>
+            </header>
+            <div className="result-board-streets">
+              {boardStreets.map((street) => (
+                <div className="result-board-street" key={street.label}>
+                  <small>{street.label}</small>
+                  <strong>{readableCardsLabel(street.cards)}</strong>
+                </div>
               ))}
             </div>
           </section>
@@ -1691,25 +1854,34 @@ function HandResultModal({
                       {player.name}
                       {player.isHuman ? "（你）" : ""}
                     </strong>
-                    <span>
-                      {revealCards
-                        ? player.holeCards.map((card, index) => (
+                    {revealCards ? (
+                      <>
+                        <span className="result-hole-cards" aria-hidden="true">
+                          {player.holeCards.map((card, index) => (
                             <PlayingCard
                               key={`${card.suit}-${card.rank}-${index}`}
                               card={card}
                               compact
                             />
-                          ))
-                        : player.totalContribution === 0
+                          ))}
+                        </span>
+                        <small className="result-hole-label">
+                          手牌：{readableCardsLabel(player.holeCards)}
+                        </small>
+                      </>
+                    ) : (
+                      <span>
+                        {player.totalContribution === 0
                           ? "未参与"
                           : player.status === "folded"
                             ? "已弃牌"
                             : "未摊牌"}
-                    </span>
+                      </span>
+                    )}
                   </div>
                   <div className="result-player-hand">
                     <strong>
-                      {hand?.categoryName ??
+                      {hand ? describeEvaluatedHand(hand) :
                         (isWinner
                           ? "未摊牌获胜"
                           : player.totalContribution === 0
@@ -1718,6 +1890,11 @@ function HandResultModal({
                               ? "已弃牌"
                               : "未亮牌")}
                     </strong>
+                    {hand ? (
+                      <small className="result-best-five">
+                        最佳五张：{readableCardsLabel(hand.cards)}
+                      </small>
+                    ) : null}
                     <small>
                       投入 {player.totalContribution.toLocaleString()} · 获得{" "}
                       {payout.toLocaleString()}
@@ -1802,24 +1979,47 @@ function GameScreen({
     thinkingId === null
       ? EMPTY_THINKING_STEPS
       : recentThinkingSteps[thinkingId] ?? EMPTY_THINKING_STEPS;
-  const thinkingPlan: AIThinkingPlan | null = useMemo(
-    () =>
-      thinkingId === null
-        ? null
-        : createAIThinkingPlan(
-            game,
-            thinkingId,
-            Math.random,
-            aiProfiles[thinkingId]?.learning,
-            recentStepsForThinkingPlayer,
-          ),
-    [
-      aiProfiles,
-      game,
-      recentStepsForThinkingPlayer,
-      thinkingId,
-    ],
+  const pendingAIAction = useMemo(
+    () => {
+      if (thinkingId === null) return null;
+      const seed = aiTurnSeed(game, thinkingId, 0xa17dec);
+      return chooseAIAction(
+        game,
+        thinkingId,
+        seededRandom(seed),
+        aiProfiles[thinkingId]?.learning,
+        seed,
+      );
+    },
+    [aiProfiles, game, thinkingId],
   );
+  const thinkingPlan: AIThinkingPlan | null = useMemo(() => {
+    if (thinkingId === null || !pendingAIAction) return null;
+    const random = seededRandom(aiTurnSeed(game, thinkingId, 0x51f15e));
+    const plan = createAIThinkingPlan(
+      game,
+      thinkingId,
+      random,
+      aiProfiles[thinkingId]?.learning,
+      recentStepsForThinkingPlayer,
+    );
+    const start = Math.floor(random() * SAFE_TABLE_TELLS.length);
+    return {
+      ...plan,
+      // Live bubbles are observable physical beats only. Strategy explanations
+      // are reserved for post-hand traces, so the table never fabricates an
+      // internal calculation that the policy did not perform.
+      steps: plan.steps.map(
+        (_, index) => SAFE_TABLE_TELLS[(start + index) % SAFE_TABLE_TELLS.length],
+      ),
+    };
+  }, [
+    aiProfiles,
+    game,
+    pendingAIAction,
+    recentStepsForThinkingPlayer,
+    thinkingId,
+  ]);
   const thinkingKey =
     thinkingId === null
       ? ""
@@ -1891,7 +2091,8 @@ function GameScreen({
       !hydrated ||
       game.phase !== "playing" ||
       thinkingId === null ||
-      !thinkingPlan
+      !thinkingPlan ||
+      !pendingAIAction
     ) {
       return;
     }
@@ -1906,12 +2107,7 @@ function GameScreen({
         }, elapsed);
       });
     const timer = window.setTimeout(() => {
-      const action = chooseAIAction(
-        game,
-        actorId,
-        Math.random,
-        aiProfiles[actorId]?.learning,
-      );
+      const action = pendingAIAction;
       setRecentThinkingSteps((current) => ({
         ...current,
         [actorId]: [
@@ -1937,6 +2133,7 @@ function GameScreen({
     thinkingId,
     thinkingKey,
     thinkingPlan,
+    pendingAIAction,
   ]);
 
   useEffect(() => {
@@ -2233,7 +2430,12 @@ function PokerGameContent() {
     const timer = window.setTimeout(() => {
       const restored = loadSession();
       const refreshedProfile = refreshDailyBenefit(loadProfile());
-      if (restored) setGame(restored);
+      if (restored) {
+        setGame(restored);
+        if (window.sessionStorage.getItem(ACTIVE_SCREEN_KEY) === "game") {
+          setScreen("game");
+        }
+      }
       setProfile(refreshedProfile);
       saveProfile(refreshedProfile);
       setHasArchive(!!restored && hasSavedSession());
@@ -2287,6 +2489,7 @@ function PokerGameContent() {
       return;
     }
     setGame(restored);
+    window.sessionStorage.setItem(ACTIVE_SCREEN_KEY, "game");
     setScreen("game");
   }
 
@@ -2294,9 +2497,8 @@ function PokerGameContent() {
     unlockGameAudio(soundEnabled);
     playDealSequence(12, soundEnabled);
     clearSession();
-    const learningReset = resetLearningData(profile);
-    const startingChips = Math.max(STARTING_CHIPS, learningReset.chips);
-    const fundedProfile = syncProfileChips(learningReset, startingChips);
+    const startingChips = Math.max(STARTING_CHIPS, profile.chips);
+    const fundedProfile = syncProfileChips(profile, startingChips);
     const fresh = createGame(Date.now(), startingChips);
     saveProfile(fundedProfile);
     saveSession(fresh);
@@ -2304,16 +2506,19 @@ function PokerGameContent() {
     setGame(fresh);
     setHasArchive(true);
     setShowNewGameConfirm(false);
+    window.sessionStorage.setItem(ACTIVE_SCREEN_KEY, "game");
     setScreen("game");
   }
 
   function exitGame() {
     saveSession(game);
     setHasArchive(true);
+    window.sessionStorage.removeItem(ACTIVE_SCREEN_KEY);
     setScreen("home");
   }
 
   function handleGameChange(nextGame: GameState) {
+    window.sessionStorage.setItem(ACTIVE_SCREEN_KEY, "game");
     setGame(nextGame);
     saveSession(nextGame);
     setHasArchive(true);
@@ -2345,6 +2550,12 @@ function PokerGameContent() {
       saveSession(nextGame);
     }
     setProfile(next);
+  }
+
+  function resetOpponentMemories() {
+    const reset = resetLearningData(profile);
+    saveProfile(reset);
+    setProfile(reset);
   }
 
   function updateSoundPreference(enabled: boolean) {
@@ -2382,6 +2593,7 @@ function PokerGameContent() {
         profile={profile}
         players={game.players}
         onBack={() => setScreen("home")}
+        onResetMemories={resetOpponentMemories}
       />
     );
   }
@@ -2402,8 +2614,8 @@ function PokerGameContent() {
             <small>NEW TRAINING SESSION</small>
             <h2>开始新的训练？</h2>
             <p>
-              当前牌局存档、历史统计和 AI 学习画像会清空；积分余额会保留，不足
-              2,000 时自动补足训练积分。
+              当前牌局存档会清空；历史统计与五位对手对你的长期记忆会保留。积分
+              不足 2,000 时自动补足训练积分。
             </p>
             <div className="result-actions">
               <button onClick={() => setShowNewGameConfirm(false)}>取消</button>

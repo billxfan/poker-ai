@@ -14,7 +14,26 @@ export const SMALL_BLIND = 10;
 export const BIG_BLIND = 20;
 export const STARTING_CHIPS = 2000;
 export const AI_REBUY_CHIPS = STARTING_CHIPS;
+const DEFAULT_SIMULATION_SEED = 20260723;
 const HUMAN_ID = 0;
+
+export function sessionIdFromSeed(seed: number): string {
+  const normalized = Number.isFinite(seed)
+    ? Math.trunc(seed)
+    : DEFAULT_SIMULATION_SEED;
+  const token =
+    normalized < 0
+      ? `negative-${Math.abs(normalized).toString(36)}`
+      : normalized.toString(36);
+  return `session-${token}`;
+}
+
+export function handIdForSession(
+  sessionId: string,
+  handNumber: number,
+): string {
+  return `${sessionId}-hand-${handNumber}`;
+}
 
 const PLAYER_BLUEPRINTS = [
   { name: "你", avatar: "你", isHuman: true },
@@ -72,10 +91,14 @@ function nextSeat(
 
 function assignPositions(players: Player[], dealerId: number): Player[] {
   const activeIds = activeSeatIds(players);
-  const labels =
-    activeIds.length === 2
-      ? ["BTN/SB", "BB"]
-      : ["BTN", "SB", "BB", "UTG", "HJ", "CO"];
+  const labelsByPlayerCount: Record<number, string[]> = {
+    2: ["BTN/SB", "BB"],
+    3: ["BTN", "SB", "BB"],
+    4: ["BTN", "SB", "BB", "CO"],
+    5: ["BTN", "SB", "BB", "UTG", "CO"],
+    6: ["BTN", "SB", "BB", "UTG", "HJ", "CO"],
+  };
+  const labels = labelsByPlayerCount[activeIds.length] ?? [];
   const dealerOffset = activeIds.indexOf(dealerId);
   const ordered = [
     ...activeIds.slice(dealerOffset),
@@ -126,7 +149,7 @@ function appendLog(
   state.actionSequence += 1;
   const player = state.players[playerId];
   const entry: ActionLogEntry = {
-    id: `${state.handNumber}-${state.actionSequence}`,
+    id: `${state.handId}-action-${state.actionSequence}`,
     playerId,
     playerName: player.name,
     street: state.street,
@@ -135,7 +158,7 @@ function appendLog(
     label: actionLabel(action, paid),
     aiDecision: action.aiDecision,
   };
-  state.actionLog = [entry, ...state.actionLog].slice(0, 80);
+  state.actionLog = [entry, ...state.actionLog];
   player.lastAction = entry.label;
 }
 
@@ -150,7 +173,7 @@ function postBlind(
   const player = state.players[playerId];
   player.lastAction = blind === "small" ? `小盲 ${paid}` : `大盲 ${paid}`;
   const entry: ActionLogEntry = {
-    id: `${state.handNumber}-${state.actionSequence}`,
+    id: `${state.handId}-action-${state.actionSequence}`,
     playerId,
     playerName: player.name,
     street: "preflop",
@@ -158,7 +181,7 @@ function postBlind(
     amount: paid,
     label: player.lastAction,
   };
-  state.actionLog = [entry, ...state.actionLog].slice(0, 80);
+  state.actionLog = [entry, ...state.actionLog];
 }
 
 function firstActorForStreet(state: GameState): number | null {
@@ -393,6 +416,7 @@ export function createGame(
   seed = 20260723,
   humanStartingChips = STARTING_CHIPS,
 ): GameState {
+  const sessionId = sessionIdFromSeed(seed);
   const players: Player[] = PLAYER_BLUEPRINTS.map((blueprint, id) => ({
     ...blueprint,
     id,
@@ -407,6 +431,8 @@ export function createGame(
   }));
 
   const base: GameState = {
+    sessionId,
+    handId: handIdForSession(sessionId, 0),
     players,
     rebuyPlayerIds: [],
     deck: [],
@@ -432,11 +458,12 @@ export function createGame(
 
 export function startNewHand(
   previous: GameState,
-  seed = Date.now(),
+  seed = DEFAULT_SIMULATION_SEED,
   rotateDealer = true,
   rebuyAI = true,
 ): GameState {
   const state = cloneState(previous);
+  if (!state.sessionId) state.sessionId = sessionIdFromSeed(seed);
   state.rebuyPlayerIds = rebuyAI
     ? state.players
         .filter((player) => !player.isHuman && player.chips <= 0)
@@ -453,6 +480,7 @@ export function startNewHand(
     state.phase = "busted";
     return state;
   }
+  if (available.length < 2) return previous;
 
   if (rotateDealer) {
     state.dealerId =
@@ -463,6 +491,7 @@ export function startNewHand(
   }
 
   state.handNumber += 1;
+  state.handId = handIdForSession(state.sessionId, state.handNumber);
   state.deck = shuffledDeck(seed + state.handNumber);
   state.communityCards = [];
   state.street = "preflop";
@@ -524,7 +553,7 @@ export function startNewHand(
 export function rebuyHumanAndStartNextHand(
   previous: GameState,
   amount = STARTING_CHIPS,
-  seed = Date.now(),
+  seed = DEFAULT_SIMULATION_SEED,
 ): GameState {
   if (previous.phase !== "busted" || previous.players[HUMAN_ID].chips > 0) {
     return previous;
@@ -551,24 +580,37 @@ export function legalActions(
   const minRaiseTarget =
     state.currentBet === 0
       ? BIG_BLIND
-      : state.currentBet + state.minimumRaiseIncrement;
+      : state.currentBet < state.minimumRaiseIncrement
+        ? state.minimumRaiseIncrement
+        : state.currentBet + state.minimumRaiseIncrement;
   const hasActedSinceFullRaise = state.actedSinceRaise.includes(playerId);
   const lastActedBet = player.lastActedBet ?? null;
   const facedSinceLastAction =
     lastActedBet === null ? Number.POSITIVE_INFINITY : state.currentBet - lastActedBet;
   const raiseRightsOpen =
     !hasActedSinceFullRaise ||
-    (lastActedBet === 0 && state.currentBet > 0) ||
     facedSinceLastAction >= state.minimumRaiseIncrement;
   const allInWouldRaise = maxRaiseTarget > state.currentBet;
+  const hasRaiseResponder = state.players.some(
+    (candidate) =>
+      candidate.id !== playerId &&
+      candidate.status === "active" &&
+      candidate.chips > 0,
+  );
 
   return {
     canFold: isTurn,
     canCheck: isTurn && toCall === 0,
     canCall: isTurn && toCall > 0 && player.chips > 0,
-    canRaise: isTurn && raiseRightsOpen && maxRaiseTarget >= minRaiseTarget,
+    canRaise:
+      isTurn &&
+      hasRaiseResponder &&
+      raiseRightsOpen &&
+      maxRaiseTarget >= minRaiseTarget,
     canAllIn:
-      isTurn && player.chips > 0 && (!allInWouldRaise || raiseRightsOpen),
+      isTurn &&
+      player.chips > 0 &&
+      (!allInWouldRaise || (hasRaiseResponder && raiseRightsOpen)),
     toCall,
     callAmount,
     minRaiseTarget,
@@ -595,11 +637,16 @@ export function applyAction(
     // No chips move.
   } else if (action.type === "call" && legal.canCall) {
     paid = payChips(state, player.id, legal.callAmount);
-  } else if (action.type === "raise" && legal.canRaise) {
-    const target = Math.min(
-      legal.maxRaiseTarget,
-      Math.max(action.amount ?? legal.minRaiseTarget, legal.minRaiseTarget),
-    );
+  } else if (
+    action.type === "raise" &&
+    legal.canRaise &&
+    typeof action.amount === "number" &&
+    Number.isFinite(action.amount) &&
+    Number.isInteger(action.amount) &&
+    action.amount >= legal.minRaiseTarget &&
+    action.amount <= legal.maxRaiseTarget
+  ) {
+    const target = action.amount;
     const previousBet = state.currentBet;
     paid = payChips(state, player.id, target - player.bet);
     state.currentBet = Math.max(state.currentBet, player.bet);

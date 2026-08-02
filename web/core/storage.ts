@@ -1,5 +1,6 @@
 import type { GameState } from "./types.ts";
 import { aiStyleForPlayerId } from "./aiProfiles.ts";
+import { handIdForSession } from "./engine.ts";
 
 const STORAGE_KEY = "poker-ai-web/session";
 const VERSION = 1;
@@ -23,6 +24,27 @@ function isPlausibleState(value: unknown): value is GameState {
   );
 }
 
+function legacySessionId(game: GameState): string {
+  const fingerprint = JSON.stringify({
+    handNumber: game.handNumber,
+    dealerId: game.dealerId,
+    players: game.players.map((player) => ({
+      id: player.id,
+      chips: player.chips,
+      holeCards: player.holeCards,
+    })),
+    communityCards: game.communityCards,
+    deck: game.deck,
+    actionSequence: game.actionSequence,
+  });
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < fingerprint.length; index += 1) {
+    hash ^= fingerprint.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return `legacy-session-${(hash >>> 0).toString(36)}`;
+}
+
 export function loadSession(): GameState | null {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -32,8 +54,18 @@ export function loadSession(): GameState | null {
       window.localStorage.removeItem(STORAGE_KEY);
       return null;
     }
+    const sessionId =
+      typeof snapshot.game.sessionId === "string" && snapshot.game.sessionId
+        ? snapshot.game.sessionId
+        : legacySessionId(snapshot.game);
+    const handId =
+      typeof snapshot.game.handId === "string" && snapshot.game.handId
+        ? snapshot.game.handId
+        : handIdForSession(sessionId, snapshot.game.handNumber);
     return {
       ...snapshot.game,
+      sessionId,
+      handId,
       players: snapshot.game.players.map((player) => ({
         ...player,
         style: player.isHuman ? undefined : aiStyleForPlayerId(player.id),

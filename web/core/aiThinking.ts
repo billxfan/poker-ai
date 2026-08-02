@@ -1,4 +1,4 @@
-import { legalActions } from "./engine.ts";
+import { aiStyleForPlayerId } from "./aiProfiles.ts";
 import {
   EARLY_POSITION_THOUGHTS,
   ENDINGS,
@@ -12,9 +12,12 @@ import {
   TABLE_THOUGHTS,
   THINKING_RHYTHMS,
 } from "./aiThinkingPhrases.ts";
+import { buildBotObservation } from "./observation.ts";
 import type {
   AIArchetype,
   AILearningState,
+  AIStyle,
+  BotObservation,
   GameState,
   Street,
 } from "./types.ts";
@@ -114,16 +117,15 @@ function learnedOpponentThought(
 }
 
 function recentActionReaction(
-  state: GameState,
-  playerId: number,
+  observation: BotObservation,
   recentSteps: readonly string[],
   random: () => number,
 ): string | null {
-  const latest = state.actionLog.find(
+  const latest = observation.actionLog.find(
     (entry) =>
-      entry.street === state.street &&
-      entry.playerId !== playerId &&
-      !entry.label.includes("盲"),
+      entry.street === observation.street &&
+      entry.playerId !== observation.playerId &&
+      !entry.isBlind,
   );
   if (!latest) return null;
   const name = latest.playerName;
@@ -178,15 +180,16 @@ function recentActionReaction(
   return null;
 }
 
-function tablePressure(state: GameState, playerId: number): number {
-  const legal = legalActions(state, playerId);
-  const player = state.players[playerId];
-  const pricePressure = legal.toCall / Math.max(1, state.pot + legal.toCall);
+function tablePressure(observation: BotObservation): number {
+  const legal = observation.legalActions;
+  const player = observation.self;
+  const pricePressure =
+    legal.toCall / Math.max(1, observation.pot + legal.toCall);
   const stackPressure = legal.toCall / Math.max(1, player.chips);
-  const raises = state.actionLog.filter(
+  const raises = observation.actionLog.filter(
     (entry) =>
-      entry.street === state.street &&
-      !entry.label.includes("盲") &&
+      entry.street === observation.street &&
+      !entry.isBlind &&
       (entry.action === "raise" || entry.action === "all-in"),
   ).length;
   const streetPressure: Record<Street, number> = {
@@ -199,24 +202,23 @@ function tablePressure(state: GameState, playerId: number): number {
     pricePressure * 0.85 +
       stackPressure * 0.45 +
       Math.min(0.24, raises * 0.1) +
-      streetPressure[state.street],
+      streetPressure[observation.street],
   );
 }
 
 function chooseThinkingMode(
-  state: GameState,
-  playerId: number,
+  observation: BotObservation,
+  style: AIStyle,
   archetype: AIArchetype,
   pressure: number,
   random: () => number,
 ): AIThinkingMode {
-  const style = state.players[playerId].style;
-  const legal = legalActions(state, playerId);
+  const legal = observation.legalActions;
   const rhythm = THINKING_RHYTHMS[archetype];
   const tankChance = clamp(
-    (style?.tankChance ?? 0.16) +
+    style.tankChance +
       pressure * 0.24 +
-      (state.street === "river" ? 0.06 : 0),
+      (observation.street === "river" ? 0.06 : 0),
     0.04,
     0.46,
   );
@@ -263,16 +265,16 @@ function sessionThought(
 }
 
 function makeSteps(
-  state: GameState,
-  playerId: number,
+  observation: BotObservation,
+  style: AIStyle,
   mode: AIThinkingMode,
   random: () => number,
   learning?: AILearningState,
   recentSteps: readonly string[] = [],
 ): string[] {
-  const player = state.players[playerId];
-  const archetype = player.style?.key ?? "balanced";
-  const legal = legalActions(state, playerId);
+  const player = observation.self;
+  const archetype = style.key;
+  const legal = observation.legalActions;
   const mannerisms = THINKING_RHYTHMS[archetype].mannerisms;
 
   if (mode === "snap") {
@@ -291,8 +293,7 @@ function makeSteps(
       : 3 + Math.floor(random() * 3);
   const learnedThought = learnedOpponentThought(learning, recentSteps, random);
   const reaction = recentActionReaction(
-    state,
-    playerId,
+    observation,
     recentSteps,
     random,
   );
@@ -322,7 +323,7 @@ function makeSteps(
     );
   }
   const opener = sampleAvoiding(
-    STREET_OPENERS[state.street],
+    STREET_OPENERS[observation.street],
     [...recentSteps, ...middle],
     random,
   );
@@ -364,12 +365,12 @@ function makeStepDurations(
     const tankBonus =
       index === tankIndex ? 620 + random() * (760 + pressure * 620) : 0;
     const visibleMinimum =
-      mode === "snap" ? 320 + random() * 120 : 260;
+      mode === "snap" ? 260 + random() * 100 : 180;
     return Math.round(
       Math.max(
         visibleMinimum,
         Math.min(
-          2300,
+          1600,
           baseline * pace * (1 + pressure * (mode === "snap" ? 0.08 : 0.22)) +
             tankBonus,
         ),
@@ -378,49 +379,53 @@ function makeStepDurations(
   });
 
   const total = durations.reduce((sum, value) => sum + value, 0);
-  const ceiling = mode === "tank" ? 7600 : mode === "measured" ? 4800 : 1050;
+  const ceiling = mode === "tank" ? 2150 : mode === "measured" ? 900 : 450;
   if (total <= ceiling) return durations;
   const scale = ceiling / total;
   return durations.map((duration) =>
-    Math.max(mode === "snap" ? 320 : 220, Math.round(duration * scale)),
+    Math.max(mode === "snap" ? 260 : 170, Math.round(duration * scale)),
   );
 }
 
 /**
- * Presentation-only behavior sequence. It uses public table state and learned
- * public action tendencies, never private cards or the already chosen action.
- * The cadence intentionally mixes snap actions, normal decisions, and rare
- * tanks so an opponent does not behave like a fixed loading timer.
+ * Presentation-only behavior sequence. Its input is the same allowlisted
+ * observation boundary as the policy, so presentation code cannot inspect an
+ * opponent's cards, the deck, or a private decision trace.
  */
-export function createAIThinkingPlan(
-  state: GameState,
-  playerId: number,
-  random: () => number = Math.random,
+export function createAIThinkingPlanFromObservation(
+  observation: BotObservation,
+  style: AIStyle,
+  random: () => number,
   learning?: AILearningState,
   recentSteps: readonly string[] = [],
 ): AIThinkingPlan {
-  const player = state.players[playerId];
-  const archetype = player.style?.key ?? "balanced";
-  const pressure = tablePressure(state, playerId);
+  const archetype = style.key;
+  const pressure = tablePressure(observation);
   const mode = chooseThinkingMode(
-    state,
-    playerId,
+    observation,
+    style,
     archetype,
     pressure,
     random,
   );
-  const steps = makeSteps(
-    state,
-    playerId,
+  const rawSteps = makeSteps(
+    observation,
+    style,
     mode,
     random,
     learning,
     recentSteps,
   );
+  // One or two physical tells read as human; a seven-line inner monologue reads
+  // as a blocking loading screen. High-pressure spots may keep a third beat.
+  const steps = rawSteps.slice(
+    0,
+    mode === "tank" ? 3 : mode === "measured" ? 2 : 1,
+  );
   const stepDurations = makeStepDurations(
     steps,
     mode,
-    player.style?.thinkingPace ?? 1,
+    style.thinkingPace,
     pressure,
     random,
   );
@@ -431,4 +436,25 @@ export function createAIThinkingPlan(
     totalMs: stepDurations.reduce((sum, value) => sum + value, 0),
     mode,
   };
+}
+
+/** Compatibility boundary for existing full-state callers. */
+export function createAIThinkingPlan(
+  state: GameState,
+  playerId: number,
+  random: () => number,
+  learning?: AILearningState,
+  recentSteps: readonly string[] = [],
+): AIThinkingPlan {
+  const observation = buildBotObservation(state, playerId);
+  const style =
+    state.players.find((player) => player.id === playerId)?.style ??
+    aiStyleForPlayerId(playerId);
+  return createAIThinkingPlanFromObservation(
+    observation,
+    style,
+    random,
+    learning,
+    recentSteps,
+  );
 }

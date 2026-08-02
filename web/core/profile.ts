@@ -197,14 +197,19 @@ export function recordCompletedHand(
   game: GameState,
 ): LocalProfile {
   if (!game.result) return profile;
-  const recordId = `${game.handNumber}-${game.actionSequence}`;
+  const recordId = game.handId;
   if (profile.history.some((record) => record.id === recordId)) return profile;
 
-  const preflopRaises = game.actionLog.filter(
-    (entry) =>
-      entry.street === "preflop" &&
-      (entry.action === "raise" || entry.action === "all-in") &&
-      !entry.label.includes("盲"),
+  const chronologicalPreflopRaises = [...game.actionLog]
+    .reverse()
+    .filter(
+      (entry) =>
+        entry.street === "preflop" &&
+        (entry.action === "raise" || entry.action === "all-in") &&
+        !entry.label.includes("盲"),
+    );
+  const threeBettorIds = new Set(
+    chronologicalPreflopRaises.slice(1, 2).map((entry) => entry.playerId),
   );
   const aiProfiles = { ...profile.aiProfiles };
 
@@ -222,9 +227,7 @@ export function recordCompletedHand(
       const raisedPreflop = preflop.some((entry) =>
         ["raise", "all-in"].includes(entry.action),
       );
-      const threeBet = preflopRaises.some(
-        (entry, index) => index > 0 && entry.playerId === player.id,
-      );
+      const threeBet = threeBettorIds.has(player.id);
       const aggressiveActions = actions.filter((entry) =>
         ["raise", "all-in"].includes(entry.action),
       ).length;
@@ -303,10 +306,10 @@ export function recordCompletedHand(
   };
 }
 
+/** Clears adaptive AI profiles while preserving the completed-hand archive. */
 export function resetLearningData(profile: LocalProfile): LocalProfile {
   return {
     ...profile,
-    history: [],
     aiProfiles: {},
   };
 }

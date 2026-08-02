@@ -1,44 +1,48 @@
-# Module: Local Session
+# Module: Local Session and Controls
 
 ## Entry and exit
 
-- Entry: load the versioned browser record during page initialization.
-- Exit: save after every stable user or AI action and on hand completion.
+- Entry: load table and learning records from separate versioned keys.
+- Exit: save after each stable engine transition and completed learning update.
 
 ## Main path
 
-1. Read a versioned session snapshot.
-2. Validate the expected shape and numeric ranges.
-3. Restore stacks, cards, street, pot, action log, and session statistics.
-4. Persist changes locally as gameplay advances.
+1. Validate/migrate the table snapshot.
+2. Validate/migrate each bot's memory independently.
+3. Resume the exact actor and visible table state.
+4. Persist immutable snapshots after legal transitions.
+5. Offer separate controls for new table, reset memories and export a local
+   diagnostic replay.
 
-## Alternate path
+## Alternate paths
 
-- If no snapshot exists, create a table with default stacks.
-- The user can explicitly start a new session from the table menu.
+- No snapshot: start factory stacks and empty memories.
+- Table valid, memory invalid: preserve the hand and reset only affected memory.
+- Memory valid, table invalid: start a new table while retaining learned rivals.
 
-## Exception path
+## Exception paths
 
-- Corrupt or incompatible data is discarded and replaced with a fresh session.
-- Browser storage failure keeps the current in-memory game playable and shows a
-  non-blocking local-save warning.
-- Reset requires explicit confirmation because it removes the current session.
-- No network, account, or storage permission prompt is used.
+- Storage unavailable: remain playable in memory and show a quiet warning.
+- Reset requested: require explicit confirmation describing exactly what is
+  removed.
+- Imported diagnostic data: never execute code or accept non-versioned records.
+- No permissions or network requests are used.
 
 ## State machine
 
-`unknown → loading → restored | fresh → saving ↔ ready`
+`unknown → loading → restored | partial-reset | fresh → ready ↔ saving`
 
-Failure transitions are `loading → fresh` and `saving → memory-only`.
+Supporting confirmations are `confirm-new-table` and `confirm-reset-memories`.
 
 ## Dependencies
 
-- Browser `localStorage` for the first MVP
-- Poker table state serializer
-- Session version and validation helpers
+- Table serializer and validator
+- Learning serializer, validator and migrations
+- Browser `localStorage`
+- Non-blocking status UI
 
 ## Verification echo
 
-All user data remains on the current device. There is no identity, backend,
-cloud sync, analytics stream, or remote save.
+The recurring opponents survive a new chip session unless the player explicitly
+resets their memories. Everything remains on the current device.
 

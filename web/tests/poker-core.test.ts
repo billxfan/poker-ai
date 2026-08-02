@@ -4,6 +4,8 @@ import { AI_ENGINE_NAMES, chooseAIAction } from "../core/ai.ts";
 import {
   currentAIExplorationRate,
   defaultAILearningState,
+  getAIDecisionTuning,
+  normalizeAILearningState,
   updateAILearningAfterHand,
 } from "../core/aiLearning.ts";
 import { aiStyleForPlayerId } from "../core/aiProfiles.ts";
@@ -684,13 +686,13 @@ test("AI thinking copy varies in timing, stays public, and is perceivable", () =
 
   assert.deepEqual(first, second);
   assert.notDeepEqual(first, different);
-  assert.ok(first.steps.length >= 1 && first.steps.length <= 7);
+  assert.ok(first.steps.length >= 1 && first.steps.length <= 3);
   assert.equal(first.stepDurations.length, first.steps.length);
   assert.equal(
     first.totalMs,
     first.stepDurations.reduce((sum, value) => sum + value, 0),
   );
-  assert.ok(first.totalMs >= 320 && first.totalMs <= 7700);
+  assert.ok(first.totalMs >= 260 && first.totalMs <= 2250);
   assert.equal(
     first.steps.some((step) => /同花|对子|手牌/.test(step)),
     false,
@@ -709,13 +711,13 @@ test("AI thought plans vary broadly without becoming a fixed timer", () => {
   const modes = new Set(plans.map((plan) => plan.mode));
 
   assert.ok(uniqueCopy.size > 130);
-  assert.ok(uniqueTimings.size > 140);
-  assert.deepEqual([...lengths].sort(), [1, 2, 3, 4, 5, 6, 7]);
+  assert.ok(uniqueTimings.size >= 65);
+  assert.deepEqual([...lengths].sort(), [1, 2, 3]);
   assert.deepEqual([...modes].sort(), ["measured", "snap", "tank"]);
   assert.ok(
     Math.max(...plans.map((plan) => plan.totalMs)) -
       Math.min(...plans.map((plan) => plan.totalMs)) >
-      6000,
+      1800,
   );
 });
 
@@ -735,13 +737,13 @@ test("AI thinking uses a large phrase library and avoids each seat's recent copy
       undefined,
       recentSteps,
     );
-    const recent = new Set(recentSteps);
+    const recent = new Set(recentSteps.slice(-5));
     assert.equal(plan.steps.some((step) => recent.has(step)), false);
     plan.steps.forEach((step) => observed.add(step));
     recentSteps = [...recentSteps, ...plan.steps].slice(-36);
   }
 
-  assert.ok(observed.size >= 80);
+  assert.ok(observed.size >= 50);
 });
 
 test("AI thinking rhythm responds to pressure and remains persona-specific", () => {
@@ -769,7 +771,7 @@ test("AI thinking rhythm responds to pressure and remains persona-specific", () 
 
   const relaxedFox = plansFor(lowPressure, 5);
   const pressuredFox = plansFor(highPressure, 5);
-  assert.ok(averageMs(pressuredFox) > averageMs(relaxedFox) + 1200);
+  assert.ok(averageMs(pressuredFox) > averageMs(relaxedFox) + 400);
 
   const pony = plansFor(base, 2);
   const uncle = plansFor(base, 3);
@@ -777,7 +779,15 @@ test("AI thinking rhythm responds to pressure and remains persona-specific", () 
     pony.filter((plan) => plan.mode === "snap").length >
       uncle.filter((plan) => plan.mode === "snap").length + 25,
   );
-  assert.ok(averageMs(uncle) > averageMs(pony) + 900);
+  assert.ok(averageMs(uncle) > averageMs(pony) + 300);
+
+  const sortedPonyTimes = pony
+    .map((plan) => plan.totalMs)
+    .sort((left, right) => left - right);
+  const percentile = (value: number) =>
+    sortedPonyTimes[Math.floor((sortedPonyTimes.length - 1) * value)];
+  assert.ok(percentile(0.5) <= 910);
+  assert.ok(percentile(0.95) <= 2160);
 
   const humanCues = new Set(
     [...relaxedFox, ...pressuredFox].flatMap((plan) =>
@@ -824,7 +834,7 @@ test("AI personas produce observably different action distributions", () => {
       card(7, "hearts"),
     ];
     const result = { fold: 0, passive: 0, aggressive: 0 };
-    for (let seed = 1; seed <= 240; seed += 1) {
+    for (let seed = 1; seed <= 400; seed += 1) {
       const action = chooseAIAction(
         game,
         playerId,
@@ -870,10 +880,97 @@ test("AI learning records contexts and decays exploration within style bounds", 
   assert.ok(
     currentAIExplorationRate(style, learning) >= style.minimumExploration,
   );
+  assert.deepEqual(
+    Object.keys(learning.opponentReads)
+      .map(Number)
+      .sort((left, right) => left - right),
+    [0, 1, 3, 4, 5],
+  );
+  assert.ok(
+    Object.values(learning.opponentReads).some(
+      (read) => read.handsObserved > 0,
+    ),
+  );
 });
 
-test("deterministic AI simulations complete without loops or chip loss", () => {
-  for (let seed = 1; seed <= 200; seed += 1) {
+test("old AI learning saves migrate to per-opponent reads", () => {
+  const oldLearning = {
+    ...defaultAILearningState(),
+    opponentReads: undefined,
+    humanRead: {
+      ...defaultAILearningState().humanRead,
+      handsObserved: 9,
+      foldsToAggression: 5,
+    },
+  };
+  const migrated = normalizeAILearningState(
+    oldLearning as unknown as ReturnType<typeof defaultAILearningState>,
+  );
+
+  assert.equal(migrated.humanRead.handsObserved, 9);
+  assert.equal(migrated.opponentReads[0].foldsToAggression, 5);
+});
+
+test("AI targets learned tendencies of the active opponent", () => {
+  const style = aiStyleForPlayerId(5);
+  const learning = defaultAILearningState();
+  learning.handsPlayed = 20;
+  learning.opponentReads[3] = {
+    handsObserved: 20,
+    vpipHands: 7,
+    pfrHands: 2,
+    aggressiveActions: 2,
+    totalActions: 30,
+    pressureOpportunities: 20,
+    foldsToAggression: 17,
+    continuesVsAggression: 3,
+  };
+  const baseline = getAIDecisionTuning(style, learning, "unknown", {
+    activeIds: [4],
+  });
+  const exploit = getAIDecisionTuning(style, learning, "unknown", {
+    activeIds: [3],
+    primaryId: 3,
+  });
+
+  assert.ok(exploit.bluffChance > baseline.bluffChance);
+  assert.ok(exploit.aggressionChance > baseline.aggressionChance);
+});
+
+test("AI uses effective stacks and commits strong hands at shallow SPR", () => {
+  const base = createGame(179);
+  base.currentActor = 1;
+  base.currentBet = 20;
+  base.minimumRaiseIncrement = 20;
+  base.pot = 100;
+  base.players[1].bet = 0;
+  base.players[1].chips = 100;
+  base.players[1].holeCards = [card(14, "spades"), card(14, "hearts")];
+  base.players
+    .filter((player) => player.id !== 1 && player.status !== "out")
+    .forEach((player) => {
+      player.chips = 100;
+    });
+  const deep = structuredClone(base);
+  deep.players.forEach((player) => {
+    if (player.status !== "out") player.chips = 2_000;
+  });
+  const controlledRandom = () => {
+    const values = [0.99, 0, 0];
+    return () => values.shift() ?? 0;
+  };
+
+  const shallowAction = chooseAIAction(base, 1, controlledRandom());
+  const deepAction = chooseAIAction(deep, 1, controlledRandom());
+
+  assert.equal(shallowAction.type, "all-in");
+  assert.equal(deepAction.type, "raise");
+  assert.match(shallowAction.aiDecision!.contextKey, /\|short$/);
+  assert.match(deepAction.aiDecision!.contextKey, /\|deep$/);
+});
+
+test("ten thousand deterministic AI simulations complete without loops or chip loss", () => {
+  for (let seed = 1; seed <= 10_000; seed += 1) {
     let game = createGame(seed);
     const random = seededRandom(seed * 997);
     let actions = 0;

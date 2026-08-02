@@ -5,6 +5,7 @@ import type {
   AIStyle,
   GameState,
   HumanOpponentRead,
+  OpponentRead,
 } from "./types.ts";
 
 export type AIDecisionTuning = {
@@ -20,7 +21,7 @@ function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, value));
 }
 
-function emptyHumanRead(): HumanOpponentRead {
+function emptyOpponentRead(): OpponentRead {
   return {
     handsObserved: 0,
     vpipHands: 0,
@@ -40,7 +41,8 @@ export function defaultAILearningState(): AILearningState {
     aggressionBias: 0,
     tightnessBias: 0,
     bluffBias: 0,
-    humanRead: emptyHumanRead(),
+    humanRead: emptyOpponentRead(),
+    opponentReads: {},
     contextPolicies: {},
     snapshots: [],
   };
@@ -51,6 +53,67 @@ export function normalizeAILearningState(
 ): AILearningState {
   const fallback = defaultAILearningState();
   if (!value || typeof value !== "object") return fallback;
+  const normalizeCount = (count: number | null | undefined) =>
+    Number.isFinite(count) ? clamp(Math.floor(count!), 0, 1_000_000) : 0;
+  const normalizeRead = (read: OpponentRead | null | undefined): OpponentRead => {
+    const candidate = { ...emptyOpponentRead(), ...(read ?? {}) };
+    return {
+      handsObserved: normalizeCount(candidate.handsObserved),
+      vpipHands: normalizeCount(candidate.vpipHands),
+      pfrHands: normalizeCount(candidate.pfrHands),
+      aggressiveActions: normalizeCount(candidate.aggressiveActions),
+      totalActions: normalizeCount(candidate.totalActions),
+      pressureOpportunities: normalizeCount(candidate.pressureOpportunities),
+      foldsToAggression: normalizeCount(candidate.foldsToAggression),
+      continuesVsAggression: normalizeCount(candidate.continuesVsAggression),
+    };
+  };
+  const storedReads =
+    value.opponentReads && typeof value.opponentReads === "object"
+      ? Object.fromEntries(
+          Object.entries(value.opponentReads).map(([id, read]) => [
+            id,
+            normalizeRead(read),
+          ]),
+        )
+      : {};
+  const humanRead = normalizeRead(storedReads[0] ?? value.humanRead);
+  const contextPolicies =
+    value.contextPolicies && typeof value.contextPolicies === "object"
+      ? Object.fromEntries(
+          Object.entries(value.contextPolicies)
+            .filter(([, policy]) => !!policy && typeof policy === "object")
+            .map(([key, policy]) => [
+              key,
+              {
+                foldScore: clamp(
+                  Number.isFinite(policy.foldScore) ? policy.foldScore : 0,
+                  -1,
+                  1,
+                ),
+                passiveScore: clamp(
+                  Number.isFinite(policy.passiveScore) ? policy.passiveScore : 0,
+                  -1,
+                  1,
+                ),
+                aggressiveScore: clamp(
+                  Number.isFinite(policy.aggressiveScore)
+                    ? policy.aggressiveScore
+                    : 0,
+                  -1,
+                  1,
+                ),
+                sampleCount: normalizeCount(policy.sampleCount),
+              },
+            ])
+            .sort(
+              ([, left], [, right]) =>
+                (right as AIContextPolicy).sampleCount -
+                (left as AIContextPolicy).sampleCount,
+            )
+            .slice(0, 256),
+        )
+      : {};
   return {
     handsPlayed: Number.isFinite(value.handsPlayed)
       ? Math.max(0, value.handsPlayed)
@@ -59,14 +122,9 @@ export function normalizeAILearningState(
     aggressionBias: clamp(value.aggressionBias ?? 0, -1, 1),
     tightnessBias: clamp(value.tightnessBias ?? 0, -1, 1),
     bluffBias: clamp(value.bluffBias ?? 0, -1, 1),
-    humanRead: {
-      ...fallback.humanRead,
-      ...(value.humanRead ?? {}),
-    },
-    contextPolicies:
-      value.contextPolicies && typeof value.contextPolicies === "object"
-        ? value.contextPolicies
-        : {},
+    humanRead,
+    opponentReads: { ...storedReads, 0: humanRead },
+    contextPolicies,
     snapshots: Array.isArray(value.snapshots) ? value.snapshots.slice(-60) : [],
   };
 }
@@ -87,7 +145,12 @@ export function currentAILearningRate(
   const decaySteps = Math.floor(
     state.handsPlayed / Math.max(1, style.memoryWindow),
   );
-  return style.learningRate * 0.9 ** decaySteps;
+  // Preserve a small adaptation floor so a long-running rival can respond when
+  // the human changes gears instead of freezing permanently after many hands.
+  return Math.max(
+    style.learningRate * 0.15,
+    style.learningRate * 0.9 ** decaySteps,
+  );
 }
 
 export function currentAIExplorationRate(
@@ -137,6 +200,8 @@ function opponentAdjustment(read: HumanOpponentRead): Partial<AIDecisionTuning> 
   const confidence = clamp(read.handsObserved / 12, 0, 1);
   const aggressionRate =
     read.totalActions > 0 ? read.aggressiveActions / read.totalActions : 0;
+  const vpipRate = read.vpipHands / Math.max(1, read.handsObserved);
+  const pfrRate = read.pfrHands / Math.max(1, read.handsObserved);
   const foldRate =
     read.pressureOpportunities > 0
       ? read.foldsToAggression / read.pressureOpportunities
@@ -170,6 +235,22 @@ function opponentAdjustment(read: HumanOpponentRead): Partial<AIDecisionTuning> 
     passiveThreshold += strength * 0.35;
     continueChance -= strength * 0.65;
   }
+  if (vpipRate < 0.28) {
+    const strength = (0.28 - vpipRate) * 0.22 * confidence;
+    aggressionChance += strength * 0.45;
+    bluffChance += strength;
+    bluffThreshold -= strength * 0.35;
+  }
+  if (vpipRate > 0.58) {
+    const strength = (vpipRate - 0.58) * 0.18 * confidence;
+    aggressiveThreshold -= strength * 0.35;
+    bluffChance -= strength * 0.55;
+  }
+  if (pfrRate > 0.34) {
+    const strength = (pfrRate - 0.34) * 0.16 * confidence;
+    passiveThreshold += strength * 0.3;
+    continueChance -= strength * 0.55;
+  }
 
   return {
     aggressiveThreshold,
@@ -181,10 +262,54 @@ function opponentAdjustment(read: HumanOpponentRead): Partial<AIDecisionTuning> 
   };
 }
 
+function opponentGroupAdjustment(
+  learning: AILearningState,
+  opponentIds: number[] | undefined,
+  primaryOpponentId: number | null | undefined,
+): Partial<AIDecisionTuning> {
+  if (!opponentIds) return opponentAdjustment(learning.humanRead);
+  const reads = opponentIds
+    .map((id) => learning.opponentReads[id])
+    .filter((read): read is OpponentRead => !!read && read.handsObserved > 0);
+  if (!reads.length) return {};
+
+  const keys: (keyof AIDecisionTuning)[] = [
+    "aggressiveThreshold",
+    "passiveThreshold",
+    "aggressionChance",
+    "continueChance",
+    "bluffThreshold",
+    "bluffChance",
+  ];
+  const weights = reads.map((read) => clamp(read.handsObserved / 12, 0, 1));
+  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+  const group: Partial<AIDecisionTuning> = {};
+  keys.forEach((key) => {
+    group[key] = reads.reduce((sum, read, index) => {
+      return sum + (opponentAdjustment(read)[key] ?? 0) * weights[index];
+    }, 0) / Math.max(1, totalWeight);
+  });
+
+  const primary =
+    primaryOpponentId === null || primaryOpponentId === undefined
+      ? undefined
+      : learning.opponentReads[primaryOpponentId];
+  if (!primary || primary.handsObserved <= 0) return group;
+  const targeted = opponentAdjustment(primary);
+  keys.forEach((key) => {
+    group[key] = (group[key] ?? 0) * 0.65 + (targeted[key] ?? 0) * 0.35;
+  });
+  return group;
+}
+
 export function getAIDecisionTuning(
   style: AIStyle,
   learning: AILearningState | null | undefined,
   contextKey: string,
+  opponents?: {
+    activeIds: number[];
+    primaryId?: number | null;
+  },
 ): AIDecisionTuning {
   const state = normalizeAILearningState(learning);
   const confidence = aiLearningConfidence(style, state);
@@ -193,13 +318,33 @@ export function getAIDecisionTuning(
   const tightnessBias = state.tightnessBias * cap;
   const bluffBias = state.bluffBias * cap;
   const contextual = policyAdjustment(state.contextPolicies[contextKey]);
-  const opponent = opponentAdjustment(state.humanRead);
+  const opponent = opponentGroupAdjustment(
+    state,
+    opponents?.activeIds,
+    opponents?.primaryId,
+  );
 
+  // Every learned contribution—not only the aggregate bias—must remain inside
+  // the persona envelope. This prevents long sessions from converging all five
+  // rivals toward the same exploit policy.
   const delta = (key: keyof AIDecisionTuning) =>
-    (contextual[key] ?? 0) + (opponent[key] ?? 0);
+    clamp((contextual[key] ?? 0) + (opponent[key] ?? 0), -cap, cap);
+
+  const withinPersona = (
+    key: keyof AIDecisionTuning,
+    value: number,
+    hardMinimum: number,
+    hardMaximum: number,
+  ) =>
+    clamp(
+      value,
+      Math.max(hardMinimum, style[key] - cap),
+      Math.min(hardMaximum, style[key] + cap),
+    );
 
   return {
-    aggressiveThreshold: clamp(
+    aggressiveThreshold: withinPersona(
+      "aggressiveThreshold",
       style.aggressiveThreshold -
         aggressionBias * 0.6 +
         tightnessBias * 0.9 +
@@ -207,7 +352,8 @@ export function getAIDecisionTuning(
       0.08,
       0.95,
     ),
-    passiveThreshold: clamp(
+    passiveThreshold: withinPersona(
+      "passiveThreshold",
       style.passiveThreshold -
         aggressionBias * 0.25 +
         tightnessBias * 0.7 +
@@ -215,7 +361,8 @@ export function getAIDecisionTuning(
       0.05,
       0.9,
     ),
-    aggressionChance: clamp(
+    aggressionChance: withinPersona(
+      "aggressionChance",
       style.aggressionChance +
         aggressionBias * 1.4 -
         tightnessBias * 0.45 +
@@ -223,7 +370,8 @@ export function getAIDecisionTuning(
       0.02,
       0.98,
     ),
-    continueChance: clamp(
+    continueChance: withinPersona(
+      "continueChance",
       style.continueChance +
         aggressionBias * 0.3 -
         tightnessBias * 0.95 +
@@ -231,7 +379,8 @@ export function getAIDecisionTuning(
       0.05,
       0.98,
     ),
-    bluffThreshold: clamp(
+    bluffThreshold: withinPersona(
+      "bluffThreshold",
       style.bluffThreshold -
         bluffBias * 0.8 +
         tightnessBias * 0.25 +
@@ -239,7 +388,8 @@ export function getAIDecisionTuning(
       0,
       0.75,
     ),
-    bluffChance: clamp(
+    bluffChance: withinPersona(
+      "bluffChance",
       style.bluffChance +
         bluffBias * 1.4 +
         aggressionBias * 0.25 -
@@ -252,32 +402,30 @@ export function getAIDecisionTuning(
 }
 
 function visibleActionsForObserver(game: GameState, observerId: number) {
-  const chronological = [...game.actionLog].reverse();
-  const observerFoldIndex = chronological.findIndex(
-    (entry) => entry.playerId === observerId && entry.action === "fold",
-  );
-  return observerFoldIndex >= 0
-    ? chronological.slice(0, observerFoldIndex + 1)
-    : chronological;
+  void observerId;
+  // Folding a hand does not remove a seated human's ability to observe later
+  // public bets and a public showdown. Hole cards remain governed separately.
+  return [...game.actionLog].reverse();
 }
 
-function updateHumanRead(
+function updateOpponentRead(
   game: GameState,
   observerId: number,
-  previous: HumanOpponentRead,
-): HumanOpponentRead {
+  opponentId: number,
+  previous: OpponentRead,
+): OpponentRead {
   const visible = visibleActionsForObserver(game, observerId);
-  const humanActions = visible.filter(
-    (entry) => entry.playerId === 0 && !entry.label.includes("盲"),
+  const opponentActions = visible.filter(
+    (entry) => entry.playerId === opponentId && !entry.label.includes("盲"),
   );
-  const preflop = humanActions.filter((entry) => entry.street === "preflop");
+  const preflop = opponentActions.filter((entry) => entry.street === "preflop");
   const voluntary = preflop.some((entry) =>
     ["call", "raise", "all-in"].includes(entry.action),
   );
   const raised = preflop.some((entry) =>
     ["raise", "all-in"].includes(entry.action),
   );
-  const aggressiveActions = humanActions.filter((entry) =>
+  const aggressiveActions = opponentActions.filter((entry) =>
     ["raise", "all-in"].includes(entry.action),
   ).length;
 
@@ -291,7 +439,11 @@ function updateHumanRead(
       street = entry.street;
       lastAggressor = null;
     }
-    if (entry.playerId === 0 && lastAggressor !== null && lastAggressor !== 0) {
+    if (
+      entry.playerId === opponentId &&
+      lastAggressor !== null &&
+      lastAggressor !== opponentId
+    ) {
       pressureOpportunities += 1;
       if (entry.action === "fold") foldsToAggression += 1;
       else if (entry.action !== "check") continuesVsAggression += 1;
@@ -305,11 +457,12 @@ function updateHumanRead(
   });
 
   return {
-    handsObserved: previous.handsObserved + (humanActions.length > 0 ? 1 : 0),
+    handsObserved:
+      previous.handsObserved + (opponentActions.length > 0 ? 1 : 0),
     vpipHands: previous.vpipHands + (voluntary ? 1 : 0),
     pfrHands: previous.pfrHands + (raised ? 1 : 0),
     aggressiveActions: previous.aggressiveActions + aggressiveActions,
-    totalActions: previous.totalActions + humanActions.length,
+    totalActions: previous.totalActions + opponentActions.length,
     pressureOpportunities:
       previous.pressureOpportunities + pressureOpportunities,
     foldsToAggression: previous.foldsToAggression + foldsToAggression,
@@ -432,13 +585,15 @@ export function updateAILearningAfterHand(
   const learningRate = currentAILearningRate(style, previous);
   const contextPolicies = structuredClone(previous.contextPolicies);
 
-  [...game.actionLog]
+  const decisions = [...game.actionLog]
     .reverse()
     .filter(
       (entry) => entry.playerId === playerId && entry.aiDecision !== undefined,
-    )
-    .forEach((entry) => {
+    );
+  decisions.forEach((entry, index) => {
       const decision = entry.aiDecision!;
+      const stepsFromOutcome = decisions.length - index - 1;
+      const temporalCredit = 0.7 + 0.3 * 0.86 ** stepsFromOutcome;
       const reward =
         rewardForDecision(
           decision.actionKind,
@@ -447,6 +602,7 @@ export function updateAILearningAfterHand(
           didWin,
         ) *
         actionLearningWeight(style, decision.actionKind) *
+        temporalCredit *
         (decision.usedExploration ? 0.9 : 1);
       const policy = contextPolicies[decision.contextKey] ?? {
         foldScore: 0,
@@ -468,11 +624,24 @@ export function updateAILearningAfterHand(
   const effectiveCap =
     style.adjustmentCap *
     clamp(handsPlayed / Math.max(1, style.memoryWindow), 0, 1);
+  const opponentReads = { ...previous.opponentReads };
+  game.players
+    .filter((player) => player.id !== playerId)
+    .forEach((opponent) => {
+      opponentReads[opponent.id] = updateOpponentRead(
+        game,
+        playerId,
+        opponent.id,
+        opponentReads[opponent.id] ?? emptyOpponentRead(),
+      );
+    });
+  const humanRead = opponentReads[0] ?? previous.humanRead;
   const nextBase: AILearningState = {
     handsPlayed,
     totalProfit: previous.totalProfit + profit,
     ...biases,
-    humanRead: updateHumanRead(game, playerId, previous.humanRead),
+    humanRead,
+    opponentReads,
     contextPolicies,
     snapshots: previous.snapshots,
   };

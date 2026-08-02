@@ -7,6 +7,42 @@ The table is the hero, with a layered walnut-and-brass bezel, luminous emerald
 felt, cream cards, compact seat pods, and a floating table-side action console.
 Information panels behave like a slim scorecard and never compete with the hand.
 
+The Humanlike Core revision preserves this material direction. Its new visual
+goal is “recurring rivals, not visible algorithms”: memory and adaptation appear
+as restrained character knowledge, while live solver scores, equity meters and
+debug traces stay out of the active hand.
+
+## Humanlike core experience
+
+### Rival memory
+
+- Each opponent profile carries one quiet memory line, such as “看了你 18 手 ·
+  觉得你面对再加注偏谨慎”. It always includes sample size or uncertainty.
+- During a hand, the seat may show a short public-information cue (“重新看了一眼
+  你的加注尺寸”), never an exact equity, hidden card reference or claim of mind
+  reading.
+- Learning maturity is rendered as an evidence ring with discrete labels
+  `观察中 / 有些把握 / 熟悉你的节奏`; it is not a progress bar toward perfection.
+
+### Post-hand table read
+
+- The result overlay remains focused on winner and chip movement.
+- An optional secondary sheet, “这手他们看到了什么”, lists at most three
+  public factors per acting bot: position, price, board, public sequence and
+  established opponent tendency.
+- Explanations describe influence, not false certainty: “大额跟注压力让他收紧”
+  rather than “因为你在诈唬所以弃牌”.
+- A bot's private strength bucket is shown only when its cards were revealed at
+  showdown. Otherwise it stays private.
+
+### Memory controls
+
+- “新牌桌” and “清除对手记忆” are separate menu rows with different icons and
+  confirmations.
+- Memory reset confirmation says chips and current session remain unchanged.
+- Local-save or memory migration warnings use a small amber status pill; they
+  never block a live hand.
+
 ## Color tokens
 
 | Token | Value | Use |
@@ -49,6 +85,8 @@ Information panels behave like a slim scorecard and never compete with the hand.
 - Cards tuck into the pod edge so seats read as one coherent object
 - Active seat uses a bright signal ring plus “thinking” copy
 - Folded seats desaturate; the human pod is anchored to the near edge
+- Persona is communicated through cadence, sizing and concise copy; persistent
+  badges do not label opponents as “fish”, “nit” or expose internal policy names
 
 ### Playing card
 
@@ -76,6 +114,8 @@ Information panels behave like a slim scorecard and never compete with the hand.
 - Session profit is the visual anchor; action history becomes a compact timeline
 - Strategy note uses a warm inset rather than another generic panel
 - “Local / offline” remains visible and confirms device-only storage
+- Developer decision traces live behind a development-only diagnostics panel;
+  production scorecards show safe narrative summaries only after a hand
 
 ### Home
 
@@ -137,6 +177,8 @@ Information panels behave like a slim scorecard and never compete with the hand.
 - Use color together with text and shape, never as the only state signal
 - Maintain touch targets of at least 44px
 - Keep the human hand and action console in a stable location
+- Express confidence with sample size and uncertainty
+- Keep live tells causally downstream of the completed decision
 
 ## Don’t
 
@@ -145,3 +187,5 @@ Information panels behave like a slim scorecard and never compete with the hand.
 - Do not overuse suit icons or giant wordmarks as decoration
 - Do not obscure the table with persistent onboarding
 - Do not rely on hover for important information
+- Do not show live equity, Q-values, context keys or unrevealed hand-strength buckets
+- Do not imply that a single result proves learning or that opponents know hidden cards
