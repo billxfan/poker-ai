@@ -44,7 +44,7 @@
 .character-rim-light,
 .character-expression,
 .character-reaction-mark,
-.character-chip-sparks {
+.character-fish-sparks {
   position: absolute;
   pointer-events: none;
 }
@@ -240,7 +240,7 @@
   transform: translate3d(-5px, 8px, 30px) scale(0.5);
 }
 
-.character-chip-sparks {
+.character-fish-sparks {
   z-index: 7;
   right: 8%;
   bottom: 10%;
@@ -249,26 +249,40 @@
   opacity: 0;
 }
 
-.character-chip-sparks i {
+.character-fish-sparks i {
   position: absolute;
   bottom: 0;
   left: 50%;
-  width: 9px;
-  height: 9px;
-  border: 2px solid #f2cf72;
-  border-radius: 50%;
-  background: #8c2d2d;
-  box-shadow: inset 0 0 0 2px #f7e0a0;
+  width: 13px;
+  height: 7px;
+  border: 1px solid #f1c56f;
+  border-radius: 58% 46% 46% 58%;
+  background: linear-gradient(145deg, #d6a14c, #865321);
+  box-shadow:
+    inset 1px 1px rgb(255 226 157 / 0.38),
+    0 2px 4px rgb(0 0 0 / 0.28);
 }
 
-.character-chip-sparks i:nth-child(2) {
+.character-fish-sparks i::after {
+  position: absolute;
+  top: 0;
+  left: -5px;
+  width: 0;
+  height: 0;
+  border-top: 3px solid transparent;
+  border-right: 6px solid #9c652a;
+  border-bottom: 3px solid transparent;
+  content: "";
+}
+
+.character-fish-sparks i:nth-child(2) {
   left: 37%;
-  background: #1e5960;
+  background: linear-gradient(145deg, #e0ad59, #925b24);
 }
 
-.character-chip-sparks i:nth-child(3) {
+.character-fish-sparks i:nth-child(3) {
   left: 64%;
-  background: #193f2c;
+  background: linear-gradient(145deg, #c98d40, #73431c);
 }
 
 .game-seat.is-thinking .seat-character-button {
@@ -342,19 +356,19 @@
   animation: gesture-win-body 1.65s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
-.game-seat.gesture-win .character-chip-sparks {
+.game-seat.gesture-win .character-fish-sparks {
   opacity: 1;
 }
 
-.game-seat.gesture-win .character-chip-sparks i {
-  animation: chip-collect 1.2s cubic-bezier(0.22, 0.8, 0.2, 1) both;
+.game-seat.gesture-win .character-fish-sparks i {
+  animation: dried-fish-collect 1.2s cubic-bezier(0.22, 0.8, 0.2, 1) both;
 }
 
-.game-seat.gesture-win .character-chip-sparks i:nth-child(2) {
+.game-seat.gesture-win .character-fish-sparks i:nth-child(2) {
   animation-delay: 90ms;
 }
 
-.game-seat.gesture-win .character-chip-sparks i:nth-child(3) {
+.game-seat.gesture-win .character-fish-sparks i:nth-child(3) {
   animation-delay: 170ms;
 }
 
@@ -581,7 +595,7 @@
   }
 }
 
-@keyframes chip-collect {
+@keyframes dried-fish-collect {
   0% {
     opacity: 0;
     transform: translate3d(44px, 18px, 0) rotate(0);
@@ -667,12 +681,510 @@
 
 @media (prefers-reduced-motion: reduce) {
   .game-seat .character-layer,
-  .game-seat .character-chip-sparks i,
+  .game-seat .character-fish-sparks i,
   .game-seat .character-reaction-mark,
   .table-result-beat {
     animation-duration: 160ms !important;
     animation-iteration-count: 1 !important;
     transform: none !important;
+  }
+}
+
+/* Lobby v2 — a game start screen built around the table, not a marketing hero. */
+.home-page {
+  display: grid;
+  width: min(1240px, 100%);
+  min-height: 100dvh;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto minmax(510px, 1fr) auto;
+  gap: 18px;
+  padding: max(22px, env(safe-area-inset-top)) clamp(18px, 4vw, 42px)
+    max(24px, env(safe-area-inset-bottom));
+  overflow: auto;
+  background:
+    radial-gradient(circle at 78% 16%, rgb(49 128 94 / 0.13), transparent 32rem),
+    radial-gradient(circle at 8% 92%, rgb(178 130 58 / 0.08), transparent 26rem),
+    #06130f;
+  color: #f5f1e8;
+}
+
+.home-lobby-header {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.home-wordmark {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.home-wordmark > span {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgb(202 161 87 / 0.36);
+  border-radius: 13px 13px 9px 9px;
+  background: linear-gradient(145deg, #173d30, #0a241b);
+  color: #d5ae65;
+  box-shadow: inset 0 1px rgb(255 255 255 / 0.08);
+  font-family: Georgia, serif;
+  font-size: 22px;
+}
+
+.home-wordmark > div {
+  display: grid;
+  gap: 1px;
+}
+
+.home-wordmark small {
+  color: rgb(255 255 255 / 0.42);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+.home-wordmark strong {
+  font-size: 19px;
+  letter-spacing: -0.03em;
+}
+
+.home-wallet {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  padding: 8px 12px;
+  border-right: 2px solid #caa157;
+  background: rgb(255 255 255 / 0.035);
+}
+
+.home-wallet span {
+  color: rgb(255 255 255 / 0.4);
+  font-size: 9px;
+}
+
+.home-wallet strong {
+  color: #e4c27e;
+  font-size: 18px;
+}
+
+.home-lobby-stage {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(280px, 0.72fr) minmax(520px, 1.28fr);
+  min-height: 510px;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 0.08);
+  border-radius: 26px 26px 18px 18px;
+  background:
+    linear-gradient(90deg, rgb(3 17 13 / 0.96) 0 31%, rgb(3 17 13 / 0.46) 53%, transparent),
+    radial-gradient(circle at 72% 34%, rgb(35 117 84 / 0.22), transparent 28rem),
+    #071b15;
+  box-shadow:
+    0 28px 70px rgb(0 0 0 / 0.32),
+    inset 0 1px rgb(255 255 255 / 0.04);
+  animation: home-rise 420ms var(--curve-deal) both;
+}
+
+.home-lobby-stage::after {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 51px, rgb(255 255 255 / 0.012) 51px 52px),
+    linear-gradient(180deg, transparent 62%, rgb(1 8 6 / 0.5));
+  content: "";
+  pointer-events: none;
+}
+
+.home-lobby-copy {
+  position: relative;
+  z-index: 8;
+  display: flex;
+  max-width: 410px;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(28px, 5vw, 62px);
+}
+
+.home-lobby-kicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #d1ad68;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.home-lobby-kicker i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #5fcf9a;
+  box-shadow: 0 0 0 4px rgb(95 207 154 / 0.1);
+}
+
+.home-lobby-copy h1 {
+  margin: 20px 0 0;
+  color: #fffaf0;
+  font-family: inherit;
+  font-size: clamp(38px, 5vw, 60px);
+  font-weight: 760;
+  letter-spacing: -0.065em;
+  line-height: 1.02;
+  text-wrap: balance;
+}
+
+.home-lobby-copy > p {
+  max-width: 31rem;
+  margin: 18px 0 0;
+  color: rgb(255 255 255 / 0.52);
+  font-size: 13px;
+  line-height: 1.75;
+}
+
+.home-primary-actions {
+  display: grid;
+  gap: 9px;
+  margin-top: 36px;
+}
+
+.home-enter-button,
+.home-new-button {
+  display: flex;
+  align-items: center;
+  border-radius: 13px;
+  transition:
+    filter 180ms var(--curve),
+    transform 180ms var(--curve),
+    box-shadow 180ms var(--curve);
+}
+
+.home-enter-button {
+  min-height: 68px;
+  gap: 13px;
+  padding: 10px 16px;
+  background: #c99d4d;
+  color: #171006;
+  box-shadow: 0 14px 30px rgb(0 0 0 / 0.2);
+  text-align: left;
+}
+
+.home-enter-button:disabled {
+  opacity: 0.4;
+}
+
+.home-enter-button > svg,
+.home-new-button > svg {
+  width: 23px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.9;
+}
+
+.home-enter-button > span {
+  display: grid;
+  gap: 2px;
+}
+
+.home-enter-button strong {
+  font-size: 16px;
+}
+
+.home-enter-button small {
+  color: rgb(23 16 6 / 0.58);
+  font-size: 9px;
+}
+
+.home-new-button {
+  min-height: 48px;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  background: rgb(255 255 255 / 0.055);
+  color: rgb(255 255 255 / 0.76);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.home-enter-button:not(:disabled):hover,
+.home-new-button:hover {
+  filter: brightness(1.08);
+  transform: translateY(-2px);
+}
+
+.home-enter-button:not(:disabled):active,
+.home-new-button:active {
+  transform: translateY(0) scale(0.985);
+}
+
+.home-mini-table {
+  position: relative;
+  min-height: 510px;
+}
+
+.home-mini-felt {
+  position: absolute;
+  z-index: 1;
+  inset: 9% 4% 6% 0;
+  border: 10px solid #7b512c;
+  border-radius: 50%;
+  background:
+    radial-gradient(ellipse at 48% 42%, rgb(57 168 122 / 0.2), transparent 48%),
+    repeating-radial-gradient(ellipse at 50% 50%, rgb(255 255 255 / 0.018) 0 1px, transparent 1px 5px),
+    linear-gradient(180deg, #0a7354, #07523d 70%, #043a2c);
+  box-shadow:
+    0 34px 60px rgb(0 0 0 / 0.38),
+    inset 0 12px 32px rgb(0 27 20 / 0.38),
+    0 0 0 2px rgb(205 161 81 / 0.2);
+  transform: perspective(900px) rotateX(7deg);
+}
+
+.home-lobby-player {
+  position: absolute;
+  z-index: 4;
+  width: clamp(112px, 14vw, 175px);
+  aspect-ratio: 1;
+  filter: drop-shadow(0 15px 12px rgb(0 0 0 / 0.36));
+}
+
+.home-lobby-player img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.lobby-player-1 { top: -7%; left: 5%; }
+.lobby-player-2 { top: -13%; left: 38%; }
+.lobby-player-3 { top: -5%; right: 3%; }
+.lobby-player-4 { right: 5%; bottom: -3%; }
+.lobby-player-5 { bottom: -5%; left: 8%; }
+
+.home-mini-deck {
+  position: absolute;
+  z-index: 2;
+  top: 43%;
+  left: 50%;
+  display: flex;
+  transform: translate(-50%, -50%) rotate(-5deg);
+}
+
+.home-mini-deck i {
+  display: block;
+  width: 38px;
+  aspect-ratio: 0.71;
+  border: 2px solid #c49a4d;
+  border-radius: 7px;
+  background:
+    radial-gradient(circle, #d3ab60 0 2px, transparent 3px),
+    linear-gradient(145deg, #174f47, #0a3430);
+  box-shadow:
+    inset 0 0 0 3px #0c2926,
+    0 8px 14px rgb(0 0 0 / 0.28);
+}
+
+.home-mini-deck i + i {
+  margin-left: -19px;
+  transform: translate(22px, 5px) rotate(11deg);
+}
+
+.home-open-seat {
+  position: absolute;
+  z-index: 5;
+  bottom: 4%;
+  left: 50%;
+  padding: 7px 12px;
+  border: 1px dashed rgb(227 190 116 / 0.58);
+  border-radius: 9px;
+  background: rgb(3 27 20 / 0.82);
+  color: #dfbd78;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  transform: translateX(-50%);
+}
+
+.home-lobby-footer {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.8fr) minmax(420px, 1.2fr);
+  gap: 12px;
+}
+
+.home-daily-strip {
+  display: grid;
+  min-height: 72px;
+  grid-template-columns: 38px 1fr 20px;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 14px;
+  border: 1px solid rgb(255 255 255 / 0.07);
+  border-radius: 14px;
+  background: rgb(255 255 255 / 0.04);
+}
+
+.home-daily-strip > span {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 10px;
+  background: rgb(202 161 87 / 0.12);
+  color: #caa157;
+}
+
+.home-daily-strip svg,
+.home-utility-actions svg {
+  width: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.home-daily-strip > div,
+.home-utility-actions button > span {
+  display: grid;
+  gap: 3px;
+}
+
+.home-daily-strip strong,
+.home-utility-actions strong {
+  font-size: 12px;
+}
+
+.home-daily-strip small,
+.home-utility-actions small {
+  color: rgb(255 255 255 / 0.38);
+  font-size: 9px;
+}
+
+.home-daily-strip > svg {
+  color: #5fcf8c;
+}
+
+.home-utility-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.home-utility-actions button {
+  display: flex;
+  min-height: 72px;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 14px;
+  border: 1px solid rgb(255 255 255 / 0.07);
+  border-radius: 14px;
+  background: rgb(255 255 255 / 0.04);
+  color: rgb(255 255 255 / 0.78);
+  text-align: left;
+  transition:
+    background 180ms var(--curve),
+    transform 180ms var(--curve);
+}
+
+.home-utility-actions button:hover {
+  background: rgb(255 255 255 / 0.075);
+  transform: translateY(-2px);
+}
+
+/* Position and blind labels share one component boundary with identity. */
+.seat-identity .seat-badges {
+  position: static;
+  z-index: auto;
+  display: flex;
+  max-width: none;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  gap: 3px;
+}
+
+.seat-identity .seat-badges span,
+.seat-identity .seat-badges b,
+.seat-identity .seat-badges strong {
+  padding: 2px 5px;
+  font-size: 7px;
+  white-space: nowrap;
+}
+
+.seat-identity .seat-badges .dealer-badge {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+}
+
+@media (max-width: 759px) {
+  .home-page {
+    grid-template-rows: auto auto auto;
+    gap: 14px;
+    padding-inline: 14px;
+  }
+
+  .home-lobby-stage {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .home-lobby-copy {
+    max-width: none;
+    padding: 28px 22px 18px;
+  }
+
+  .home-lobby-copy h1 {
+    margin-top: 14px;
+    font-size: clamp(34px, 11vw, 46px);
+  }
+
+  .home-lobby-copy > p {
+    margin-top: 12px;
+  }
+
+  .home-primary-actions {
+    margin-top: 24px;
+  }
+
+  .home-mini-table {
+    min-height: 340px;
+  }
+
+  .home-mini-felt {
+    inset: 8% 3% 7%;
+  }
+
+  .home-lobby-player {
+    width: clamp(88px, 30vw, 122px);
+  }
+
+  .home-lobby-footer {
+    grid-template-columns: 1fr;
+  }
+
+  .home-utility-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .seat-identity .seat-badges .blind-badge em {
+    display: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .home-wallet span {
+    display: none;
+  }
+
+  .home-utility-actions {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -724,7 +1236,7 @@ button:disabled {
 .home-page {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .app-masthead {
@@ -1129,6 +1641,336 @@ button:disabled {
   background: linear-gradient(135deg, #8095ad, #5b718d);
 }
 
+/* Home: private card-room arrival, rather than a generic utility dashboard. */
+.home-page {
+  background:
+    radial-gradient(circle at 12% 5%, rgb(205 161 81 / 0.13), transparent 30rem),
+    linear-gradient(160deg, #081914, #0d241c 48%, #07120f);
+  color: #f6f0df;
+}
+
+.home-kicker {
+  display: block;
+  margin-bottom: 12px;
+  color: #cda151;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+.app-masthead h1 {
+  color: #fff9e9;
+  font-family: "Songti SC", "STSong", Georgia, serif;
+  font-size: clamp(38px, 8vw, 68px);
+  font-weight: 750;
+  letter-spacing: -0.055em;
+  padding-top: 0.08em;
+  line-height: 1.03;
+  text-wrap: balance;
+}
+
+.app-masthead h1::after {
+  display: none;
+}
+
+.app-masthead p {
+  max-width: 38rem;
+  margin: 18px 0 0;
+  color: rgb(246 240 223 / 0.62);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.home-table-hero {
+  position: relative;
+  isolation: isolate;
+  min-height: clamp(300px, 48vh, 510px);
+  overflow: hidden;
+  border: 1px solid rgb(205 161 81 / 0.24);
+  border-radius: 28px 28px 18px 18px;
+  background: #07130f;
+  box-shadow:
+    0 30px 70px rgb(0 0 0 / 0.34),
+    inset 0 1px rgb(255 255 255 / 0.06);
+  animation: home-rise 420ms 70ms var(--curve-deal) both;
+}
+
+.home-table-lineup {
+  position: absolute;
+  z-index: -2;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  filter: saturate(0.82) contrast(1.08) brightness(0.78);
+  object-fit: cover;
+  object-position: center 42%;
+  transform: scale(1.025);
+  transition: transform 1.2s var(--curve-deal);
+}
+
+.home-table-hero:hover .home-table-lineup {
+  transform: scale(1.045);
+}
+
+.home-table-vignette {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgb(2 11 8 / 0.12), transparent 38%, rgb(2 11 8 / 0.94)),
+    linear-gradient(90deg, rgb(2 11 8 / 0.48), transparent 32%, transparent 68%, rgb(2 11 8 / 0.48));
+  pointer-events: none;
+}
+
+.home-table-status {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  border-radius: 11px;
+  background: rgb(3 17 13 / 0.66);
+  backdrop-filter: blur(14px);
+}
+
+.home-table-status span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.home-table-status i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #65d09f;
+  box-shadow: 0 0 0 4px rgb(101 208 159 / 0.12);
+}
+
+.home-table-status small {
+  color: rgb(255 255 255 / 0.5);
+  font-size: 9px;
+}
+
+.home-balance {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  display: flex;
+  align-items: end;
+  gap: 11px;
+  padding: 12px 14px;
+  border: 1px solid rgb(205 161 81 / 0.3);
+  border-radius: 14px;
+  background: rgb(3 21 15 / 0.8);
+  box-shadow: 0 14px 30px rgb(0 0 0 / 0.28);
+  backdrop-filter: blur(16px);
+}
+
+.home-balance > span:last-child {
+  padding-bottom: 3px;
+  color: rgb(255 255 255 / 0.5);
+  font-size: 10px;
+}
+
+.home-page .daily-card {
+  border: 1px solid rgb(255 255 255 / 0.08);
+  background: rgb(255 255 255 / 0.055);
+  color: #f6f0df;
+  box-shadow: none;
+  backdrop-filter: blur(12px);
+}
+
+.home-page .daily-icon {
+  background: rgb(205 161 81 / 0.12);
+  color: #d9b66d;
+}
+
+.home-page .daily-card small {
+  color: rgb(255 255 255 / 0.46);
+}
+
+.home-page .daily-card > i {
+  background: rgb(255 255 255 / 0.08);
+}
+
+.home-page .home-actions {
+  padding-top: 20px;
+}
+
+.home-secondary-label {
+  display: block;
+  margin: 6px 2px -2px;
+  color: rgb(255 255 255 / 0.34);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.14em;
+}
+
+.home-page .home-action {
+  border-color: rgb(255 255 255 / 0.08);
+  box-shadow: none;
+}
+
+.home-page .action-continue {
+  background: linear-gradient(135deg, #d0a757, #98702f);
+  color: #151007;
+}
+
+.home-page .action-new {
+  background: linear-gradient(135deg, #166c50, #0c4b39);
+}
+
+.home-page .action-welfare,
+.home-page .action-statistics {
+  background: rgb(255 255 255 / 0.065);
+  color: rgb(255 255 255 / 0.78);
+}
+
+.home-page .home-action:focus-visible {
+  outline-color: #d0a757;
+}
+
+/* Dried-fish wagers stay beside each player and remain legible at table scale. */
+.dried-fish-wager {
+  position: relative;
+  display: inline-flex;
+  min-height: 52px;
+  align-items: center;
+  gap: 8px;
+  color: #f3cf7c;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.dried-fish-pile {
+  position: relative;
+  display: block;
+  width: 68px;
+  height: 50px;
+  flex: 0 0 auto;
+}
+
+.dried-fish-pile > .dried-fish-icon {
+  position: absolute;
+  right: var(--fish-x, 1px);
+  bottom: var(--fish-y, 1px);
+  width: 36px;
+  height: 25px;
+  opacity: 0;
+  filter: drop-shadow(0 3px 2px rgb(0 0 0 / 0.3));
+  transform: translateY(-14px) rotate(var(--fish-rotation, -8deg));
+  animation: dried-fish-drop 500ms var(--curve-deal) forwards;
+}
+
+.dried-fish-pile > .dried-fish-icon:nth-child(1) {
+  --fish-x: 30px;
+  --fish-y: 1px;
+  --fish-rotation: -10deg;
+  animation-delay: 60ms;
+}
+
+.dried-fish-pile > .dried-fish-icon:nth-child(2) {
+  --fish-x: 3px;
+  --fish-y: 4px;
+  --fish-rotation: 7deg;
+  animation-delay: 130ms;
+}
+
+.dried-fish-pile > .dried-fish-icon:nth-child(3) {
+  --fish-x: 27px;
+  --fish-y: 20px;
+  --fish-rotation: 4deg;
+  animation-delay: 200ms;
+}
+
+.dried-fish-pile > .dried-fish-icon:nth-child(4) {
+  --fish-x: 0px;
+  --fish-y: 22px;
+  --fish-rotation: -7deg;
+  animation-delay: 270ms;
+}
+
+.dried-fish-pile > .dried-fish-icon:nth-child(5) {
+  --fish-x: 15px;
+  --fish-y: 11px;
+  --fish-rotation: 1deg;
+  animation-delay: 340ms;
+}
+
+.dried-fish-wager > b {
+  min-width: 40px;
+  padding: 5px 7px;
+  border: 1px solid rgb(239 199 108 / 0.34);
+  border-radius: 9px;
+  background: rgb(1 32 23 / 0.9);
+  color: #f5cf74;
+  font-size: 12px;
+  text-align: center;
+  line-height: 1.25;
+}
+
+.dried-fish-wager.is-compact {
+  min-height: 50px;
+  gap: 7px;
+  font-size: 11px;
+}
+
+.dried-fish-wager.is-compact .dried-fish-pile {
+  width: 64px;
+  height: 48px;
+}
+
+.dried-fish-wager.is-compact .dried-fish-pile > .dried-fish-icon {
+  width: 34px;
+  height: 24px;
+}
+
+.seat-contribution {
+  --fish-source-x: 0px;
+  --fish-source-y: -24px;
+}
+
+.seat-1 .seat-contribution { --fish-source-x: -55px; --fish-source-y: 28px; }
+.seat-2 .seat-contribution { --fish-source-x: -30px; --fish-source-y: -38px; }
+.seat-3 .seat-contribution { --fish-source-x: 0px; --fish-source-y: -44px; }
+.seat-4 .seat-contribution { --fish-source-x: 30px; --fish-source-y: -38px; }
+.seat-5 .seat-contribution { --fish-source-x: 55px; --fish-source-y: 28px; }
+.seat-human .seat-contribution { --fish-source-x: 0px; --fish-source-y: 55px; }
+
+.seat-contribution:not(:empty) {
+  animation: dried-fish-bet-flight 560ms var(--curve-deal) both;
+}
+
+@keyframes dried-fish-bet-flight {
+  from {
+    opacity: 0;
+    filter: blur(2px);
+    transform: translate(var(--fish-source-x), var(--fish-source-y)) scale(0.7) rotate(-10deg);
+  }
+  72% { opacity: 1; transform: translate(-2px, 2px) scale(1.06) rotate(2deg); }
+  to { opacity: 1; filter: none; transform: translate(0) scale(1); }
+}
+
+@keyframes dried-fish-drop {
+  0% {
+    opacity: 0;
+    transform: translateY(-14px) rotate(calc(var(--fish-rotation) - 18deg)) scale(0.75);
+  }
+  62% {
+    opacity: 1;
+    transform: translateY(1px) rotate(calc(var(--fish-rotation) + 3deg)) scale(1.06);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotate(var(--fish-rotation)) scale(1);
+  }
+}
+
 .light-page {
   background: var(--app-bg);
 }
@@ -1182,13 +2024,27 @@ button:disabled {
   align-content: center;
   margin-bottom: 20px;
   border-radius: 26px;
-  background: linear-gradient(145deg, #70839e, #224368);
+  background:
+    radial-gradient(circle at 68% 24%, rgb(214 166 83 / 0.16), transparent 36%),
+    linear-gradient(145deg, #0d5a42, #063527);
   color: white;
   box-shadow: 0 16px 32px rgb(34 67 104 / 0.18);
 }
 
 .welfare-balance > span {
-  font-size: 54px;
+  display: grid;
+  width: 62px;
+  height: 62px;
+  place-items: center;
+  border: 1px solid rgb(244 208 134 / 0.26);
+  border-radius: 50%;
+  background: rgb(218 164 79 / 0.14);
+}
+
+.welfare-balance > span .dried-fish-icon {
+  width: 38px;
+  height: 38px;
+  color: #e9bd69;
 }
 
 .welfare-balance small {
@@ -3913,15 +4769,40 @@ button:disabled {
   font-weight: 650;
 }
 
-.cat-food-icon {
+.seat-stack > .dried-fish-icon {
+  width: 23px;
+  height: 23px;
+  margin-inline: 1px;
+  filter: drop-shadow(0 2px 2px rgb(0 0 0 / 0.24));
+}
+
+.dried-fish-icon {
   width: 14px;
   height: 14px;
   flex: 0 0 auto;
-  fill: rgb(226 181 82 / 0.22);
-  stroke: #e7bd61;
+  overflow: visible;
+  color: #d7a54f;
+}
+
+.dried-fish-icon .fish-body,
+.dried-fish-icon .fish-tail {
+  fill: currentColor;
+  stroke: #5f3c1b;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 1.45;
+  stroke-width: 1;
+}
+
+.dried-fish-icon .fish-bones {
+  fill: none;
+  stroke: #fff0b7;
+  stroke-linecap: round;
+  stroke-width: 1.05;
+}
+
+.dried-fish-icon .fish-eye {
+  fill: #39210f;
+  stroke: none;
 }
 
 .seat-cards {
@@ -3942,8 +4823,8 @@ button:disabled {
 .seat-contribution {
   position: absolute;
   z-index: 9;
-  top: 119px;
-  right: 5px;
+  top: 96px;
+  right: -30px;
   display: grid;
   min-height: 0;
   justify-items: end;
@@ -3952,25 +4833,6 @@ button:disabled {
   color: var(--gold);
   font-size: 9px;
   font-weight: 700;
-}
-
-.cat-food-bet {
-  display: inline-flex;
-  min-height: 24px;
-  align-items: center;
-  gap: 2px;
-  padding: 3px 6px;
-  border: 1px solid rgb(230 181 46 / 0.48);
-  border-radius: 999px;
-  background: rgb(24 62 30 / 0.92);
-  box-shadow:
-    0 5px 10px rgb(0 0 0 / 0.28),
-    inset 0 1px rgb(255 255 255 / 0.12);
-}
-
-.cat-food-bet .cat-food-icon {
-  width: 13px;
-  height: 13px;
 }
 
 .seat-contribution > small {
@@ -3982,7 +4844,7 @@ button:disabled {
 }
 
 .seat-contribution:not(:empty) {
-  animation: chip-arrive 260ms var(--curve-deal) both;
+  animation: dried-fish-bet-flight 560ms var(--curve-deal) both;
 }
 
 .last-action {
@@ -4872,6 +5734,10 @@ button:disabled {
     grid-template-columns: 1fr 1fr;
   }
 
+  .home-secondary-label {
+    grid-column: 1 / -1;
+  }
+
   .home-action {
     min-height: 66px;
   }
@@ -4927,6 +5793,12 @@ button:disabled {
     min-height: 570px;
   }
 
+  .home-page .home-table-hero {
+    grid-column: 1;
+    grid-row: 2 / 4;
+    min-height: 570px;
+  }
+
   .home-page .daily-card {
     grid-column: 2;
     grid-row: 2;
@@ -4941,6 +5813,10 @@ button:disabled {
     align-content: end;
     padding-top: 0;
     margin-top: 0;
+  }
+
+  .home-page .home-secondary-label {
+    grid-column: auto;
   }
 
   .home-page .home-action {
@@ -5554,14 +6430,16 @@ button:disabled {
   }
 
   .seat-contribution {
-    top: 83px;
-    right: 2px;
+    top: 68px;
+    right: -36px;
     font-size: 8px;
   }
 
-  .cat-food-bet {
-    min-height: 20px;
-    padding: 2px 4px;
+  .seat-4 .seat-contribution,
+  .seat-5 .seat-contribution {
+    right: auto;
+    left: -48px;
+    justify-items: start;
   }
 
   .last-action {
@@ -5729,5 +6607,471 @@ button:disabled {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Final layout ownership for the lobby, after legacy responsive rules. */
+.app-page.home-page {
+  display: grid;
+  width: min(1240px, 100%);
+  grid-template-columns: 1fr;
+  grid-template-rows: auto minmax(510px, 1fr) auto;
+  gap: 18px;
+  padding: max(22px, env(safe-area-inset-top)) clamp(18px, 4vw, 42px)
+    max(24px, env(safe-area-inset-bottom));
+  overflow: auto;
+  background:
+    radial-gradient(circle at 78% 16%, rgb(49 128 94 / 0.13), transparent 32rem),
+    radial-gradient(circle at 8% 92%, rgb(178 130 58 / 0.08), transparent 26rem),
+    #06130f;
+}
+
+@media (max-width: 759px) {
+  .app-page.home-page {
+    grid-template-rows: auto auto auto;
+    gap: 14px;
+    padding-inline: 14px;
+  }
+}
+
+/* Home — keep the original product structure, add only a restrained card-room skin. */
+.app-page.home-page {
+  display: grid;
+  width: min(1160px, 100%);
+  min-height: 100dvh;
+  grid-template-columns: minmax(0, 1.12fr) minmax(340px, 0.88fr);
+  grid-template-rows: auto auto 1fr;
+  gap: 20px 32px;
+  padding: max(34px, env(safe-area-inset-top)) clamp(24px, 4vw, 44px)
+    max(30px, env(safe-area-inset-bottom));
+  overflow: auto;
+  background:
+    radial-gradient(circle at 88% 9%, rgb(192 145 67 / 0.13), transparent 22rem),
+    radial-gradient(circle at 5% 96%, rgb(18 82 61 / 0.08), transparent 26rem),
+    #f3f0e8;
+  color: #14211c;
+}
+
+.home-page .app-masthead {
+  grid-column: 1 / -1;
+  margin: 0 0 4px;
+  animation: home-rise var(--motion-panel) var(--curve-deal) both;
+}
+
+.home-page .app-masthead h1 {
+  color: #10261e;
+  font-family:
+    "Songti SC", "STSong", "Noto Serif CJK SC", Georgia, serif;
+  font-size: clamp(32px, 4vw, 44px);
+  font-weight: 760;
+  letter-spacing: -0.045em;
+  line-height: 1.12;
+}
+
+.home-page .app-masthead h1::after {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-left: 11px;
+  border-radius: 50%;
+  background: #b8893f;
+  box-shadow: 0 0 0 5px rgb(184 137 63 / 0.12);
+  content: "";
+  vertical-align: 0.24em;
+}
+
+.home-page .balance-card {
+  grid-column: 1;
+  grid-row: 2 / 4;
+  min-height: 550px;
+  border: 1px solid rgb(207 166 92 / 0.38);
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 50% 42%, rgb(33 135 95 / 0.3), transparent 28%),
+    radial-gradient(ellipse at 50% 115%, rgb(194 145 62 / 0.18), transparent 48%),
+    linear-gradient(145deg, #0b4a37, #063527 58%, #04271e);
+  color: #fffaf0;
+  box-shadow:
+    0 26px 54px rgb(12 47 36 / 0.2),
+    inset 0 1px rgb(255 255 255 / 0.11),
+    inset 0 0 0 7px rgb(255 255 255 / 0.018);
+}
+
+.home-page .balance-card::before {
+  z-index: -1;
+  inset: 18px;
+  border: 1px solid rgb(222 185 111 / 0.12);
+  border-radius: 23px;
+  background:
+    repeating-radial-gradient(
+      ellipse at 50% 58%,
+      transparent 0 7px,
+      rgb(255 255 255 / 0.012) 8px 9px
+    );
+  content: "";
+  mask-image: none;
+}
+
+.home-page .balance-card::after {
+  top: 18%;
+  right: -12%;
+  bottom: auto;
+  left: auto;
+  width: 56%;
+  height: 56%;
+  border: 1px solid rgb(224 185 109 / 0.09);
+  border-radius: 50%;
+  background: transparent;
+  content: "";
+  opacity: 1;
+  transform: none;
+  animation: none;
+}
+
+.home-page .balance-card .coin-mark {
+  width: 58px;
+  height: 58px;
+  margin-bottom: 18px;
+  border: 1px solid rgb(255 245 214 / 0.38);
+  background: linear-gradient(145deg, #e0b45f, #a8782f);
+  color: #173126;
+  box-shadow:
+    inset 0 1px rgb(255 255 255 / 0.5),
+    0 12px 26px rgb(0 0 0 / 0.18);
+}
+
+.home-page .balance-card .coin-mark .dried-fish-icon {
+  width: 38px;
+  height: 38px;
+  color: #75491b;
+}
+
+.home-page .balance-card strong {
+  color: #fff8e7;
+  font-size: clamp(58px, 8vw, 88px);
+  font-weight: 580;
+  letter-spacing: -0.035em;
+  text-shadow: 0 4px 22px rgb(0 0 0 / 0.16);
+}
+
+.food-balance-value {
+  animation: dried-fish-balance-receive 520ms var(--curve-deal) both;
+}
+
+.food-stack-value {
+  animation: number-settle 320ms var(--curve-deal) both;
+}
+
+@keyframes dried-fish-balance-receive {
+  0% {
+    opacity: 0.5;
+    filter: brightness(1.35);
+    transform: translateY(-5px) scale(1.08);
+  }
+  68% {
+    opacity: 1;
+    transform: translateY(1px) scale(0.985);
+  }
+  100% {
+    filter: none;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.home-page .balance-card p {
+  margin-top: 17px;
+  color: rgb(255 250 237 / 0.62);
+  font-size: 15px;
+  letter-spacing: 0.08em;
+}
+
+.home-page .daily-card {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: start;
+  gap: 14px 16px;
+  padding: 22px 22px 27px;
+  margin: 0;
+  border: 1px solid rgb(21 57 44 / 0.09);
+  border-radius: 20px;
+  background: rgb(255 253 248 / 0.82);
+  color: #17241f;
+  box-shadow:
+    0 14px 34px rgb(28 45 38 / 0.08),
+    inset 0 1px rgb(255 255 255 / 0.9);
+  backdrop-filter: blur(14px);
+}
+
+.home-page .daily-icon {
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgb(178 133 58 / 0.13);
+  background: #f3ead7;
+  color: #9d722e;
+}
+
+.home-page .daily-card strong {
+  color: #213129;
+  font-size: 17px;
+}
+
+.home-page .daily-card small {
+  color: #7b857f;
+}
+
+.home-page .daily-card > i {
+  background: #e8e4d9;
+}
+
+.home-page .daily-card > i.is-complete::after {
+  background: #267b59;
+}
+
+.home-page .daily-success {
+  color: #267b59;
+}
+
+.home-page .home-actions {
+  grid-column: 2;
+  grid-row: 3;
+  grid-template-columns: 1fr 1fr;
+  align-content: end;
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+}
+
+.home-page .home-action {
+  grid-template-columns: 36px minmax(0, auto);
+  min-height: 66px;
+  gap: 10px;
+  border-radius: 16px;
+  box-shadow: none;
+}
+
+.home-page .home-action span {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+}
+
+.home-page .home-action b {
+  font-size: 16px;
+}
+
+.home-page .action-continue {
+  grid-column: 1 / -1;
+  min-height: 72px;
+  border-color: rgb(89 54 11 / 0.14);
+  background: linear-gradient(135deg, #d8ac58, #b68435);
+  color: #251b0b;
+  box-shadow: 0 13px 26px rgb(127 88 29 / 0.14);
+}
+
+.home-page .action-new {
+  grid-column: 1 / -1;
+  border-color: rgb(255 255 255 / 0.11);
+  background: linear-gradient(135deg, #176044, #0d4734);
+  color: #f8f5ec;
+  box-shadow: 0 12px 24px rgb(13 71 52 / 0.13);
+}
+
+.home-page .action-welfare,
+.home-page .action-statistics {
+  border-color: rgb(20 58 44 / 0.1);
+  background: rgb(255 253 248 / 0.7);
+  color: #32433b;
+  box-shadow: inset 0 1px rgb(255 255 255 / 0.86);
+}
+
+.home-page .action-welfare span,
+.home-page .action-statistics span {
+  border-color: rgb(20 58 44 / 0.09);
+  background: rgb(18 76 56 / 0.06);
+  color: #35634f;
+}
+
+.home-page .home-action:not(:disabled):hover {
+  filter: none;
+  box-shadow: 0 14px 28px rgb(24 51 40 / 0.13);
+}
+
+.home-page .action-continue:not(:disabled):hover {
+  box-shadow: 0 16px 30px rgb(127 88 29 / 0.2);
+}
+
+.home-page .home-action:focus-visible {
+  outline-color: #a97933;
+}
+
+@media (max-width: 759px) {
+  .app-page.home-page {
+    display: flex;
+    width: min(620px, 100%);
+    min-height: 100dvh;
+    gap: 0;
+    padding: max(24px, env(safe-area-inset-top)) 16px
+      max(24px, env(safe-area-inset-bottom));
+  }
+
+  .home-page .app-masthead {
+    margin: 4px 2px 20px;
+  }
+
+  .home-page .app-masthead h1 {
+    font-size: clamp(30px, 9vw, 38px);
+  }
+
+  .home-page .balance-card {
+    min-height: clamp(272px, 39vh, 330px);
+    border-radius: 25px;
+  }
+
+  .home-page .balance-card::before {
+    inset: 13px;
+    border-radius: 19px;
+  }
+
+  .home-page .balance-card strong {
+    font-size: clamp(54px, 17vw, 72px);
+  }
+
+  .home-page .daily-card {
+    width: 100%;
+    align-self: stretch;
+    margin-top: 14px;
+    padding: 18px 17px 24px;
+  }
+
+  .home-page .daily-card > span {
+    font-size: 11px;
+  }
+
+  .home-page .home-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding-top: 18px;
+    margin-top: 0;
+  }
+
+  .home-page .home-action {
+    min-height: 58px;
+    grid-template-columns: 32px minmax(0, auto);
+    gap: 8px;
+  }
+
+  .home-page .home-action span {
+    width: 32px;
+    height: 32px;
+  }
+
+  .home-page .home-action b {
+    font-size: 14px;
+  }
+
+  .home-page .action-continue,
+  .home-page .action-new {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 350px) {
+  .home-page .daily-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .home-page .daily-card > span {
+    justify-self: start;
+  }
+}
+
+/* Keep every wager beside its cards. The action strip and the thinking bubble
+   each own a separate lane, so none of the three can stack on top of another. */
+@media (min-width: 1120px) {
+  .game-stage .seat-contribution,
+  .game-bottom-dock > .seat-human .seat-contribution {
+    width: max-content;
+  }
+
+  .game-stage .seat-1 .seat-contribution {
+    top: 92px;
+    right: auto;
+    left: 150px;
+  }
+
+  .game-stage .seat-2 .seat-contribution {
+    top: 112px;
+    right: auto;
+    left: 150px;
+  }
+
+  .game-stage .seat-3 .seat-contribution {
+    top: 104px;
+    right: auto;
+    left: 150px;
+  }
+
+  .game-stage .seat-4 .seat-contribution {
+    top: 112px;
+    right: 150px;
+    left: auto;
+  }
+
+  .game-stage .seat-5 .seat-contribution {
+    top: 92px;
+    right: 150px;
+    left: auto;
+  }
+
+  .game-stage .thought-bubble,
+  .game-stage .seat-4 .thought-bubble,
+  .game-stage .seat-5 .thought-bubble {
+    top: 24px;
+  }
+
+  .game-bottom-dock > .seat-human .seat-contribution {
+    top: -54px;
+    right: auto;
+    left: 80px;
+  }
+}
+
+@media (max-width: 759px) {
+  .dried-fish-wager.is-compact {
+    position: relative;
+    display: block;
+    width: 60px;
+    min-height: 40px;
+  }
+
+  .dried-fish-wager.is-compact .dried-fish-pile {
+    width: 52px;
+    height: 38px;
+  }
+
+  .dried-fish-wager.is-compact .dried-fish-pile > .dried-fish-icon {
+    width: 28px;
+    height: 20px;
+  }
+
+  .dried-fish-wager.is-compact > b {
+    position: absolute;
+    z-index: 4;
+    right: -4px;
+    bottom: -3px;
+    min-width: 36px;
+    padding: 4px 6px;
+    font-size: 11px;
+  }
+
+  .seat-contribution {
+    right: -10px;
+  }
+
+  .seat-4 .seat-contribution,
+  .seat-5 .seat-contribution {
+    right: auto;
+    left: -20px;
   }
 }

@@ -238,7 +238,7 @@ const POKER_GLOSSARY: Record<string, GlossaryItem> = {
   VPIP: {
     term: "VPIP",
     name: "主动入池率",
-    description: "翻牌前自愿投入筹码的手数占比。",
+    description: "翻牌前自愿投入小鱼干的手数占比。",
     detail: "跟注、加注或全下会计入；强制投入的小盲和大盲本身不计入。",
   },
   PFR: {
@@ -269,14 +269,16 @@ function BackIcon() {
   );
 }
 
-function CatFoodIcon() {
+function DriedFishIcon() {
   return (
-    <svg className="cat-food-icon" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M4.5 11.5h15l-1.4 6.1a2 2 0 0 1-2 1.6H7.9a2 2 0 0 1-2-1.6l-1.4-6.1Z" />
-      <path d="M6.2 11.5c.8-2.2 2.7-3.3 5.8-3.3s5 1.1 5.8 3.3" />
-      <circle cx="8.5" cy="7.1" r="1.25" />
-      <circle cx="12.1" cy="5.8" r="1.25" />
-      <circle cx="15.7" cy="7.1" r="1.25" />
+    <svg className="dried-fish-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path className="fish-tail" d="M6.3 8.7 2.4 6.2 3.2 12l-.8 5.8 3.9-2.5" />
+      <path
+        className="fish-body"
+        d="M5.4 12c2.2-3.8 5.2-5.7 9-5.7 2.5 0 4.6 1.4 6.2 5.7-1.6 4.3-3.7 5.7-6.2 5.7-3.8 0-6.8-1.9-9-5.7Z"
+      />
+      <path className="fish-bones" d="M8.2 12h7.2M10 9.1v5.8M12.4 8.1v7.8" />
+      <circle className="fish-eye" cx="17.2" cy="10.3" r="1" />
     </svg>
   );
 }
@@ -607,7 +609,7 @@ function PlayerAvatar({
           alt=""
           draggable={false}
         />
-        <span className="character-chip-sparks" aria-hidden="true">
+        <span className="character-fish-sparks" aria-hidden="true">
           <i />
           <i />
           <i />
@@ -672,6 +674,31 @@ function SeatPositionBadges({
   );
 }
 
+function DriedFishWager({
+  amount,
+  compact = false,
+  label,
+}: {
+  amount: number;
+  compact?: boolean;
+  label?: string;
+}) {
+  const fishCount = amount >= 80 ? 5 : 4;
+  return (
+    <span
+      className={`dried-fish-wager ${compact ? "is-compact" : ""}`}
+      aria-label={label ?? `${amount} 小鱼干`}
+    >
+      <span className="dried-fish-pile" aria-hidden="true">
+        {Array.from({ length: fishCount }, (_, index) => (
+          <DriedFishIcon key={index} />
+        ))}
+      </span>
+      <b>×{amount.toLocaleString()}</b>
+    </span>
+  );
+}
+
 function Seat({
   player,
   active,
@@ -710,9 +737,8 @@ function Seat({
         performance ? `has-performance gesture-${performance.gesture}` : ""
       }`}
       data-persona={player.style?.key ?? "human"}
-      aria-label={`${player.name}，${player.position}，${player.chips} 猫粮`}
+      aria-label={`${player.name}，${player.position}，${player.chips} 小鱼干`}
     >
-      <SeatPositionBadges player={player} dealer={dealer} />
       <button
         key={performance?.eventId ?? "idle-character"}
         className="seat-character-button"
@@ -731,10 +757,13 @@ function Seat({
         </span>
       ) : null}
       <div className="seat-identity">
+        <SeatPositionBadges player={player} dealer={dealer} />
         <strong className="seat-player-name">{player.name}</strong>
-        <span className="seat-stack" aria-label={`${player.chips} 猫粮`}>
-          <CatFoodIcon />
-          <b>{player.chips.toLocaleString()}</b>
+        <span className="seat-stack" aria-label={`${player.chips} 小鱼干`}>
+          <DriedFishIcon />
+          <b key={player.chips} className="food-stack-value">
+            {player.chips.toLocaleString()}
+          </b>
         </span>
       </div>
       <div className="seat-cards" aria-label={`${player.name}的手牌`}>
@@ -757,17 +786,12 @@ function Seat({
         key={`${player.bet}-${player.totalContribution}`}
         className="seat-contribution"
       >
-        {player.bet > 0 ? (
-          <span
-            className="cat-food-bet"
-            aria-label={`本轮投入 ${player.bet} 猫粮`}
-          >
-            <CatFoodIcon />
-            <b>{player.bet}</b>
-          </span>
-        ) : null}
-        {player.totalContribution > player.bet ? (
-          <small>累计 {player.totalContribution}</small>
+        {player.totalContribution > 0 ? (
+          <DriedFishWager
+            amount={player.totalContribution}
+            compact
+            label={`本局已投入 ${player.totalContribution} 小鱼干`}
+          />
         ) : null}
       </span>
       {thinkingLabel || reactionLabel ? (
@@ -826,12 +850,18 @@ function HomeScreen({
         <h1>德扑 AI 训练器</h1>
       </header>
 
-      <section className="balance-card" aria-label="虚拟训练积分">
+      <section className="balance-card" aria-label="训练小鱼干余额">
         <span className="coin-mark">
-          <AppIcon name="chip" />
+          <DriedFishIcon />
         </span>
-        <strong>{profile.chips.toLocaleString()}</strong>
-        <p>虚拟训练积分</p>
+        <strong
+          key={profile.chips}
+          className="food-balance-value"
+          aria-live="polite"
+        >
+          {profile.chips.toLocaleString()}
+        </strong>
+        <p>我的小鱼干</p>
       </section>
 
       <section className="daily-card">
@@ -840,7 +870,7 @@ function HomeScreen({
             <AppIcon name="calendar" />
           </span>
           <span>
-            <strong>每日训练积分 {DAILY_FREE_CHIPS.toLocaleString()}</strong>
+            <strong>每日补给 {DAILY_FREE_CHIPS.toLocaleString()} 小鱼干</strong>
             <small>每天 10:00 自动补充</small>
           </span>
         </div>
@@ -863,30 +893,19 @@ function HomeScreen({
           disabled={!canContinue}
           onClick={onContinue}
         >
-          <span>
-            <AppIcon name="play" />
-          </span>
+          <span><AppIcon name="play" /></span>
           <b>{canContinue ? "继续游戏" : "暂无存档"}</b>
         </button>
         <button className="home-action action-new" onClick={onNewGame}>
-          <span>
-            <AppIcon name="refresh" />
-          </span>
+          <span><AppIcon name="refresh" /></span>
           <b>新开始</b>
         </button>
         <button className="home-action action-welfare" onClick={onWelfare}>
-          <span>
-            <AppIcon name="gift" />
-          </span>
+          <span><AppIcon name="gift" /></span>
           <b>福利中心</b>
         </button>
-        <button
-          className="home-action action-statistics"
-          onClick={onStatistics}
-        >
-          <span>
-            <AppIcon name="history" />
-          </span>
+        <button className="home-action action-statistics" onClick={onStatistics}>
+          <span><AppIcon name="history" /></span>
           <b>历史统计</b>
         </button>
       </nav>
@@ -928,15 +947,21 @@ function WelfareScreen({
     <main className="app-page light-page">
       <PageHeader title="福利中心" onBack={onBack} />
       <section className="welfare-balance">
-        <span>🎁</span>
-        <small>虚拟训练积分</small>
-        <strong>{profile.chips.toLocaleString()}</strong>
+        <span><DriedFishIcon /></span>
+        <small>我的小鱼干</small>
+        <strong
+          key={profile.chips}
+          className="food-balance-value"
+          aria-live="polite"
+        >
+          {profile.chips.toLocaleString()}
+        </strong>
       </section>
       <section className="benefit-card">
         <div className="benefit-icon benefit-green">▦</div>
         <div>
           <h2>每日免费领</h2>
-          <p>每日 {DAILY_FREE_CHIPS.toLocaleString()} 积分</p>
+          <p>每日补给 {DAILY_FREE_CHIPS.toLocaleString()} 小鱼干</p>
           <small>每天 10:00 自动到账</small>
         </div>
         <b className="benefit-state">
@@ -947,7 +972,7 @@ function WelfareScreen({
         <div className="benefit-icon benefit-red">✓</div>
         <div>
           <h2>每日签到</h2>
-          <p>签到 +{DAILY_SIGN_IN_BONUS.toLocaleString()} 积分</p>
+          <p>签到 +{DAILY_SIGN_IN_BONUS.toLocaleString()} 小鱼干</p>
           <small>每天可领取一次</small>
         </div>
         <button disabled={signedIn} onClick={signIn}>
@@ -1090,7 +1115,7 @@ function StatisticsScreen({
         <section key="overview" className="statistics-content">
           <div className="overview-hero">
             <span>
-              <small>当前积分</small>
+              <small>当前小鱼干</small>
               <strong>{profile.chips.toLocaleString()}</strong>
             </span>
             <span>
@@ -1331,7 +1356,7 @@ function StatisticsScreen({
             <small>RESET RIVAL MEMORY</small>
             <h2>让对手重新认识你？</h2>
             <p>
-              只会清除五位对手学到的打法画像；当前筹码、牌桌存档和最近牌局记录都会保留。
+              只会清除五位对手学到的打法画像；当前小鱼干、牌桌存档和最近牌局记录都会保留。
             </p>
             <div className="result-actions">
               <button onClick={() => setShowMemoryReset(false)}>取消</button>
@@ -1399,7 +1424,7 @@ function HistoryDetailModal({
     const cues: string[] = [];
     if (factors.pressure >= 0.2) cues.push("跟注价格带来压力");
     if (factors.positionBonus >= 0.05) cues.push("处在有利位置");
-    if (factors.stackToPotRatio <= 1.5) cues.push("有效筹码已经较浅");
+    if (factors.stackToPotRatio <= 1.5) cues.push("可用小鱼干已经不多");
     if (factors.boardWetness >= 0.62) cues.push("公共牌连接较强");
     if (factors.hasInitiative) cues.push("延续了前街主动权");
     if (!cues.length) cues.push("当前公开行动线较简单");
@@ -1548,8 +1573,8 @@ function HistoryDetailModal({
                           </small>
                         ) : null}
                         <small>
-                          投入 {participant.contribution.toLocaleString()} ·
-                          获得 {participant.payout.toLocaleString()}
+                          投喂 {participant.contribution.toLocaleString()} ·
+                          收回 {participant.payout.toLocaleString()}
                         </small>
                       </p>
                       <b
@@ -2412,11 +2437,11 @@ function HandResultModal({
             </strong>
           </div>
           <div>
-            <small>底池</small>
+            <small>底池小鱼干</small>
             <strong>{potTotal.toLocaleString()}</strong>
           </div>
           <div>
-            <small>你的投入</small>
+            <small>你的投喂</small>
             <strong>{human.totalContribution.toLocaleString()}</strong>
           </div>
         </div>
@@ -2531,7 +2556,7 @@ function HandResultModal({
                       </small>
                     ) : null}
                     <small>
-                      投入 {player.totalContribution.toLocaleString()} · 获得{" "}
+                      投喂 {player.totalContribution.toLocaleString()} · 收回{" "}
                       {payout.toLocaleString()}
                     </small>
                   </div>
@@ -2557,8 +2582,8 @@ function HandResultModal({
           <button onClick={onExit}>返回主页</button>
           {game.phase === "busted" ? (
             <button className="primary rebuy-action" onClick={onRebuy}>
-              <span>买入 {STARTING_CHIPS.toLocaleString()} 并继续</span>
-              <small>虚拟训练筹码</small>
+              <span>补充 {STARTING_CHIPS.toLocaleString()} 小鱼干并继续</span>
+              <small>仅用于牌局训练</small>
             </button>
           ) : (
             <button className="primary" onClick={onNextHand}>
@@ -2696,7 +2721,7 @@ function GameScreen({
     ? `${game.rebuyPlayerIds
         .map((playerId) => game.players[playerId]?.name)
         .filter(Boolean)
-        .join("、")} 重新带入 ${STARTING_CHIPS.toLocaleString()} 筹码`
+        .join("、")} 补充了 ${STARTING_CHIPS.toLocaleString()} 小鱼干`
     : null;
   const rebuyNotice =
     rebuyNoticeText && dismissedRebuyHand !== game.handNumber
@@ -3036,7 +3061,7 @@ function GameScreen({
         </button>
         <div className="game-round-meta">
           <strong>第 {game.handNumber} 局</strong>
-          <small>底池: {game.pot.toLocaleString()}</small>
+          <small>底池小鱼干: {game.pot.toLocaleString()}</small>
         </div>
         <div className="game-toolbar">
           <button
@@ -3072,13 +3097,13 @@ function GameScreen({
         ) : null}
         <div className="community-summary">
           <span>
-            <small>底池</small>
+            <small>底池小鱼干</small>
             <strong key={game.pot} className="pot-value">
               {game.pot.toLocaleString()}
             </strong>
           </span>
           <span>
-            <small>跟注</small>
+            <small>跟注小鱼干</small>
             <strong key={legal.callAmount} className="call-value">
               {legal.callAmount.toLocaleString()}
             </strong>
@@ -3460,8 +3485,8 @@ function PokerGameContent() {
             <small>NEW TRAINING SESSION</small>
             <h2>开始新的训练？</h2>
             <p>
-              当前牌局存档会清空；历史统计与五位对手对你的长期记忆会保留。积分
-              不足 2,000 时自动补足训练积分。
+              当前牌局存档会清空；历史统计与五位对手对你的长期记忆会保留。小鱼干
+              不足 2,000 时会自动补足训练小鱼干。
             </p>
             <div className="result-actions">
               <button onClick={() => setShowNewGameConfirm(false)}>取消</button>

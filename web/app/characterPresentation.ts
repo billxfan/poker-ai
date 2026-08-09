@@ -64,11 +64,11 @@ export function performancesForEvent(
 export function characterGestureLabel(gesture: CharacterGesture): string {
   const labels: Record<CharacterGesture, string> = {
     check: "轻敲桌面，选择过牌",
-    call: "将跟注筹码推入桌面",
-    raise: "向前推筹码并完成加注",
-    "all-in": "把全部筹码推入底池",
+    call: "把跟注的小鱼干放到身边",
+    raise: "再拿出一叠小鱼干完成加注",
+    "all-in": "把全部小鱼干都押上",
     fold: "收回身体并弃牌",
-    win: "收拢筹码，庆祝获胜",
+    win: "把赢来的小鱼干收回身边",
     loss: "放低姿态，接受结果",
   };
   return labels[gesture];
