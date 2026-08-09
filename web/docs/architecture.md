@@ -12,9 +12,32 @@ inference, authentication, cloud databases or a cross-platform shared runtime.
 
 - TypeScript 5.9 and Node's built-in test runner
 - React 19 on the existing vinext/Vite client surface
+- Electron desktop shell for the Steam Windows build
 - Semantic DOM/CSS for accessible responsive table presentation
 - Versioned `localStorage` records for table and bot memories
 - Service worker only for application-shell assets
+
+## Desktop delivery boundary
+
+The Steam build reuses the same production Vinext worker and client assets. An
+Electron main process registers the privileged `poker-ai://` protocol and routes
+requests through a small adapter:
+
+```text
+BrowserWindow (sandboxed renderer)
+             │ poker-ai://app/*
+             ▼
+desktop protocol adapter ──static path──> packaged dist/client asset
+             │ route request
+             ▼
+packaged Vinext worker ────────────────> React application response
+```
+
+The custom protocol gives the renderer one stable origin, so browser-local
+saves survive relaunches without opening a TCP port. The desktop renderer has
+no Node integration, preload bridge, filesystem API, remote navigation or
+permission grants. Web/PWA deployment remains unchanged and the poker core has
+no Electron dependency.
 
 ## Ownership and dependency direction
 
@@ -248,6 +271,23 @@ Accepted. Emotion, animation and sound are ephemeral views of public facts.
 Storing them in the poker state would pollute deterministic saves, invite stale
 timers and couple rules to presentation. Stable derived IDs provide replay and
 deduplication without changing engine ownership.
+
+### ADR-008 — Privileged custom protocol over a bundled localhost server
+
+Accepted for desktop delivery. A random localhost port would change the browser
+origin and strand `localStorage` saves, while a fixed port can collide with
+other software and unnecessarily exposes a listener. `poker-ai://app` is a
+stable, packaged-only origin. The adapter rejects traversal, serves only files
+inside `dist/client`, delegates application routes to the packaged Vinext
+worker, and adds restrictive security headers.
+
+### ADR-009 — Electron first, Windows first
+
+Accepted for the first Steam candidate. Electron has the shortest path from the
+existing React/Vinext build to a testable desktop executable and preserves the
+current WebAudio, service-worker and local-storage behaviour. The first public
+depot targets Windows x64; macOS and Linux packages remain development smoke
+targets until their signing, notarization and platform QA are funded.
 
 ## Explicitly deferred
 

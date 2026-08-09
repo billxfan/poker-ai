@@ -792,7 +792,7 @@ test("AI thinking rhythm responds to pressure and remains persona-specific", () 
   const humanCues = new Set(
     [...relaxedFox, ...pressuredFox].flatMap((plan) =>
       plan.steps.filter((step) =>
-        /筹码|底池|目光|停顿|桌面|行动顺序/.test(step),
+        /小鱼干|猫粮|筹码|底池|目光|停顿|桌面|行动顺序/.test(step),
       ),
     ),
   );
