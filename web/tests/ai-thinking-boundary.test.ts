@@ -5,6 +5,7 @@ import {
   createAIThinkingPlanFromObservation,
   type AIThinkingPlan,
 } from "../core/aiThinking.ts";
+import { chooseAIAction } from "../core/ai.ts";
 import { defaultAILearningState } from "../core/aiLearning.ts";
 import { seededRandom } from "../core/cards.ts";
 import { createGame } from "../core/engine.ts";
@@ -111,6 +112,59 @@ test("thinking plans are invariant to opponent cards, deck, and private traces",
   }
 });
 
+test("policy-driven timing cannot leak an opponent's hidden state", () => {
+  const game = thinkingFixture(309);
+  const changed = replaceHiddenState(game);
+
+  for (let seed = 1; seed <= 64; seed += 1) {
+    const action = chooseAIAction(
+      game,
+      ACTOR_ID,
+      seededRandom(seed * 17),
+      undefined,
+      seed,
+    );
+    const changedAction = chooseAIAction(
+      changed,
+      ACTOR_ID,
+      seededRandom(seed * 17),
+      undefined,
+      seed,
+    );
+    assert.equal(
+      changedAction.aiDecision?.decisionDifficulty,
+      action.aiDecision?.decisionDifficulty,
+    );
+    assert.ok((action.aiDecision?.decisionDifficulty ?? -1) >= 0);
+    assert.ok((action.aiDecision?.decisionDifficulty ?? 2) <= 1);
+
+    const context = {
+      decisionDifficulty: action.aiDecision?.decisionDifficulty,
+    };
+    const changedContext = {
+      decisionDifficulty: changedAction.aiDecision?.decisionDifficulty,
+    };
+    assert.deepEqual(
+      createAIThinkingPlan(
+        changed,
+        ACTOR_ID,
+        seededRandom(seed * 31),
+        undefined,
+        [],
+        changedContext,
+      ),
+      createAIThinkingPlan(
+        game,
+        ACTOR_ID,
+        seededRandom(seed * 31),
+        undefined,
+        [],
+        context,
+      ),
+    );
+  }
+});
+
 test("thinking plan keeps a deliberate bounded cadence and requires explicit randomness", () => {
   const game = thinkingFixture(311);
   const observation = buildBotObservation(game, ACTOR_ID);
@@ -138,4 +192,23 @@ test("thinking plan keeps a deliberate bounded cadence and requires explicit ran
     () => callWithoutRandom(observation, style),
     /random is not a function/,
   );
+});
+
+test("close decisions tank more often than routine decisions", () => {
+  const game = thinkingFixture(313);
+  const observation = buildBotObservation(game, ACTOR_ID);
+  const style = game.players[ACTOR_ID].style!;
+  const countTanks = (decisionDifficulty: number) =>
+    Array.from({ length: 500 }, (_, index) =>
+      createAIThinkingPlanFromObservation(
+        observation,
+        style,
+        seededRandom(index + 1),
+        undefined,
+        [],
+        { decisionDifficulty },
+      ),
+    ).filter((plan) => plan.mode === "tank").length;
+
+  assert.ok(countTanks(1) > countTanks(0) + 70);
 });

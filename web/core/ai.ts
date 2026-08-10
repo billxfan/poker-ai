@@ -466,6 +466,36 @@ function actionKind(action: PlayerAction): AIActionKind {
   return "aggressive";
 }
 
+function decisionDifficulty(context: DecisionContext): number {
+  const { observation, strength, pressure, tuning } = context;
+  const passiveBoundary = tuning.passiveThreshold + pressure * 0.2;
+  const nearestBoundary = Math.min(
+    Math.abs(strength - tuning.aggressiveThreshold),
+    Math.abs(strength - passiveBoundary),
+    Math.abs(strength - tuning.bluffThreshold),
+  );
+  const boundaryAmbiguity = 1 - clamp(nearestBoundary / 0.22);
+  const legalChoiceCount = [
+    observation.legalActions.canCheck,
+    observation.legalActions.canCall,
+    observation.legalActions.canRaise,
+    observation.legalActions.canAllIn,
+    observation.legalActions.canFold,
+  ].filter(Boolean).length;
+  const streetWeight = {
+    preflop: 0,
+    flop: 0.04,
+    turn: 0.09,
+    river: 0.14,
+  }[observation.street];
+  return clamp(
+    boundaryAmbiguity * 0.56 +
+      pressure * 0.24 +
+      Math.max(0, legalChoiceCount - 2) * 0.035 +
+      streetWeight,
+  );
+}
+
 export function chooseAIActionFromObservation(
   observation: BotObservation,
   style: AIStyle,
@@ -579,6 +609,7 @@ export function chooseAIActionFromObservation(
       contextKey,
       strengthBucket: strengthBucket(strength),
       actionKind: actionKind(action),
+      decisionDifficulty: decisionDifficulty(context),
       usedExploration,
       policyVersion: AI_POLICY_VERSION,
       decisionSeed,

@@ -1,4 +1,5 @@
 import { aiStyleForPlayerId } from "./aiProfiles.ts";
+import type { PersonaState } from "./characterState.ts";
 import {
   EARLY_POSITION_THOUGHTS,
   ENDINGS,
@@ -29,6 +30,12 @@ export type AIThinkingPlan = {
   stepDurations: number[];
   totalMs: number;
   mode: AIThinkingMode;
+};
+
+export type AIThinkingContext = {
+  /** Scalar emitted by this seat's own policy; no opponent private data. */
+  decisionDifficulty?: number;
+  personaState?: PersonaState;
 };
 
 function sample<T>(items: readonly T[], random: () => number): T {
@@ -212,23 +219,29 @@ function chooseThinkingMode(
   archetype: AIArchetype,
   pressure: number,
   random: () => number,
+  context?: AIThinkingContext,
 ): AIThinkingMode {
   const legal = observation.legalActions;
   const rhythm = THINKING_RHYTHMS[archetype];
+  const difficulty = clamp(context?.decisionDifficulty ?? 0);
+  const arousal = clamp(context?.personaState?.arousal ?? 0);
   const tankChance = clamp(
     style.tankChance +
       pressure * 0.24 +
+      difficulty * 0.2 +
+      arousal * 0.07 +
       (observation.street === "river" ? 0.06 : 0),
     0.04,
-    0.46,
+    0.64,
   );
   const snapChance =
     rhythm.snapChance *
       (pressure < 0.24 ? 1 : pressure < 0.42 ? 0.42 : 0.08) +
-    (legal.canCheck && pressure < 0.18 ? 0.06 : 0);
+      (legal.canCheck && pressure < 0.18 ? 0.06 : 0);
+  const difficultyAdjustedSnapChance = snapChance * (1 - difficulty * 0.88);
   const roll = random();
   if (roll < tankChance) return "tank";
-  if (roll < tankChance + snapChance) return "snap";
+  if (roll < tankChance + difficultyAdjustedSnapChance) return "snap";
   return "measured";
 }
 
@@ -399,9 +412,9 @@ function makeStepDurations(
 }
 
 /**
- * Presentation-only behavior sequence. Its input is the same allowlisted
- * observation boundary as the policy, so presentation code cannot inspect an
- * opponent's cards, the deck, or a private decision trace.
+ * Presentation-only behavior sequence. It sees the allowlisted observation
+ * plus an optional difficulty scalar emitted by this seat's own policy. It
+ * cannot inspect an opponent's cards, the deck, or another seat's trace.
  */
 export function createAIThinkingPlanFromObservation(
   observation: BotObservation,
@@ -409,6 +422,7 @@ export function createAIThinkingPlanFromObservation(
   random: () => number,
   learning?: AILearningState,
   recentSteps: readonly string[] = [],
+  context?: AIThinkingContext,
 ): AIThinkingPlan {
   const archetype = style.key;
   const pressure = tablePressure(observation);
@@ -418,6 +432,7 @@ export function createAIThinkingPlanFromObservation(
     archetype,
     pressure,
     random,
+    context,
   );
   const rawSteps = makeSteps(
     observation,
@@ -437,7 +452,7 @@ export function createAIThinkingPlanFromObservation(
     steps,
     mode,
     style.thinkingPace,
-    pressure,
+    Math.max(pressure, clamp(context?.decisionDifficulty ?? 0) * 0.9),
     random,
   );
 
@@ -456,6 +471,7 @@ export function createAIThinkingPlan(
   random: () => number,
   learning?: AILearningState,
   recentSteps: readonly string[] = [],
+  context?: AIThinkingContext,
 ): AIThinkingPlan {
   const observation = buildBotObservation(state, playerId);
   const style =
@@ -467,5 +483,6 @@ export function createAIThinkingPlan(
     random,
     learning,
     recentSteps,
+    context,
   );
 }

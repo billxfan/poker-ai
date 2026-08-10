@@ -88,6 +88,8 @@ export type AIDecisionTrace = {
   contextKey: string;
   strengthBucket: AIHandStrengthBucket;
   actionKind: AIActionKind;
+  /** 0 is routine, 1 is a close/pressured decision. Presentation may use it for pacing. */
+  decisionDifficulty?: number;
   usedExploration: boolean;
   policyVersion?: string;
   decisionSeed?: number;

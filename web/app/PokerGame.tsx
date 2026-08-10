@@ -35,6 +35,11 @@ import {
   type DialogueChoice,
   type DialogueTrigger,
 } from "../core/dialogue";
+import {
+  advancePersonaState,
+  defaultPersonaState,
+  type PersonaState,
+} from "../core/characterState";
 import { AI_ENGINE_NAMES, chooseAIAction } from "../core/ai";
 import {
   currentAIExplorationRate,
@@ -221,6 +226,26 @@ const CAT_CHARACTER_PROFILES: Record<
     persona: "难测的诈唬派",
   },
 };
+
+type TableInteractionKind = "egg" | "tomato" | "flower" | "slipper";
+
+type TableInteraction = {
+  eventId: number;
+  targetId: number;
+  kind: TableInteractionKind;
+};
+
+const TABLE_INTERACTIONS: ReadonlyArray<{
+  kind: TableInteractionKind;
+  label: string;
+  projectile: string;
+  impact: string;
+}> = [
+  { kind: "egg", label: "鸡蛋", projectile: "🥚", impact: "🍳" },
+  { kind: "tomato", label: "番茄", projectile: "🍅", impact: "💥" },
+  { kind: "flower", label: "鲜花", projectile: "🌹", impact: "💖" },
+  { kind: "slipper", label: "拖鞋", projectile: "🩴", impact: "💫" },
+];
 
 type AppScreen = "home" | "game" | "welfare" | "statistics";
 const ACTIVE_SCREEN_KEY = "poker-ai-web/active-screen";
@@ -710,6 +735,10 @@ function Seat({
   dealSeatCount,
   performance,
   reactionLabel,
+  interactionMenuOpen = false,
+  interaction = null,
+  onToggleInteractionMenu,
+  onSendInteraction,
 }: {
   player: Player;
   active: boolean;
@@ -721,12 +750,22 @@ function Seat({
   dealSeatCount: number;
   performance: CharacterPerformance | null;
   reactionLabel: string | null;
+  interactionMenuOpen?: boolean;
+  interaction?: TableInteraction | null;
+  onToggleInteractionMenu?: (seatId: number) => void;
+  onSendInteraction?: (
+    seatId: number,
+    kind: TableInteractionKind,
+  ) => void;
 }) {
   const hiddenCards = !player.isHuman && !reveal;
   const character =
     CAT_CHARACTER_PROFILES[player.id] ?? CAT_CHARACTER_PROFILES[0];
   const systemActionLabel = performance?.actionLabel ?? player.lastAction;
-  const [showCharacter, setShowCharacter] = useState(false);
+  const canInteract = !player.isHuman && player.status !== "out";
+  const interactionPresentation = interaction
+    ? TABLE_INTERACTIONS.find((item) => item.kind === interaction.kind)
+    : null;
   return (
     <article
       className={`game-seat seat-${player.id} ${player.isHuman ? "seat-human" : ""} ${
@@ -735,25 +774,78 @@ function Seat({
         player.status === "out" ? "is-out" : ""
       } ${thinkingMode ? `is-thinking thinking-${thinkingMode}` : ""} ${
         performance ? `has-performance gesture-${performance.gesture}` : ""
+      } ${interactionMenuOpen ? "has-interaction-menu" : ""} ${
+        interaction ? `is-interaction-hit interaction-${interaction.kind}` : ""
       }`}
       data-persona={player.style?.key ?? "human"}
+      data-interaction-seat={player.id}
       aria-label={`${player.name}，${player.position}，${player.chips} 小鱼干`}
     >
       <button
         key={performance?.eventId ?? "idle-character"}
         className="seat-character-button"
-        aria-label={`查看${player.name}的猫咪角色`}
-        aria-expanded={showCharacter}
-        title={`${character.breed} · ${character.persona}`}
-        onClick={() => setShowCharacter((visible) => !visible)}
-        onBlur={() => setShowCharacter(false)}
+        aria-label={
+          canInteract ? `与${player.name}互动` : `查看${player.name}的猫咪角色`
+        }
+        aria-expanded={canInteract ? interactionMenuOpen : undefined}
+        aria-haspopup={canInteract ? "menu" : undefined}
+        title={
+          canInteract
+            ? `与${player.name}互动 · ${character.breed}`
+            : `${character.breed} · ${character.persona}`
+        }
+        onClick={() => {
+          if (canInteract) onToggleInteractionMenu?.(player.id);
+        }}
       >
         <PlayerAvatar player={player} variant="table" />
       </button>
-      {showCharacter ? (
-        <span className="seat-character-popover" role="status">
-          <strong>{character.breed}</strong>
-          <small>{character.persona}</small>
+      {interactionMenuOpen && canInteract ? (
+        <div className="seat-interaction-menu" role="menu">
+          <header>
+            <strong>与{player.name}互动</strong>
+            <small>
+              {character.breed} · {character.persona}
+            </small>
+          </header>
+          <div>
+            {TABLE_INTERACTIONS.map((item) => (
+              <button
+                key={item.kind}
+                type="button"
+                role="menuitem"
+                aria-label={`向${player.name}送出${item.label}`}
+                onClick={() => onSendInteraction?.(player.id, item.kind)}
+              >
+                <span aria-hidden="true">{item.projectile}</span>
+                <small>{item.label}</small>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      {interaction && interactionPresentation ? (
+        <span
+          key={interaction.eventId}
+          className="seat-interaction-effect"
+          aria-hidden="true"
+        >
+          <span className="interaction-projectile">
+            {interactionPresentation.projectile}
+          </span>
+          <span className="interaction-impact">
+            <b>{interactionPresentation.impact}</b>
+            <i />
+            <i />
+            <i />
+            <i />
+            <i />
+          </span>
+        </span>
+      ) : null}
+      {interaction && interactionPresentation ? (
+        <span className="sr-only" aria-live="polite">
+          你向{player.name}送出了{interactionPresentation.label}
         </span>
       ) : null}
       <div className="seat-identity">
@@ -2628,16 +2720,34 @@ function GameScreen({
   const [dialogueBySeat, setDialogueBySeat] = useState<Record<number, string>>(
     {},
   );
+  const [interactionMenuSeatId, setInteractionMenuSeatId] = useState<
+    number | null
+  >(null);
+  const [tableInteraction, setTableInteraction] =
+    useState<TableInteraction | null>(null);
   const [resultVisibleHand, setResultVisibleHand] = useState<string | null>(
     game.phase === "playing" ? null : game.handId,
   );
   const [dialogueMemory, setDialogueMemory] = useState<
     Record<number, { ids: string[]; families: string[] }>
   >({});
+  const [personaStateBySeat, setPersonaStateBySeat] = useState<
+    Record<number, PersonaState>
+  >(() =>
+    Object.fromEntries(
+      game.players
+        .filter((player) => !player.isHuman)
+        .map((player) => [player.id, defaultPersonaState()]),
+    ),
+  );
   const performanceTimersRef = useRef<Record<number, number>>({});
   const dialogueTimersRef = useRef<Record<number, number>>({});
+  const spokeBeforeActionRef = useRef<Record<number, boolean>>({});
   const resultTimerRef = useRef<number | null>(null);
   const presentationTimersRef = useRef<number[]>([]);
+  const interactionSequenceRef = useRef(0);
+  const interactionTimerRef = useRef<number | null>(null);
+  const interactionSoundTimerRef = useRef<number | null>(null);
   const previousPresentationRef = useRef(buildPublicPresentationSnapshot(game));
   const [dismissedRebuyHand, setDismissedRebuyHand] = useState<number | null>(
     null,
@@ -2674,22 +2784,25 @@ function GameScreen({
       ids: [],
       families: [],
     };
-    return Array.from({ length: 3 }, (_, index) =>
-      choosePersonaDialogue({
-        archetype: player.style?.key ?? "balanced",
-        trigger: "turn",
-        seed: aiTurnSeed(game, thinkingId, 0x7e11 + index * 97),
-        recentIds: [
-          ...memory.ids,
-          ...Array.from(
-            { length: index },
-            (_, inner) => `${player.style?.key ?? "balanced"}:turn:${inner}`,
-          ),
-        ],
-        recentFamilies: memory.families,
-      }),
-    ).filter((choice): choice is DialogueChoice => choice !== null);
-  }, [dialogueMemory, game, thinkingId]);
+    const choice = choosePersonaDialogue({
+      archetype: player.style?.key ?? "balanced",
+      trigger: "turn",
+      seed: aiTurnSeed(game, thinkingId, 0x7e11),
+      recentIds: memory.ids,
+      recentFamilies: memory.families,
+      context: {
+        personaState: personaStateBySeat[thinkingId],
+        pressure: pendingAIAction?.aiDecision?.publicFactors?.pressure,
+      },
+    });
+    return choice ? [choice] : [];
+  }, [
+    dialogueMemory,
+    game,
+    pendingAIAction,
+    personaStateBySeat,
+    thinkingId,
+  ]);
   const thinkingPlan: AIThinkingPlan | null = useMemo(() => {
     if (thinkingId === null || !pendingAIAction) return null;
     const random = seededRandom(aiTurnSeed(game, thinkingId, 0x51f15e));
@@ -2699,11 +2812,16 @@ function GameScreen({
       random,
       aiProfiles[thinkingId]?.learning,
       recentStepsForThinkingPlayer,
+      {
+        decisionDifficulty: pendingAIAction.aiDecision?.decisionDifficulty,
+        personaState: personaStateBySeat[thinkingId],
+      },
     );
   }, [
     aiProfiles,
     game,
     pendingAIAction,
+    personaStateBySeat,
     recentStepsForThinkingPlayer,
     thinkingId,
   ]);
@@ -2747,8 +2865,52 @@ function GameScreen({
   );
   function act(type: ActionType, amount?: number) {
     setShowQuickBet(false);
+    setInteractionMenuSeatId(null);
     unlockGameAudio(soundEnabled);
     onGameChange(applyAction(game, { playerId: HUMAN_ID, type, amount }));
+  }
+
+  function toggleInteractionMenu(seatId: number) {
+    unlockGameAudio(soundEnabled);
+    playGameSound("ui", soundEnabled, seatId % 5);
+    setInteractionMenuSeatId((current) =>
+      current === seatId ? null : seatId,
+    );
+  }
+
+  function sendTableInteraction(
+    targetId: number,
+    kind: TableInteractionKind,
+  ) {
+    const target = game.players[targetId];
+    if (!target || target.isHuman || target.status === "out") return;
+
+    setInteractionMenuSeatId(null);
+    unlockGameAudio(soundEnabled);
+    playGameSound("deal", soundEnabled, targetId % 5);
+    interactionSequenceRef.current += 1;
+    setTableInteraction({
+      eventId: interactionSequenceRef.current,
+      targetId,
+      kind,
+    });
+
+    if (interactionTimerRef.current) {
+      window.clearTimeout(interactionTimerRef.current);
+    }
+    if (interactionSoundTimerRef.current) {
+      window.clearTimeout(interactionSoundTimerRef.current);
+    }
+    interactionSoundTimerRef.current = window.setTimeout(() => {
+      playGameSound(kind === "flower" ? "ui" : "check", soundEnabled, 3);
+      interactionSoundTimerRef.current = null;
+    }, 520);
+    interactionTimerRef.current = window.setTimeout(() => {
+      setTableInteraction((current) =>
+        current?.eventId === interactionSequenceRef.current ? null : current,
+      );
+      interactionTimerRef.current = null;
+    }, 1_320);
   }
 
   function toggleSound() {
@@ -2797,6 +2959,8 @@ function GameScreen({
       });
     const timer = window.setTimeout(() => {
       const action = pendingAIAction;
+      spokeBeforeActionRef.current[actorId] =
+        thinkingDialogueChoices.length > 0;
       setDialogueMemory((current) => {
         const actorMemory = current[actorId] ?? { ids: [], families: [] };
         return {
@@ -2857,9 +3021,32 @@ function GameScreen({
         window.clearTimeout(timer),
       );
       if (resultTimerRef.current) window.clearTimeout(resultTimerRef.current);
+      if (interactionTimerRef.current)
+        window.clearTimeout(interactionTimerRef.current);
+      if (interactionSoundTimerRef.current)
+        window.clearTimeout(interactionSoundTimerRef.current);
       presentationTimers.forEach((timer) => window.clearTimeout(timer));
     };
   }, []);
+
+  useEffect(() => {
+    if (interactionMenuSeatId === null) return;
+    const closeOnOutsidePress = (event: PointerEvent) => {
+      const target = event.target;
+      if (
+        target instanceof Element &&
+        target.closest(
+          `[data-interaction-seat="${interactionMenuSeatId}"]`,
+        )
+      ) {
+        return;
+      }
+      setInteractionMenuSeatId(null);
+    };
+    document.addEventListener("pointerdown", closeOnOutsidePress);
+    return () =>
+      document.removeEventListener("pointerdown", closeOnOutsidePress);
+  }, [interactionMenuSeatId]);
 
   useEffect(() => {
     const nextSnapshot = buildPublicPresentationSnapshot(game);
@@ -2897,11 +3084,17 @@ function GameScreen({
       seatId: number,
       trigger: DialogueTrigger,
       eventId: string,
+      personaState: PersonaState | undefined,
     ) => {
       const player = game.players[seatId];
       if (!player) return null;
       if (player.isHuman) return null;
       if (!player.style) return null;
+      if (["check", "call", "raise", "all-in", "fold"].includes(trigger)) {
+        const alreadySpoke = spokeBeforeActionRef.current[seatId] === true;
+        spokeBeforeActionRef.current[seatId] = false;
+        if (alreadySpoke) return null;
+      }
       const memory = dialogueMemory[seatId] ?? {
         ids: [],
         families: [],
@@ -2912,11 +3105,22 @@ function GameScreen({
         seed: stableTextSeed(`${eventId}:${seatId}`),
         recentIds: memory.ids,
         recentFamilies: memory.families,
+        context: {
+          personaState,
+          pressure:
+            eventId.includes(":result")
+              ? 0
+              : game.currentBet / Math.max(1, game.pot + game.currentBet),
+        },
       });
       if (choice) rememberChoice(seatId, choice);
       return choice?.text ?? null;
     };
-    const present = (event: PresentationEvent, delayMs = 0) => {
+    const present = (
+      event: PresentationEvent,
+      delayMs = 0,
+      personaStates: Record<number, PersonaState>,
+    ) => {
       const performances = performancesForEvent(event);
       Object.entries(performances).forEach(([seatKey, performance]) => {
         const seatId = Number(seatKey);
@@ -2941,7 +3145,12 @@ function GameScreen({
               : performance.gesture === "win"
                 ? "win"
                 : "lose";
-          const phrase = phraseFor(seatId, trigger, performance.eventId);
+          const phrase = phraseFor(
+            seatId,
+            trigger,
+            performance.eventId,
+            personaStates[seatId],
+          );
           if (phrase) {
             setDialogueBySeat((current) => ({ ...current, [seatId]: phrase }));
             const existingDialogueTimer = dialogueTimersRef.current[seatId];
@@ -2981,7 +3190,22 @@ function GameScreen({
       (event) => event.kind === "action" && event.action === "all-in",
     );
 
+    let nextPersonaStates = personaStateBySeat;
     events.forEach((event) => {
+      nextPersonaStates = Object.fromEntries(
+        game.players
+          .filter((player) => !player.isHuman)
+          .map((player) => [
+            player.id,
+            advancePersonaState(
+              nextPersonaStates[player.id] ?? defaultPersonaState(),
+              event,
+              player.id,
+              BIG_BLIND,
+            ),
+          ]),
+      );
+      const personaStatesForEvent = nextPersonaStates;
       if (event.kind === "deal") {
         setResultVisibleHand(null);
         playDealSequence(event.cardCount, soundEnabled, 0.062, event.id);
@@ -2989,7 +3213,7 @@ function GameScreen({
       }
       if (event.kind === "action") {
         playGameEventSound(event.id, actionSound(event.action), soundEnabled);
-        present(event);
+        present(event, 0, personaStatesForEvent);
         return;
       }
       if (event.kind === "street") {
@@ -3007,7 +3231,7 @@ function GameScreen({
         return;
       }
       const resultDelay = hasImmediateAllIn ? 420 : 0;
-      present(event, resultDelay);
+      present(event, resultDelay, personaStatesForEvent);
       if (event.showdown) {
         playGameEventSound(`${event.id}:showdown`, "showdown", soundEnabled);
       }
@@ -3027,10 +3251,15 @@ function GameScreen({
         resultDelay + 1_500,
       );
     });
-  }, [dialogueMemory, game, soundEnabled]);
+    setPersonaStateBySeat(nextPersonaStates);
+  }, [dialogueMemory, game, personaStateBySeat, soundEnabled]);
 
   useEffect(() => {
     function handleKey(event: KeyboardEvent) {
+      if (interactionMenuSeatId !== null && event.key === "Escape") {
+        setInteractionMenuSeatId(null);
+        return;
+      }
       if (showActionLog) {
         if (event.key === "Escape") setShowActionLog(false);
         return;
@@ -3150,6 +3379,14 @@ function GameScreen({
                   dealSeatCount={dealSeatIds.length}
                   performance={performanceBySeat[player.id] ?? null}
                   reactionLabel={dialogueBySeat[player.id] ?? null}
+                  interactionMenuOpen={interactionMenuSeatId === player.id}
+                  interaction={
+                    tableInteraction?.targetId === player.id
+                      ? tableInteraction
+                      : null
+                  }
+                  onToggleInteractionMenu={toggleInteractionMenu}
+                  onSendInteraction={sendTableInteraction}
                 />
               ),
             )}
@@ -3170,6 +3407,14 @@ function GameScreen({
                 dealSeatCount={dealSeatIds.length}
                 performance={performanceBySeat[player.id] ?? null}
                 reactionLabel={dialogueBySeat[player.id] ?? null}
+                interactionMenuOpen={interactionMenuSeatId === player.id}
+                interaction={
+                  tableInteraction?.targetId === player.id
+                    ? tableInteraction
+                    : null
+                }
+                onToggleInteractionMenu={toggleInteractionMenu}
+                onSendInteraction={sendTableInteraction}
               />
             ))}
           </div>
@@ -3267,12 +3512,18 @@ function GameScreen({
         <HandResultModal
           game={game}
           onExit={onExit}
-          onRebuy={() =>
+          onRebuy={() => {
+            setInteractionMenuSeatId(null);
+            setTableInteraction(null);
             onGameChange(
               rebuyHumanAndStartNextHand(game, STARTING_CHIPS, Date.now()),
-            )
-          }
-          onNextHand={() => onGameChange(startNewHand(game, Date.now()))}
+            );
+          }}
+          onNextHand={() => {
+            setInteractionMenuSeatId(null);
+            setTableInteraction(null);
+            onGameChange(startNewHand(game, Date.now()));
+          }}
         />
       ) : null}
     </main>
