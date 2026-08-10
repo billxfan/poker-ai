@@ -1,6 +1,6 @@
 {
-  "name": "Poker AI Web",
-  "short_name": "Poker AI",
+  "name": "德扑 AI 训练器",
+  "short_name": "德扑训练器",
   "description": "离线优先的单机德州扑克 AI 训练游戏",
   "start_url": "/",
   "display": "standalone",

@@ -343,10 +343,6 @@
   animation: gesture-fold-body 680ms cubic-bezier(0.22, 0.8, 0.2, 1) both;
 }
 
-.game-seat.gesture-fold .seat-cards {
-  animation: gesture-fold-paws 680ms cubic-bezier(0.22, 0.8, 0.2, 1) both;
-}
-
 .game-seat.gesture-win .character-rim-light {
   background: radial-gradient(circle, rgb(242 207 114 / 0.72), transparent 68%);
   animation: result-rim 1.65s cubic-bezier(0.22, 0.8, 0.2, 1) both;
@@ -547,16 +543,6 @@
     filter: grayscale(0.7) saturate(0.55);
     opacity: 0.55;
     transform: scale(0.96);
-  }
-}
-
-@keyframes gesture-fold-paws {
-  35% {
-    transform: translate3d(-14px, -3px, 18px) rotate(-5deg);
-  }
-  100% {
-    opacity: 0.52;
-    transform: translate3d(-7px, 0, 0);
   }
 }
 
@@ -4445,6 +4431,10 @@ button:disabled {
 .game-seat {
   --turn-shift-x: 0px;
   --turn-shift-y: 8px;
+  --character-anchor-x: 50%;
+  --interaction-menu-x: 50%;
+  --interaction-source-x: 0px;
+  --interaction-source-y: 260px;
   position: relative;
   isolation: isolate;
   display: grid;
@@ -4549,16 +4539,57 @@ button:disabled {
   }
 }
 
-.game-seat.is-folded {
-  opacity: 0.43;
+.game-seat.has-interaction-menu {
+  z-index: 30;
 }
 
-.game-seat.is-folded .avatar-table {
+.game-seat.is-folded .seat-character-button {
+  opacity: 0.5;
   filter: grayscale(0.72) saturate(0.55);
+}
+
+.game-seat.is-folded .seat-cards {
+  opacity: 0.48;
+  filter: grayscale(0.92) brightness(0.72);
+  pointer-events: none;
+}
+
+.game-seat.is-folded .seat-identity {
+  opacity: 0.82;
+}
+
+.game-seat.is-folded .last-action {
+  border: 1px solid rgb(255 255 255 / 0.12);
+  background: rgb(2 38 29 / 0.9);
+  color: rgb(255 255 255 / 0.78);
 }
 
 .game-seat.is-out {
   opacity: 0.25;
+}
+
+.seat-1 {
+  --interaction-source-x: 150px;
+  --interaction-source-y: 230px;
+}
+
+.seat-2 {
+  --interaction-source-x: 170px;
+  --interaction-source-y: 340px;
+}
+
+.seat-3 {
+  --interaction-source-y: 380px;
+}
+
+.seat-4 {
+  --interaction-source-x: -170px;
+  --interaction-source-y: 340px;
+}
+
+.seat-5 {
+  --interaction-source-x: -150px;
+  --interaction-source-y: 230px;
 }
 
 .seat-badges {
@@ -4621,7 +4652,7 @@ button:disabled {
   position: absolute;
   z-index: 4;
   top: -34px;
-  left: 50%;
+  left: var(--character-anchor-x);
   width: 148px;
   height: 148px;
   padding: 0;
@@ -4632,6 +4663,7 @@ button:disabled {
   transform: translateX(-50%);
   transform-origin: 50% 78%;
   transition:
+    opacity 220ms var(--curve),
     filter 180ms var(--curve),
     transform 220ms var(--curve-deal);
 }
@@ -4702,6 +4734,336 @@ button:disabled {
   pointer-events: none;
   animation: character-popover-in 160ms var(--curve-deal) both;
   backdrop-filter: blur(12px);
+}
+
+.seat-interaction-menu {
+  position: absolute;
+  z-index: 50;
+  top: 72px;
+  left: var(--interaction-menu-x);
+  display: grid;
+  width: 218px;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgb(230 181 46 / 0.48);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 50% 0, rgb(78 168 132 / 0.16), transparent 70%),
+    rgb(1 31 24 / 0.97);
+  box-shadow:
+    0 18px 42px rgb(0 0 0 / 0.46),
+    inset 0 1px rgb(255 255 255 / 0.08);
+  color: white;
+  transform: translateX(-50%);
+  animation: interaction-menu-in 180ms var(--curve-deal) both;
+  backdrop-filter: blur(16px);
+}
+
+.seat-interaction-menu::before {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  width: 11px;
+  height: 11px;
+  border-top: 1px solid rgb(230 181 46 / 0.48);
+  border-left: 1px solid rgb(230 181 46 / 0.48);
+  background: rgb(3 38 29 / 0.98);
+  content: "";
+  transform: translate(-50%, 6px) rotate(45deg);
+}
+
+.seat-interaction-menu > header {
+  display: grid;
+  gap: 1px;
+  padding-inline: 2px;
+  text-align: left;
+}
+
+.seat-interaction-menu > header strong {
+  font-size: 12px;
+}
+
+.seat-interaction-menu > header small {
+  overflow: hidden;
+  color: rgb(255 255 255 / 0.58);
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.seat-interaction-menu > div {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.seat-interaction-menu button {
+  display: grid;
+  min-width: 0;
+  min-height: 52px;
+  place-items: center;
+  align-content: center;
+  gap: 1px;
+  padding: 4px 2px;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  border-radius: 11px;
+  background: rgb(255 255 255 / 0.07);
+  color: white;
+  transition:
+    border-color 150ms var(--curve),
+    background 150ms var(--curve),
+    transform 150ms var(--curve-deal);
+}
+
+.seat-interaction-menu button:hover,
+.seat-interaction-menu button:focus-visible {
+  border-color: rgb(230 181 46 / 0.64);
+  background: rgb(230 181 46 / 0.14);
+  transform: translateY(-3px) scale(1.04);
+}
+
+.seat-interaction-menu button > span {
+  font-size: 24px;
+  line-height: 1;
+  filter: drop-shadow(0 3px 3px rgb(0 0 0 / 0.28));
+}
+
+.seat-interaction-menu button > small {
+  color: rgb(255 255 255 / 0.72);
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.seat-interaction-effect {
+  position: absolute;
+  z-index: 60;
+  top: 20px;
+  left: var(--character-anchor-x);
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.interaction-projectile,
+.interaction-impact {
+  position: absolute;
+  top: -25px;
+  left: -25px;
+  display: grid;
+  width: 50px;
+  height: 50px;
+  place-items: center;
+}
+
+.interaction-projectile {
+  z-index: 2;
+  font-size: 38px;
+  line-height: 1;
+  filter: drop-shadow(0 8px 6px rgb(0 0 0 / 0.4));
+  will-change: transform, opacity;
+  animation: interaction-projectile-flight 860ms cubic-bezier(0.2, 0.72, 0.24, 1)
+    both;
+}
+
+.interaction-impact {
+  z-index: 1;
+  opacity: 0;
+  animation: interaction-impact-bloom 740ms 500ms var(--curve-deal) both;
+}
+
+.interaction-impact b {
+  z-index: 2;
+  font-size: 42px;
+  line-height: 1;
+  filter: drop-shadow(0 4px 5px rgb(0 0 0 / 0.3));
+}
+
+.interaction-impact i {
+  --particle-x: 32px;
+  --particle-y: -24px;
+  position: absolute;
+  top: 21px;
+  left: 21px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #fff4d1;
+  box-shadow: 0 0 8px currentcolor;
+  animation: interaction-particle-burst 580ms 545ms ease-out both;
+}
+
+.interaction-impact i:nth-of-type(2) {
+  --particle-x: -35px;
+  --particle-y: -18px;
+  width: 7px;
+  height: 7px;
+}
+
+.interaction-impact i:nth-of-type(3) {
+  --particle-x: 38px;
+  --particle-y: 12px;
+  width: 6px;
+  height: 6px;
+}
+
+.interaction-impact i:nth-of-type(4) {
+  --particle-x: -30px;
+  --particle-y: 22px;
+}
+
+.interaction-impact i:nth-of-type(5) {
+  --particle-x: 4px;
+  --particle-y: -40px;
+  width: 6px;
+  height: 6px;
+}
+
+.game-seat.interaction-egg .interaction-impact i {
+  background: #fff8df;
+  color: #ffd34e;
+}
+
+.game-seat.interaction-egg .interaction-impact i:first-of-type {
+  background: #ffc928;
+}
+
+.game-seat.interaction-tomato .interaction-impact i {
+  background: #ef3e31;
+  color: #ff6a48;
+}
+
+.game-seat.interaction-flower .interaction-impact i {
+  background: #ff6fa6;
+  color: #ffc1d8;
+  transform: rotate(45deg);
+}
+
+.game-seat.interaction-slipper .interaction-impact i {
+  background: #ffd256;
+  color: #fff0a6;
+  border-radius: 2px;
+  transform: rotate(45deg);
+}
+
+.game-seat.is-interaction-hit .seat-character-material {
+  animation: interaction-cat-hit 650ms 500ms cubic-bezier(0.2, 0.8, 0.2, 1)
+    both;
+}
+
+.game-seat.is-interaction-hit.interaction-flower .seat-character-material {
+  animation-name: interaction-cat-delight;
+}
+
+@keyframes interaction-menu-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-8px) scale(0.94);
+  }
+}
+
+@keyframes interaction-projectile-flight {
+  0% {
+    opacity: 0;
+    transform: translate3d(
+        var(--interaction-source-x),
+        var(--interaction-source-y),
+        0
+      )
+      rotate(-36deg) scale(0.64);
+  }
+  10% {
+    opacity: 1;
+  }
+  64% {
+    opacity: 1;
+    transform: translate3d(0, -14px, 0) rotate(18deg) scale(1.08);
+  }
+  78% {
+    opacity: 1;
+    transform: translate3d(0, 1px, 0) rotate(28deg) scale(0.9);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, 5px, 0) rotate(34deg) scale(0.72);
+  }
+}
+
+@keyframes interaction-impact-bloom {
+  0% {
+    opacity: 0;
+    transform: scale(0.35) rotate(-18deg);
+  }
+  28%,
+  72% {
+    opacity: 1;
+    transform: scale(1.16) rotate(4deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.88) rotate(10deg);
+  }
+}
+
+@keyframes interaction-particle-burst {
+  0% {
+    opacity: 0;
+    transform: translate(0) scale(0.4);
+  }
+  22% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--particle-x), var(--particle-y)) scale(0.1)
+      rotate(160deg);
+  }
+}
+
+@keyframes interaction-cat-hit {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0);
+  }
+  28% {
+    filter: brightness(1.16) saturate(1.12);
+    transform: translateX(-8px) rotate(-3deg) scale(0.98);
+  }
+  48% {
+    transform: translateX(7px) rotate(2.5deg);
+  }
+  68% {
+    transform: translateX(-3px) rotate(-1deg);
+  }
+}
+
+@keyframes interaction-cat-delight {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  38% {
+    filter: brightness(1.12) saturate(1.16);
+    transform: translateY(-8px) rotate(-2deg) scale(1.035);
+  }
+  66% {
+    transform: translateY(-3px) rotate(2deg) scale(1.015);
+  }
+}
+
+@media (max-width: 759px) {
+  .seat-1,
+  .seat-2 {
+    --interaction-menu-x: calc(100% - 4px);
+  }
+
+  .seat-4,
+  .seat-5 {
+    --interaction-menu-x: 4px;
+  }
+
+  .seat-interaction-menu {
+    width: min(218px, calc(100vw - 24px));
+  }
 }
 
 .seat-character-popover strong {
@@ -6022,6 +6384,10 @@ button:disabled {
   .game-stage .seat-1 {
     --turn-shift-x: 10px;
     --turn-shift-y: -2px;
+    --character-anchor-x: 15%;
+    --interaction-menu-x: 68%;
+    --interaction-source-x: 480px;
+    --interaction-source-y: 300px;
     --deal-x: 420px;
     --deal-y: -155px;
     --deal-rotate: 12deg;
@@ -6036,6 +6402,8 @@ button:disabled {
   .game-stage .seat-2 {
     --turn-shift-x: 5px;
     --turn-shift-y: 10px;
+    --interaction-source-x: 390px;
+    --interaction-source-y: 430px;
     --deal-x: 430px;
     --deal-y: 125px;
     --deal-rotate: 11deg;
@@ -6055,6 +6423,8 @@ button:disabled {
   .game-stage .seat-3 {
     --turn-shift-x: 0px;
     --turn-shift-y: 11px;
+    --interaction-source-x: 0px;
+    --interaction-source-y: 470px;
     --deal-x: 0px;
     --deal-y: 230px;
     --deal-rotate: -3deg;
@@ -6078,6 +6448,8 @@ button:disabled {
   .game-stage .seat-4 {
     --turn-shift-x: -5px;
     --turn-shift-y: 10px;
+    --interaction-source-x: -390px;
+    --interaction-source-y: 430px;
     --deal-x: -430px;
     --deal-y: 125px;
     --deal-rotate: -11deg;
@@ -6088,6 +6460,10 @@ button:disabled {
   .game-stage .seat-5 {
     --turn-shift-x: -10px;
     --turn-shift-y: -2px;
+    --character-anchor-x: 85%;
+    --interaction-menu-x: 32%;
+    --interaction-source-x: -480px;
+    --interaction-source-y: 300px;
     --deal-x: -420px;
     --deal-y: -155px;
     --deal-rotate: -12deg;

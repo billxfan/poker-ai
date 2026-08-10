@@ -3,11 +3,11 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Poker AI Web",
-    template: "%s · Poker AI Web",
+    default: "德扑 AI 训练器",
+    template: "%s · 德扑 AI 训练器",
   },
   description: "离线优先的开源单机德州扑克 AI 训练游戏。",
-  applicationName: "Poker AI Web",
+  applicationName: "德扑 AI 训练器",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: "/poker-ai-icon.png",
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     apple: "/poker-ai-icon.png",
   },
   openGraph: {
-    title: "Poker AI Web",
+    title: "德扑 AI 训练器",
     description: "无需登录，随时离线开一桌的德州扑克 AI 训练游戏。",
     images: [{ url: "/og.png", width: 1200, height: 630 }],
   },

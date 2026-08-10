@@ -11,6 +11,10 @@ import {
   FORBIDDEN_LIVE_DIALOGUE_TERMS,
   type DialogueTrigger,
 } from "../core/dialogue.ts";
+import {
+  advancePersonaState,
+  defaultPersonaState,
+} from "../core/characterState.ts";
 import { applyAction, createGame } from "../core/engine.ts";
 import {
   buildPublicPresentationSnapshot,
@@ -128,7 +132,7 @@ test("settlement gives the human character visible win and loss feedback", () =>
   assert.equal(performances[1]?.gesture, "win");
 });
 
-test("five persona catalogs are substantial, distinct, safe, and deterministic", () => {
+test("five persona catalogs are substantial, recognizable, safe, and deterministic", () => {
   const sampled = new Map<AIArchetype, Set<string>>();
   for (const persona of PERSONAS) {
     assert.ok(dialogueCatalogSize(persona) >= 32);
@@ -163,9 +167,71 @@ test("five persona catalogs are substantial, distinct, safe, and deterministic",
       const overlap = [...sampled.get(PERSONAS[left])!].filter((phrase) =>
         sampled.get(PERSONAS[right])!.has(phrase),
       );
-      assert.equal(overlap.length, 0);
+      // A few shared words such as “过” and “行” make the table sound human.
+      // Most of each seat's sampled vocabulary must still belong to that seat.
+      assert.ok(overlap.length <= 4);
+      assert.ok(
+        overlap.length / Math.min(
+          sampled.get(PERSONAS[left])!.size,
+          sampled.get(PERSONAS[right])!.size,
+        ) < 0.14,
+      );
     }
   }
+});
+
+test("quiet and chatty personas have deterministic but different silence rates", () => {
+  const spokenTurns = (archetype: AIArchetype) =>
+    Array.from({ length: 500 }, (_, index) =>
+      choosePersonaDialogue({ archetype, trigger: "turn", seed: index + 1 }),
+    ).filter(Boolean).length;
+
+  const oldK = spokenTurns("tight-aggressive");
+  const littleFish = spokenTurns("loose-weak");
+  assert.ok(littleFish > oldK + 100);
+  assert.ok(oldK > 100 && littleFish < 450);
+});
+
+test("public results create short-lived emotion and an ongoing mutter topic", () => {
+  const largeLoss: PresentationEvent = {
+    id: "hand:result",
+    kind: "result",
+    handId: "hand",
+    winnerIds: [0],
+    netBySeat: { 0: 320, 4: -320 },
+    showdown: true,
+    humanDelta: 320,
+  };
+  let state = advancePersonaState(defaultPersonaState(), largeLoss, 4);
+  assert.equal(state.emotion, "irritated");
+  assert.equal(state.monologueTopic, "rough-run");
+  assert.equal(state.topicHandsLeft, 3);
+
+  const lines = new Set(
+    Array.from({ length: 80 }, (_, index) =>
+      choosePersonaDialogue({
+        archetype: "loose-weak",
+        trigger: "turn",
+        seed: index + 1,
+        allowSilence: false,
+        context: { personaState: state },
+      }),
+    ).flatMap((choice) => (choice ? [choice.text] : [])),
+  );
+  assert.ok(lines.has("我都输好几手啦。"));
+  assert.ok(lines.has("怎么还不来呀。"));
+
+  const nextDeal: PresentationEvent = {
+    id: "next:deal",
+    kind: "deal",
+    handId: "next",
+    cardCount: 12,
+  };
+  state = advancePersonaState(state, nextDeal, 4);
+  assert.equal(state.topicHandsLeft, 2);
+  state = advancePersonaState(state, nextDeal, 4);
+  state = advancePersonaState(state, nextDeal, 4);
+  assert.equal(state.monologueTopic, null);
 });
 
 test("dialogue selector respects recent phrase and semantic-family cooldowns", () => {
