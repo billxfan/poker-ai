@@ -2723,6 +2723,7 @@ button:disabled {
 }
 
 .player-avatar {
+  position: relative;
   display: grid;
   flex: 0 0 auto;
   width: 52px;
@@ -2736,9 +2737,19 @@ button:disabled {
 }
 
 .player-avatar img {
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.player-avatar-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 0.58em;
 }
 
 .player-avatar.avatar-small {
