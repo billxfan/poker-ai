@@ -40,10 +40,7 @@ import {
   defaultPersonaState,
   type PersonaState,
 } from "../core/characterState";
-import {
-  AI_PROFILE_AVATAR_SOURCES,
-  AVATAR_SOURCES,
-} from "./characterAssets";
+import { AVATAR_SOURCES } from "./characterAssets";
 import { AI_ENGINE_NAMES, chooseAIAction } from "../core/ai";
 import {
   currentAIExplorationRate,
@@ -3594,14 +3591,6 @@ function PokerGameContent() {
         void navigator.serviceWorker.register("/sw.js").catch(() => undefined);
       }
     }
-
-    // Warm profile portraits while the player is on the home screen. They used
-    // to start loading only after opening AI profiles, leaving empty circles on
-    // slower connections.
-    AI_PROFILE_AVATAR_SOURCES.forEach((source) => {
-      const image = new Image();
-      image.src = source;
-    });
 
     return () => {
       window.clearTimeout(timer);
