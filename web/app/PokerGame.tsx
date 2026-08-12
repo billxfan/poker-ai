@@ -40,6 +40,7 @@ import {
   defaultPersonaState,
   type PersonaState,
 } from "../core/characterState";
+import { AVATAR_SOURCES } from "./characterAssets";
 import { AI_ENGINE_NAMES, chooseAIAction } from "../core/ai";
 import {
   currentAIExplorationRate,
@@ -182,15 +183,6 @@ function actionSound(type: ActionType): GameSound {
   if (type === "all-in") return "all-in";
   return "raise";
 }
-const AVATAR_SOURCES: Record<number, string> = {
-  0: "/characters/portraits/golden-player.webp",
-  1: "/characters/portraits/british-shorthair.webp",
-  2: "/characters/portraits/siamese.webp",
-  3: "/characters/portraits/maine-coon.webp",
-  4: "/characters/portraits/orange-tabby.webp",
-  5: "/characters/portraits/abyssinian.webp",
-};
-
 const CAT_CHARACTER_PROFILES: Record<
   number,
   { seatAsset: string; breed: string; persona: string }
@@ -654,6 +646,9 @@ function PlayerAvatar({
 
   return (
     <span className={`player-avatar avatar-${size}`}>
+      <span className="player-avatar-fallback" aria-hidden="true">
+        🐱
+      </span>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={source} alt="" />
     </span>

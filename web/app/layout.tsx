@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { AI_PROFILE_AVATAR_SOURCES } from "./characterAssets";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -33,6 +34,17 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="zh-CN">
+      <head>
+        {AI_PROFILE_AVATAR_SOURCES.map((source) => (
+          <link
+            key={source}
+            rel="preload"
+            as="image"
+            type="image/webp"
+            href={source}
+          />
+        ))}
+      </head>
       <body>{children}</body>
     </html>
   );
