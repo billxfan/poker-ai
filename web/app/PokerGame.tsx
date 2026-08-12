@@ -111,6 +111,116 @@ function readableCardsLabel(cards: Card[]): string {
   return cards.map(readableCardLabel).join("、");
 }
 
+function useDialogFocus<T extends HTMLElement>(
+  active: boolean,
+  onClose: () => void,
+) {
+  const rootRef = useRef<T>(null);
+  const closeRef = useRef(onClose);
+
+  useEffect(() => {
+    closeRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!active || !rootRef.current) return;
+    const root = rootRef.current;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const overlay = root.closest<HTMLElement>(
+      ".drawer-backdrop, .modal-backdrop, .seat-interaction-menu",
+    ) ?? root;
+    const outsideBranches: Array<{ element: HTMLElement; inert: boolean }> = [];
+    let branch: HTMLElement = overlay;
+    while (branch.parentElement && branch.parentElement !== document.body) {
+      Array.from(branch.parentElement.children).forEach((element) => {
+        if (element instanceof HTMLElement && element !== branch) {
+          outsideBranches.push({ element, inert: element.inert });
+          element.inert = true;
+        }
+      });
+      branch = branch.parentElement;
+    }
+    if (branch.parentElement === document.body) {
+      Array.from(document.body.children).forEach((element) => {
+        if (element instanceof HTMLElement && element !== branch) {
+          outsideBranches.push({ element, inert: element.inert });
+          element.inert = true;
+        }
+      });
+    }
+
+    const focusable = () =>
+      Array.from(
+        root.querySelectorAll<HTMLElement>(
+          'button:not(:disabled), [href], [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((element) => !element.inert);
+    window.requestAnimationFrame(() => {
+      (focusable()[0] ?? root).focus();
+    });
+
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        const focusTarget = previousFocus;
+        closeRef.current();
+        window.requestAnimationFrame(() => focusTarget?.focus());
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = focusable();
+      if (!items.length) {
+        event.preventDefault();
+        root.focus();
+        return;
+      }
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    window.addEventListener("keydown", handleKey);
+    return () => {
+      window.removeEventListener("keydown", handleKey);
+      outsideBranches.forEach(({ element, inert }) => {
+        element.inert = inert;
+      });
+      previousFocus?.focus();
+    };
+  }, [active]);
+
+  return rootRef;
+}
+
+function keepTabInsideDialog(event: React.KeyboardEvent<HTMLElement>) {
+  if (event.key !== "Tab") return;
+  const items = Array.from(
+    event.currentTarget.querySelectorAll<HTMLElement>(
+      'button:not(:disabled), [href], [tabindex]:not([tabindex="-1"])',
+    ),
+  );
+  if (!items.length) {
+    event.preventDefault();
+    event.currentTarget.focus();
+    return;
+  }
+  const first = items[0];
+  const last = items[items.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
 function describeEvaluatedHand(hand: EvaluatedHand): string {
   const [primary, secondary] = hand.values.map(rankLabel);
 
@@ -290,6 +400,20 @@ const TABLE_INTERACTIONS: ReadonlyArray<{
 
 type AppScreen = "home" | "game" | "welfare" | "statistics";
 const ACTIVE_SCREEN_KEY = "poker-ai-web/active-screen";
+
+function screenPath(screen: AppScreen): string {
+  if (screen === "welfare") return "/rewards";
+  if (screen === "statistics") return "/stats";
+  if (screen === "game") return "/game";
+  return "/";
+}
+
+function screenFromPath(pathname: string): AppScreen {
+  if (pathname.startsWith("/rewards")) return "welfare";
+  if (pathname.startsWith("/stats")) return "statistics";
+  if (pathname.startsWith("/game")) return "game";
+  return "home";
+}
 
 const CardPreviewContext = createContext<((card: Card) => void) | null>(null);
 type StatisticsTab = "overview" | "profiles" | "recent";
@@ -621,27 +745,17 @@ function CardPreviewModal({
   card: Card;
   onClose: () => void;
 }) {
-  const dialogRef = useRef<HTMLElement>(null);
+  const dialogRef = useDialogFocus<HTMLElement>(true, onClose);
   const source = catCardArtSource(card);
   const label = catCardAccessibleLabel(card);
-
-  useEffect(() => {
-    const previousFocus = document.activeElement as HTMLElement | null;
-    dialogRef.current?.focus();
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", handleEscape);
-    return () => {
-      window.removeEventListener("keydown", handleEscape);
-      previousFocus?.focus();
-    };
-  }, [onClose]);
 
   if (!source) return null;
 
   return (
-    <div className="modal-backdrop card-preview-backdrop" onClick={onClose}>
+    <div
+      className="modal-backdrop card-preview-backdrop"
+      onClick={onClose}
+    >
       <section
         ref={dialogRef}
         className="card-preview-modal"
@@ -649,10 +763,72 @@ function CardPreviewModal({
         aria-modal="true"
         aria-label={`${label}大图`}
         tabIndex={-1}
+        onKeyDown={keepTabInsideDialog}
         onClick={(event) => event.stopPropagation()}
       >
+        <button
+          type="button"
+          className="card-preview-close"
+          aria-label="关闭牌面大图"
+          onClick={onClose}
+        >
+          ×
+        </button>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={source} alt={label} draggable={false} />
+        <small className="card-preview-hint">点击深色区域返回牌桌</small>
+      </section>
+    </div>
+  );
+}
+
+function ConfirmDialog({
+  eyebrow,
+  title,
+  description,
+  confirmLabel,
+  onCancel,
+  onConfirm,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+  confirmLabel: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const dialogRef = useDialogFocus<HTMLElement>(true, onCancel);
+  const titleId = `confirm-${title.replace(/\W/g, "")}`;
+
+  return (
+    <div className="modal-backdrop" onClick={onCancel}>
+      <section
+        ref={dialogRef}
+        className="confirm-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        onKeyDown={keepTabInsideDialog}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <small>{eyebrow}</small>
+        <button
+          type="button"
+          className="modal-close-button"
+          aria-label="关闭"
+          onClick={onCancel}
+        >
+          ×
+        </button>
+        <h2 id={titleId}>{title}</h2>
+        <p>{description}</p>
+        <div className="result-actions">
+          <button onClick={onCancel}>取消</button>
+          <button className="primary" onClick={onConfirm}>
+            {confirmLabel}
+          </button>
+        </div>
       </section>
     </div>
   );
@@ -763,7 +939,7 @@ function SeatPositionBadges({
       {regularPosition && regularPosition !== "OUT" ? (
         <span className="position-badge">{regularPosition}</span>
       ) : null}
-      {dealer ? (
+      {dealer && regularPosition !== "BTN" ? (
         <b className="dealer-badge" aria-label="庄家按钮">
           D
         </b>
@@ -849,6 +1025,10 @@ function Seat({
   const interactionPresentation = interaction
     ? TABLE_INTERACTIONS.find((item) => item.kind === interaction.kind)
     : null;
+  const interactionDialogRef = useDialogFocus<HTMLDivElement>(
+    interactionMenuOpen && canInteract,
+    () => onToggleInteractionMenu?.(player.id),
+  );
   return (
     <article
       className={`game-seat seat-${player.id} ${player.isHuman ? "seat-human" : ""} ${
@@ -884,28 +1064,52 @@ function Seat({
         <PlayerAvatar player={player} variant="table" />
       </button>
       {interactionMenuOpen && canInteract ? (
-        <div className="seat-interaction-menu" role="menu">
-          <header>
-            <strong>与{player.name}互动</strong>
-            <small>
-              {character.breed} · {character.persona}
-            </small>
-          </header>
-          <div>
-            {TABLE_INTERACTIONS.map((item) => (
+        <>
+          <button
+            type="button"
+            className="seat-interaction-backdrop"
+            aria-label="关闭互动面板"
+            onClick={() => onToggleInteractionMenu?.(player.id)}
+          />
+          <div
+            ref={interactionDialogRef}
+            className="seat-interaction-menu"
+            role="menu"
+            tabIndex={-1}
+            onKeyDown={keepTabInsideDialog}
+          >
+            <header>
+              <span>
+                <strong>与{player.name}互动</strong>
+                <small>
+                  {character.breed} · {character.persona}
+                </small>
+              </span>
               <button
-                key={item.kind}
                 type="button"
-                role="menuitem"
-                aria-label={`向${player.name}送出${item.label}`}
-                onClick={() => onSendInteraction?.(player.id, item.kind)}
+                className="seat-interaction-close"
+                aria-label="关闭互动面板"
+                onClick={() => onToggleInteractionMenu?.(player.id)}
               >
-                <span aria-hidden="true">{item.projectile}</span>
-                <small>{item.label}</small>
+                ×
               </button>
-            ))}
+            </header>
+            <div>
+              {TABLE_INTERACTIONS.map((item) => (
+                <button
+                  key={item.kind}
+                  type="button"
+                  role="menuitem"
+                  aria-label={`向${player.name}送出${item.label}`}
+                  onClick={() => onSendInteraction?.(player.id, item.kind)}
+                >
+                  <span aria-hidden="true">{item.projectile}</span>
+                  <small>{item.label}</small>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        </>
       ) : null}
       {interaction && interactionPresentation ? (
         <span
@@ -969,6 +1173,18 @@ function Seat({
           />
         ) : null}
       </span>
+      <span className="seat-mobile-status" aria-hidden="true">
+        <span>
+          {systemActionLabel ??
+            (player.bet > 0
+              ? `本轮 ${player.bet.toLocaleString()}`
+              : player.status === "folded"
+              ? "已弃牌"
+              : active
+                ? "行动中"
+                : "等待")}
+        </span>
+      </span>
       {thinkingLabel || reactionLabel ? (
         <span
           className={`thought-bubble ${reactionLabel ? "thought-reaction" : `thought-${thinkingMode ?? "measured"}`}`}
@@ -999,6 +1215,26 @@ function Seat({
         </span>
       ) : null}
     </article>
+  );
+}
+
+function TrainingEntryButton({
+  canContinue,
+  onContinue,
+  onNewGame,
+}: {
+  canContinue: boolean;
+  onContinue: () => void;
+  onNewGame: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="training-entry-button"
+      onClick={canContinue ? onContinue : onNewGame}
+    >
+      {canContinue ? "继续训练" : "开始第一局训练"}
+    </button>
   );
 }
 
@@ -1063,14 +1299,15 @@ function HomeScreen({
       </section>
 
       <nav className="home-actions" aria-label="主菜单">
-        <button
-          className="home-action action-continue"
-          disabled={!canContinue}
-          onClick={onContinue}
-        >
-          <span><AppIcon name="play" /></span>
-          <b>{canContinue ? "继续游戏" : "暂无存档"}</b>
-        </button>
+        {canContinue ? (
+          <button
+            className="home-action action-continue"
+            onClick={onContinue}
+          >
+            <span><AppIcon name="play" /></span>
+            <b>继续游戏</b>
+          </button>
+        ) : null}
         <button className="home-action action-new" onClick={onNewGame}>
           <span><AppIcon name="refresh" /></span>
           <b>新开始</b>
@@ -1133,18 +1370,7 @@ function WelfareScreen({
         </strong>
       </section>
       <section className="benefit-card">
-        <div className="benefit-icon benefit-green">▦</div>
-        <div>
-          <h2>每日免费领</h2>
-          <p>每日补给 {DAILY_FREE_CHIPS.toLocaleString()} 小鱼干</p>
-          <small>每天 10:00 自动到账</small>
-        </div>
-        <b className="benefit-state">
-          {dailyClaimed ? "✓ 今日已到账" : "等待到账"}
-        </b>
-      </section>
-      <section className="benefit-card">
-        <div className="benefit-icon benefit-red">✓</div>
+        <div className="benefit-icon benefit-red"><AppIcon name="check" /></div>
         <div>
           <h2>每日签到</h2>
           <p>签到 +{DAILY_SIGN_IN_BONUS.toLocaleString()} 小鱼干</p>
@@ -1155,6 +1381,17 @@ function WelfareScreen({
             ? "今日已签到"
             : `签到 +${DAILY_SIGN_IN_BONUS.toLocaleString()}`}
         </button>
+      </section>
+      <section className="benefit-card benefit-passive">
+        <div className="benefit-icon benefit-green"><AppIcon name="calendar" /></div>
+        <div>
+          <h2>每日自动补给</h2>
+          <p>{DAILY_FREE_CHIPS.toLocaleString()} 小鱼干</p>
+          <small>每天 10:00 自动到账</small>
+        </div>
+        <b className="benefit-state">
+          {dailyClaimed ? "今日已到账" : "等待到账"}
+        </b>
       </section>
     </main>
   );
@@ -1170,11 +1407,17 @@ function StatisticsScreen({
   players,
   onBack,
   onResetMemories,
+  canContinue,
+  onContinueTraining,
+  onStartTraining,
 }: {
   profile: LocalProfile;
   players: Player[];
   onBack: () => void;
   onResetMemories: () => void;
+  canContinue: boolean;
+  onContinueTraining: () => void;
+  onStartTraining: () => void;
 }) {
   const [tab, setTab] = useState<StatisticsTab>("overview");
   const [selectedAI, setSelectedAI] = useState(1);
@@ -1253,6 +1496,18 @@ function StatisticsScreen({
     return () => window.clearTimeout(timer);
   }, [glossaryToast]);
 
+  useEffect(() => {
+    if (!glossaryToast) return;
+    function closeGlossary(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        setGlossaryToast(null);
+      }
+    }
+    window.addEventListener("keydown", closeGlossary);
+    return () => window.removeEventListener("keydown", closeGlossary);
+  }, [glossaryToast]);
+
   return (
     <main className="app-page light-page statistics-page">
       <PageHeader title="历史统计" onBack={onBack} />
@@ -1301,7 +1556,23 @@ function StatisticsScreen({
               </strong>
             </span>
           </div>
-          <div className="metrics-grid">
+          {totalHands === 0 ? (
+            <div className="statistics-first-hand">
+              <span className="empty-card-mark" aria-hidden="true">
+                <i />
+                <i />
+              </span>
+              <h2>完成第一手，开始记录训练数据</h2>
+              <p>胜率、盈亏趋势和复盘建议会在牌局结束后自动生成。</p>
+              <TrainingEntryButton
+                canContinue={canContinue}
+                onContinue={onContinueTraining}
+                onNewGame={onStartTraining}
+              />
+            </div>
+          ) : (
+            <>
+              <div className="metrics-grid">
             <Metric label="记录手数" value={`${totalHands}`} />
             <Metric label="胜率" value={percentage(wins, totalHands)} />
             <Metric
@@ -1312,9 +1583,9 @@ function StatisticsScreen({
               label="最大单手盈利"
               value={`+${Math.max(0, ...profile.history.map((record) => record.humanDelta))}`}
             />
-          </div>
-          <ProfitTrendChart records={chronologicalHistory} />
-          <section className="reflection-dashboard">
+              </div>
+              <ProfitTrendChart records={chronologicalHistory} />
+              <section className="reflection-dashboard">
             <header>
               <div>
                 <h2>近期状态与复盘</h2>
@@ -1368,8 +1639,8 @@ function StatisticsScreen({
                 完成更多牌局后，这里会给出优先复盘建议。
               </p>
             )}
-          </section>
-          <section className="learning-summary">
+              </section>
+              <section className="learning-summary">
             <h2>训练进度</h2>
             <p>
               数据来自当前浏览器已完成的牌局。随着手数增加，AI 画像中的
@@ -1379,7 +1650,9 @@ function StatisticsScreen({
               <i style={{ width: `${Math.min(100, totalHands * 3.33)}%` }} />
             </div>
             <small>{totalHands} / 30 手基础样本</small>
-          </section>
+              </section>
+            </>
+          )}
         </section>
       ) : null}
 
@@ -1401,7 +1674,24 @@ function StatisticsScreen({
               );
             })}
           </div>
-          {activeProfile ? (
+          {activeProfile && activeProfile.handsPlayed < 8 ? (
+            <div className="profile-baseline-state">
+              <PlayerAvatar
+                player={players[activeProfile.playerId]}
+                size="normal"
+              />
+              <h2>还在认识{activeProfile.name}</h2>
+              <p>
+                完成至少 8 手后，再展示打法指标和对你的针对性调整，避免用零样本制造结论。
+              </p>
+              <span>{activeProfile.handsPlayed} / 8 手</span>
+              <TrainingEntryButton
+                canContinue={canContinue}
+                onContinue={onContinueTraining}
+                onNewGame={onStartTraining}
+              />
+            </div>
+          ) : activeProfile ? (
             <>
               <AIProfileCard
                 key={activeProfile.playerId}
@@ -1492,6 +1782,11 @@ function StatisticsScreen({
               </span>
               <h2>还没有完成的牌局</h2>
               <p>完成第一手后，这里会保存最近 30 手记录。</p>
+              <TrainingEntryButton
+                canContinue={canContinue}
+                onContinue={onContinueTraining}
+                onNewGame={onStartTraining}
+              />
             </div>
           )}
         </section>
@@ -1526,27 +1821,17 @@ function StatisticsScreen({
         />
       ) : null}
       {showMemoryReset ? (
-        <div className="modal-backdrop">
-          <section className="confirm-modal" role="dialog" aria-modal="true">
-            <small>RESET RIVAL MEMORY</small>
-            <h2>让对手重新认识你？</h2>
-            <p>
-              只会清除五位对手学到的打法画像；当前小鱼干、牌桌存档和最近牌局记录都会保留。
-            </p>
-            <div className="result-actions">
-              <button onClick={() => setShowMemoryReset(false)}>取消</button>
-              <button
-                className="primary"
-                onClick={() => {
-                  onResetMemories();
-                  setShowMemoryReset(false);
-                }}
-              >
-                确认清除记忆
-              </button>
-            </div>
-          </section>
-        </div>
+        <ConfirmDialog
+          eyebrow="对手记忆"
+          title="让对手重新认识你？"
+          description="只清除五位对手学到的打法画像；小鱼干、牌桌存档和最近记录都会保留。"
+          confirmLabel="清除记忆"
+          onCancel={() => setShowMemoryReset(false)}
+          onConfirm={() => {
+            onResetMemories();
+            setShowMemoryReset(false);
+          }}
+        />
       ) : null}
     </main>
   );
@@ -1561,13 +1846,7 @@ function HistoryDetailModal({
   players: Player[];
   onClose: () => void;
 }) {
-  useEffect(() => {
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", handleEscape);
-    return () => window.removeEventListener("keydown", handleEscape);
-  }, [onClose]);
+  const dialogRef = useDialogFocus<HTMLElement>(true, onClose);
 
   const settlementParticipants = players
     .map(
@@ -1609,10 +1888,12 @@ function HistoryDetailModal({
   return (
     <div className="modal-backdrop history-detail-backdrop" onClick={onClose}>
       <section
+        ref={dialogRef}
         className="history-detail-modal"
         role="dialog"
         aria-modal="true"
         aria-labelledby="history-detail-title"
+        onKeyDown={keepTabInsideDialog}
         onClick={(event) => event.stopPropagation()}
       >
         <header>
@@ -2434,6 +2715,7 @@ function QuickBetPanel({
   onSelect: (amount: number) => void;
   onCancel: () => void;
 }) {
+  const panelRef = useDialogFocus<HTMLDivElement>(true, onCancel);
   const options = [
     ["1/3", 0.33],
     ["1/2", 0.5],
@@ -2444,7 +2726,15 @@ function QuickBetPanel({
   const potAfterCall = game.pot + Math.min(callAmount, human.chips);
 
   return (
-    <div className="quick-bet-panel" role="dialog" aria-label="快捷加注尺度">
+    <div
+      ref={panelRef}
+      className="quick-bet-panel"
+      role="dialog"
+      aria-modal="true"
+      aria-label="快捷加注尺度"
+      tabIndex={-1}
+      onKeyDown={keepTabInsideDialog}
+    >
       <header>
         <div>
           <small>QUICK RAISE</small>
@@ -2485,18 +2775,21 @@ function ActionDrawer({
   game: GameState;
   onClose: () => void;
 }) {
+  const drawerRef = useDialogFocus<HTMLElement>(true, onClose);
   return (
     <div className="drawer-backdrop" onClick={onClose}>
       <aside
+        ref={drawerRef}
         className="action-drawer"
         role="dialog"
         aria-modal="true"
         aria-label="本局行动记录"
+        onKeyDown={keepTabInsideDialog}
         onClick={(event) => event.stopPropagation()}
       >
         <header>
           <div>
-            <small>HAND #{game.handNumber}</small>
+            <small>第 {game.handNumber} 局 · 最新行动在前</small>
             <h2>本局行动记录</h2>
           </div>
           <button onClick={onClose} aria-label="关闭行动记录">
@@ -2551,6 +2844,7 @@ function HandResultModal({
   onNextHand: () => void;
   onRebuy: () => void;
 }) {
+  const resultRef = useDialogFocus<HTMLElement>(true, onExit);
   const result = game.result!;
   const human = game.players[HUMAN_ID];
   const potTotal = Object.values(result.payouts).reduce(
@@ -2588,10 +2882,12 @@ function HandResultModal({
   return (
     <div className="modal-backdrop result-backdrop">
       <section
+        ref={resultRef}
         className="hand-result-modal"
         role="dialog"
         aria-modal="true"
         aria-labelledby="hand-result-title"
+        onKeyDown={keepTabInsideDialog}
       >
         <header className="result-heading">
           <small>第 {game.handNumber} 手</small>
@@ -3373,7 +3669,15 @@ function GameScreen({
         </button>
         <div className="game-round-meta">
           <strong>第 {game.handNumber} 局</strong>
-          <small>底池小鱼干: {game.pot.toLocaleString()}</small>
+          <small>
+            {game.phase === "playing"
+              ? thinkingId !== null
+                  ? `${game.players[thinkingId].name}思考中`
+                  : isHumanTurn
+                    ? "请选择行动"
+                    : "等待行动"
+              : "本局已结束"}
+          </small>
         </div>
         <div className="game-toolbar">
           <button
@@ -3409,21 +3713,18 @@ function GameScreen({
         ) : null}
         <div className="community-summary">
           <span>
-            <small>底池小鱼干</small>
+            <small>当前底池</small>
             <strong key={game.pot} className="pot-value">
               {game.pot.toLocaleString()}
-            </strong>
-          </span>
-          <span>
-            <small>跟注小鱼干</small>
-            <strong key={legal.callAmount} className="call-value">
-              {legal.callAmount.toLocaleString()}
             </strong>
           </span>
           <b>{STREET_LABELS[game.street]}</b>
         </div>
 
-        <div className="community-board" aria-label="公共牌">
+        <div
+          className={`community-board ${game.communityCards.length ? "has-cards" : "is-empty"}`}
+          aria-label="公共牌"
+        >
           {Array.from({ length: 5 }, (_, index) =>
             game.communityCards[index] ? (
               <PlayingCard
@@ -3506,6 +3807,8 @@ function GameScreen({
 
       <section
         className={`game-bottom-dock ${showQuickBet ? "has-quick-bet" : ""}`}
+        inert={interactionMenuSeatId !== null}
+        aria-hidden={interactionMenuSeatId !== null}
       >
         <Seat
           player={human}
@@ -3522,42 +3825,67 @@ function GameScreen({
 
         {game.phase === "playing" ? (
           isHumanTurn ? (
-            <div className="player-actions">
-              <button
-                className="player-action fold"
-                disabled={!legal.canFold}
-                onClick={() => act("fold")}
+            <>
+              <div className="human-decision-status" role="status">
+                <strong>
+                  轮到你 ·
+                  {legal.canCheck ? " 可以过牌" : ` 跟注 ${legal.callAmount}`}
+                </strong>
+              </div>
+              <div
+                className="player-actions"
+                aria-hidden={showQuickBet}
               >
-                弃牌
-                <kbd>F</kbd>
-              </button>
-              <button
-                className="player-action call"
-                disabled={!legal.canCheck && !legal.canCall}
-                onClick={() => act(legal.canCheck ? "check" : "call")}
-              >
-                {legal.canCheck ? "过牌" : `跟注 ${legal.callAmount}`}
-                <kbd>C</kbd>
-              </button>
-              <button
-                className="player-action raise"
-                disabled={!legal.canRaise}
-                aria-expanded={showQuickBet}
-                onClick={() => setShowQuickBet((current) => !current)}
-              >
-                加注
-                <kbd>R</kbd>
-              </button>
-              <button
-                className="player-action all-in"
-                disabled={!legal.canAllIn}
-                onClick={() => act("all-in")}
-              >
-                全下
-                <kbd>A</kbd>
-              </button>
+                <button
+                  className="player-action fold"
+                  disabled={!legal.canFold}
+                  onClick={() => act("fold")}
+                >
+                  弃牌
+                  <kbd>F</kbd>
+                </button>
+                <button
+                  className="player-action call"
+                  disabled={!legal.canCheck && !legal.canCall}
+                  onClick={() => act(legal.canCheck ? "check" : "call")}
+                >
+                  {legal.canCheck ? "过牌" : `跟注 ${legal.callAmount}`}
+                  <kbd>C</kbd>
+                </button>
+                <button
+                  className="player-action raise"
+                  disabled={!legal.canRaise}
+                  aria-expanded={showQuickBet}
+                  onClick={() => setShowQuickBet((current) => !current)}
+                >
+                  加注
+                  <kbd>R</kbd>
+                </button>
+                <button
+                  className="player-action all-in"
+                  disabled={!legal.canAllIn}
+                  onClick={() => act("all-in")}
+                >
+                  全下
+                  <kbd>A</kbd>
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="player-turn-status" role="status" aria-live="polite">
+              <span className="thinking-dots" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+              </span>
+              <strong>
+                {thinkingId !== null
+                  ? `${game.players[thinkingId].name}正在思考`
+                  : "等待下一步行动"}
+              </strong>
+              <small>你的操作区会在轮到你时出现</small>
             </div>
-          ) : null
+          )
         ) : null}
 
         {showQuickBet && legal.canRaise ? (
@@ -3629,15 +3957,29 @@ function PokerGameContent() {
   const [showNewGameConfirm, setShowNewGameConfirm] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
 
+  function navigateScreen(nextScreen: AppScreen, replace = false) {
+    setScreen(nextScreen);
+    const method = replace ? "replaceState" : "pushState";
+    window.history[method]({ screen: nextScreen }, "", screenPath(nextScreen));
+  }
+
   useEffect(() => {
     const timer = window.setTimeout(() => {
       const restored = loadSession();
       const refreshedProfile = refreshDailyBenefit(loadProfile());
+      const requestedScreen = screenFromPath(window.location.pathname);
       if (restored) {
         setGame(restored);
-        if (window.sessionStorage.getItem(ACTIVE_SCREEN_KEY) === "game") {
+        if (requestedScreen !== "home") {
+          setScreen(requestedScreen);
+        } else if (window.sessionStorage.getItem(ACTIVE_SCREEN_KEY) === "game") {
           setScreen("game");
+          window.history.replaceState({ screen: "game" }, "", "/game");
         }
+      } else if (requestedScreen !== "game") {
+        setScreen(requestedScreen);
+      } else {
+        window.history.replaceState({ screen: "home" }, "", "/");
       }
       setProfile(refreshedProfile);
       saveProfile(refreshedProfile);
@@ -3696,6 +4038,20 @@ function PokerGameContent() {
     };
   }, []);
 
+  useEffect(() => {
+    function handlePopState() {
+      const nextScreen = screenFromPath(window.location.pathname);
+      if (nextScreen === "game" && !loadSession()) {
+        setScreen("home");
+        window.history.replaceState({ screen: "home" }, "", "/");
+        return;
+      }
+      setScreen(nextScreen);
+    }
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
   function continueGame() {
     unlockGameAudio(soundEnabled);
     playGameSound("ui", soundEnabled);
@@ -3709,7 +4065,7 @@ function PokerGameContent() {
     });
     setGame(restored);
     window.sessionStorage.setItem(ACTIVE_SCREEN_KEY, "game");
-    setScreen("game");
+    navigateScreen("game");
   }
 
   function startFreshGame() {
@@ -3729,14 +4085,14 @@ function PokerGameContent() {
     setHasArchive(true);
     setShowNewGameConfirm(false);
     window.sessionStorage.setItem(ACTIVE_SCREEN_KEY, "game");
-    setScreen("game");
+    navigateScreen("game");
   }
 
   function exitGame() {
     saveSession(game);
     setHasArchive(true);
     window.sessionStorage.removeItem(ACTIVE_SCREEN_KEY);
-    setScreen("home");
+    navigateScreen("home");
   }
 
   function handleGameChange(nextGame: GameState) {
@@ -3804,7 +4160,7 @@ function PokerGameContent() {
       <WelfareScreen
         profile={profile}
         onProfileChange={updateProfile}
-        onBack={() => setScreen("home")}
+        onBack={() => navigateScreen("home")}
       />
     );
   }
@@ -3814,8 +4170,11 @@ function PokerGameContent() {
       <StatisticsScreen
         profile={profile}
         players={game.players}
-        onBack={() => setScreen("home")}
+        onBack={() => navigateScreen("home")}
         onResetMemories={resetOpponentMemories}
+        canContinue={hasArchive}
+        onContinueTraining={continueGame}
+        onStartTraining={startFreshGame}
       />
     );
   }
@@ -3827,26 +4186,22 @@ function PokerGameContent() {
         canContinue={hasArchive}
         onContinue={continueGame}
         onNewGame={() => setShowNewGameConfirm(true)}
-        onWelfare={() => setScreen("welfare")}
-        onStatistics={() => setScreen("statistics")}
+        onWelfare={() => navigateScreen("welfare")}
+        onStatistics={() => navigateScreen("statistics")}
       />
       {showNewGameConfirm ? (
-        <div className="modal-backdrop">
-          <section className="confirm-modal" role="dialog" aria-modal="true">
-            <small>NEW TRAINING SESSION</small>
-            <h2>开始新的训练？</h2>
-            <p>
-              当前牌局存档会清空；历史统计与五位对手对你的长期记忆会保留。小鱼干
-              不足 2,000 时会自动补足训练小鱼干。
-            </p>
-            <div className="result-actions">
-              <button onClick={() => setShowNewGameConfirm(false)}>取消</button>
-              <button className="primary" onClick={startFreshGame}>
-                确认新开始
-              </button>
-            </div>
-          </section>
-        </div>
+        <ConfirmDialog
+          eyebrow="新训练"
+          title={hasArchive ? "重新开始训练？" : "开始第一局训练？"}
+          description={
+            hasArchive
+              ? "会覆盖当前牌局存档；历史统计和对手记忆都会保留。"
+              : "将发放训练小鱼干，并开始第一局。"
+          }
+          confirmLabel={hasArchive ? "重新开始" : "开始训练"}
+          onCancel={() => setShowNewGameConfirm(false)}
+          onConfirm={startFreshGame}
+        />
       ) : null}
     </>
   );
