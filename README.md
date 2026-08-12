@@ -22,3 +22,9 @@ cd web && npm install && npm run dev
 ```
 
 See each folder's README for platform-specific setup and verification commands.
+
+## Docker / NAS
+
+Docker packages the Web client for self-hosting; it is not a third game
+codebase. The isolated deployment files and NAS instructions are in
+[`deploy/docker/`](./deploy/docker/), and the image build excludes `ios/`.

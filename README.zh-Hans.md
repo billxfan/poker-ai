@@ -23,25 +23,14 @@ cd web && npm install && npm run dev
 
 ## Docker / NAS 部署
 
-Web 版可以通过 Docker 部署到群晖、威联通、飞牛等支持 Docker Compose
-的 NAS。在项目根目录运行：
+Docker 是 Web 版的一种部署方式，不是第三套客户端。部署配置独立放在
+[`deploy/docker/`](./deploy/docker/)；它只打包 `web/`，不会包含 `ios/`。
+
+在项目根目录运行：
 
 ```bash
-docker compose up -d --build
+docker compose -f deploy/docker/compose.yaml up -d --build
 ```
 
-完成后，在同一局域网的设备上打开 `http://NAS的IP:3000`。如需更换宿主机
-端口，例如改为 `8080`：
-
-```bash
-POKER_AI_PORT=8080 docker compose up -d --build
-```
-
-更新代码后再次执行相同的 `docker compose up -d --build` 即可。停止服务：
-
-```bash
-docker compose down
-```
-
-游戏没有数据库或服务端账号。对局、统计和设置保存在访问设备的浏览器中，
-清除浏览器站点数据会同时清除这些记录；不同设备之间不会自动同步。
+完成后访问 `http://NAS的IP:3000`。端口修改、更新、停止及数据保存方式见
+[`deploy/docker/README.md`](./deploy/docker/README.md)。

@@ -1,0 +1,16 @@
+.git
+.github
+ios
+social-assets
+web/node_modules
+web/dist
+web/.next
+web/.wrangler
+web/.playwright-cli
+web/output
+web/release
+web/.env*
+web/npm-debug.log*
+web/docs
+web/tests
+web/desktop

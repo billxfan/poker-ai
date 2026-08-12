@@ -31,14 +31,17 @@ npm test
 
 ## Docker / NAS
 
-From the repository root, build and start the web game:
+Docker is a deployment form of this Web client, not a separate game codebase.
+Its packaging files live under `deploy/docker/` and do not include `ios/`.
+
+From the repository root, build and start the Web game:
 
 ```bash
-docker compose up -d --build
+docker compose -f deploy/docker/compose.yaml up -d --build
 ```
 
 Open `http://<NAS-IP>:3000`. Set `POKER_AI_PORT` to publish a different host
-port, for example `POKER_AI_PORT=8080 docker compose up -d --build`.
+port. See `deploy/docker/README.md` for all NAS deployment commands.
 
 Game progress and settings remain in each visitor's browser storage. The
 container has no database volume, user accounts, or cross-device sync.
