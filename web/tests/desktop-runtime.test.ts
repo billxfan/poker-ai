@@ -30,6 +30,8 @@ test("desktop window keeps renderer privileges disabled", () => {
   assert.equal(options.webPreferences.contextIsolation, true);
   assert.equal(options.webPreferences.sandbox, true);
   assert.equal(options.webPreferences.webviewTag, false);
+  assert.equal(options.height, 900);
+  assert.equal(options.minHeight, 700);
   assert.equal(options.icon, "/tmp/icon.png");
   assert.equal(shouldAllowNavigation("poker-ai://app/statistics"), true);
   assert.equal(shouldAllowNavigation("https://example.com"), false);
