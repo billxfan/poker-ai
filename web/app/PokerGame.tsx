@@ -617,6 +617,27 @@ function PlayerAvatar({
       >
         <span className="character-floor-shadow" />
         <span className="character-rim-light" />
+        {/* The embedded portrait is visible immediately while the larger table
+            artwork loads. Keeping both sources in the same stage avoids an
+            empty seat on slow first visits. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          className="seat-character-placeholder character-layer"
+          src={AVATAR_SOURCES[player.id]}
+          alt=""
+          draggable={false}
+          style={{
+            position: "absolute",
+            zIndex: 1,
+            inset: "16%",
+            width: "68%",
+            height: "68%",
+            borderRadius: "50%",
+            objectFit: "cover",
+            opacity: 0.78,
+            pointerEvents: "none",
+          }}
+        />
         {/* A single connected puppet. The source art is not a segmented rig, so
             duplicating and moving clipped limbs creates visible seams. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -625,6 +646,7 @@ function PlayerAvatar({
           src={character.seatAsset}
           alt=""
           draggable={false}
+          fetchPriority="high"
         />
         <span className="character-fish-sparks" aria-hidden="true">
           <i />
