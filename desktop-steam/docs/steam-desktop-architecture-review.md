@@ -1,5 +1,7 @@
 # Adversarial Review — Steam Desktop Architecture — 2026-08-09
 
+> Status: ⚠️ 待优化。This is development-candidate evidence, not a release approval.
+
 ## Context
 
 - Product: offline single-player poker game

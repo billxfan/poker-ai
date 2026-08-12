@@ -22,7 +22,7 @@ const application = await electron.launch({
   },
 });
 
-const externalRequests = [];
+const externalRequests = []; // Must remain empty for the offline Steam candidate.
 try {
   const page = await application.firstWindow();
   page.on("request", (request) => {

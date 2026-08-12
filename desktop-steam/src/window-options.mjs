@@ -21,5 +21,5 @@ export function createWindowOptions(icon) {
 }
 
 export function shouldAllowNavigation(url) {
-  return isTrustedAppUrl(url);
+  return Boolean(isTrustedAppUrl(url));
 }

@@ -1,0 +1,75 @@
+{
+  "name": "poker-ai-desktop-steam",
+  "version": "0.1.0",
+  "description": "德扑 AI 训练器的待优化 Electron / Steam 桌面交付壳",
+  "author": "billxfan",
+  "license": "MIT",
+  "private": true,
+  "productName": "德扑 AI 训练器",
+  "main": "src/main.mjs",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "prepare:web": "npm --prefix ../web run build",
+    "start": "npm run prepare:web && electron .",
+    "test": "node --test tests/runtime.test.mjs",
+    "smoke": "npm run prepare:web && node tests/smoke.mjs",
+    "e2e": "npm run prepare:web && node tests/e2e.mjs",
+    "pack": "npm run prepare:web && electron-builder --dir",
+    "pack:win": "npm run prepare:web && electron-builder --win dir --x64",
+    "dist:win": "npm run prepare:web && electron-builder --win nsis --x64"
+  },
+  "devDependencies": {
+    "electron": "43.3.0",
+    "electron-builder": "26.15.3",
+    "playwright-core": "1.62.1"
+  },
+  "build": {
+    "appId": "com.pokerai.trainer",
+    "asar": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "src/**/*",
+      "package.json",
+      "!node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../web/dist",
+        "to": "web-dist"
+      },
+      {
+        "from": "../LICENSE",
+        "to": "LICENSE.txt"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.games",
+      "icon": "../web/public/poker-ai-icon.png",
+      "target": "dir"
+    },
+    "win": {
+      "executableName": "PokerAITrainer",
+      "icon": "../web/public/poker-ai-icon.png",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "德扑 AI 训练器"
+    }
+  }
+}

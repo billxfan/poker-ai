@@ -46,35 +46,7 @@ port. See `deploy/docker/README.md` for all NAS deployment commands.
 Game progress and settings remain in each visitor's browser storage. The
 container has no database volume, user accounts, or cross-device sync.
 
-## Desktop / Steam candidate
+## Other clients
 
-The Electron shell runs the same production build from the stable local origin
-`poker-ai://app`. It opens no local server port and exposes no Node or filesystem
-API to the game renderer.
-
-```bash
-# Build and run the desktop game
-npm run desktop
-
-# Headless startup assertion used by CI/local verification
-npm run desktop:smoke
-
-# Electron player flow and security assertions
-npm run desktop:e2e
-
-# Create an unpacked build for the current platform
-npm run desktop:pack
-
-# Cross-build an unpacked Windows x64 candidate
-npm run desktop:pack:win
-```
-
-Create the Windows x64 NSIS installer on Windows, or from the documented
-Wine-enabled electron-builder environment:
-
-```bash
-npm run desktop:dist:win
-```
-
-Unsigned local packages are development artifacts. Sign the release executable
-before publishing a public Steam depot.
+The Steam/Electron delivery shell is intentionally isolated in
+[`../desktop-steam/`](../desktop-steam/). This package remains the Web/PWA client.

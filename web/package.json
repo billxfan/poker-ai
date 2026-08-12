@@ -1,12 +1,7 @@
 {
   "name": "poker-ai-web",
   "version": "0.1.0",
-  "description": "离线单机六人桌德州扑克 AI 训练游戏",
-  "author": "billxfan",
-  "license": "MIT",
   "private": true,
-  "productName": "德扑 AI 训练器",
-  "main": "desktop/main.mjs",
   "engines": {
     "node": ">=22.13.0"
   },
@@ -14,12 +9,6 @@
     "dev": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext dev",
     "build": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext build",
     "start": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext start",
-    "desktop": "npm run build && electron .",
-    "desktop:e2e": "npm run build && node desktop/e2e.mjs",
-    "desktop:smoke": "npm run build && node desktop/smoke.mjs",
-    "desktop:pack": "npm run build && electron-builder --dir",
-    "desktop:pack:win": "npm run build && electron-builder --win dir --x64",
-    "desktop:dist:win": "npm run build && electron-builder --win nsis --x64",
     "test": "node --test --experimental-strip-types tests/*.test.ts && npm run build",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next"
   },
@@ -36,11 +25,8 @@
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.2",
     "@vitejs/plugin-rsc": "0.5.26",
-    "electron": "43.3.0",
-    "electron-builder": "26.15.3",
     "eslint": "9.39.4",
     "eslint-config-next": "16.3.0",
-    "playwright-core": "1.62.1",
     "react-server-dom-webpack": "19.2.8",
     "tailwindcss": "4.2.1",
     "typescript": "5.9.3",
@@ -48,50 +34,5 @@
     "vite": "8.2.1",
     "wrangler": "4.120.0"
   },
-  "type": "module",
-  "build": {
-    "appId": "com.pokerai.trainer",
-    "asar": true,
-    "directories": {
-      "output": "release"
-    },
-    "extraResources": [
-      {
-        "from": "../LICENSE",
-        "to": "LICENSE.txt"
-      }
-    ],
-    "files": [
-      "desktop/**/*",
-      "dist/**/*",
-      "package.json",
-      "!desktop/e2e.mjs",
-      "!desktop/smoke.mjs",
-      "!node_modules/**/*"
-    ],
-    "mac": {
-      "category": "public.app-category.games",
-      "icon": "public/poker-ai-icon.png",
-      "target": "dir"
-    },
-    "win": {
-      "executableName": "PokerAITrainer",
-      "icon": "public/poker-ai-icon.png",
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ]
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "德扑 AI 训练器"
-    }
-  }
+  "type": "module"
 }
