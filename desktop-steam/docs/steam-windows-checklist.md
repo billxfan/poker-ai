@@ -1,4 +1,7 @@
-# Steam Windows Release Checklist
+# Steam Windows Release Checklist — ⚠️ 待优化
+
+This checklist tracks a development candidate. Unchecked items block public
+Steam release.
 
 ## Implemented in the repository
 

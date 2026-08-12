@@ -9,11 +9,11 @@ import {
   createDesktopRequestHandler,
   isTrustedAppUrl,
   resolveClientAsset,
-} from "../desktop/protocol.mjs";
+} from "../src/protocol.mjs";
 import {
   createWindowOptions,
   shouldAllowNavigation,
-} from "../desktop/window-options.mjs";
+} from "../src/window-options.mjs";
 
 test("desktop protocol accepts only the packaged application origin", () => {
   assert.equal(APP_ORIGIN, "poker-ai://app");

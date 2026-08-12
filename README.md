@@ -2,13 +2,16 @@
 
 [中文说明](./README.zh-Hans.md)
 
-An offline Texas Hold'em trainer with two independent clients:
+An offline Texas Hold'em trainer with three isolated delivery targets:
 
 - [`ios/`](./ios/) — the original iOS 17+ app, built with SwiftUI and XcodeGen.
 - [`web/`](./web/) — an installable, browser-local single-player game built with
   React and TypeScript.
+- [`desktop-steam/`](./desktop-steam/) — an Electron/Steam delivery shell that
+  reuses the Web production build. **Status: pending optimization; not ready for
+  public Steam release.**
 
-Both clients use virtual training chips only. They have no account, real-money,
+All clients use virtual training chips only. They have no account, real-money,
 or multiplayer features.
 
 ## Run a client

@@ -45,11 +45,13 @@ if (!hasSingleInstanceLock) app.quit();
 let mainWindow = null;
 
 function appPaths() {
-  const root = app.getAppPath();
+  const webRoot = app.isPackaged
+    ? path.join(process.resourcesPath, "web-dist")
+    : path.resolve(app.getAppPath(), "..", "web", "dist");
   return {
-    clientRoot: path.join(root, "dist", "client"),
-    icon: path.join(root, "dist", "client", "poker-ai-icon.png"),
-    workerEntry: path.join(root, "dist", "server", "index.js"),
+    clientRoot: path.join(webRoot, "client"),
+    icon: path.join(webRoot, "client", "poker-ai-icon.png"),
+    workerEntry: path.join(webRoot, "server", "index.js"),
   };
 }
 
@@ -94,7 +96,7 @@ function createMainWindow(icon) {
           ? "localStorage.setItem('poker-ai-desktop-smoke', 'persisted'); ({ title: document.title, text: document.body.innerText.slice(0, 300), storage: localStorage.getItem('poker-ai-desktop-smoke') })"
           : "({ title: document.title, text: document.body.innerText.slice(0, 300), storage: localStorage.getItem('poker-ai-desktop-smoke') })";
       const snapshot = await window.webContents.executeJavaScript(expression, true);
-      process.stdout.write(`[desktop-smoke]${JSON.stringify(snapshot)}\n`);
+      process.stdout.write(`[desktop-steam-smoke]${JSON.stringify(snapshot)}\n`);
       app.quit();
     });
   }

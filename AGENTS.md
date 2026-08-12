@@ -18,6 +18,9 @@ or erratic policy.
 - Language: Simplified Chinese first, English-ready
 - Persistence: browser-local only
 - `ios/` is a preserved reference client, not part of the active rewrite
+- `desktop-steam/` is an isolated Electron/Steam delivery shell marked **pending
+  optimization**; it consumes the Web production build and is not approved for
+  public release until its platform checklist is complete
 
 ## Hard engineering rules
 
@@ -44,6 +47,7 @@ or erratic policy.
 | Persistent learning and replay | `web/core/learning/`, `web/core/storage.ts` |
 | Table experience and explainability UI | `web/app/` |
 | Verification harness and critic fixtures | `web/tests/`, `web/tools/`, `web/docs/test-reports/` |
+| Electron runtime, desktop verification and Steam packaging | `desktop-steam/` |
 
 Agents must not make overlapping edits concurrently. Coupled changes are owned
 sequentially by one integrator after specialist recommendations are collected.
@@ -57,4 +61,3 @@ sequentially by one integrator after specialist recommendations are collected.
 - A scripted multi-hand session completes without illegal actions or deadlocks.
 - Browser verification covers desktop and mobile table layouts.
 - A critic review has no unresolved Critical or High findings.
-

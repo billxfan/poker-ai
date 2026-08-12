@@ -6,7 +6,7 @@ import path from "node:path";
 
 import electronPath from "electron";
 
-const marker = "[desktop-smoke]";
+const marker = "[desktop-steam-smoke]";
 
 async function launch(mode, userData) {
   const child = spawn(electronPath, ["."], {

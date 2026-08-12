@@ -1,5 +1,5 @@
-import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
+import { readFile, stat } from "node:fs/promises";
 
 export const APP_SCHEME = "poker-ai";
 export const APP_HOST = "app";
