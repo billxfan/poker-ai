@@ -3,6 +3,23 @@ import type { Card, Suit } from "../core/types.ts";
 
 export const CAT_CARD_ART_BASE_PATH = "/cards/deck-v2";
 
+const CARD_ART_SUITS: readonly Suit[] = [
+  "spades",
+  "hearts",
+  "diamonds",
+  "clubs",
+];
+
+export const CAT_CARD_ART_SOURCES = Object.freeze(
+  CARD_ART_SUITS.flatMap((suit) =>
+    Array.from({ length: 13 }, (_, index) => {
+      const rank = index + 2;
+      const token = cardArtRankToken(rank);
+      return `${CAT_CARD_ART_BASE_PATH}/${suit}-${token}.webp`;
+    }),
+  ),
+);
+
 const SUIT_NAMES: Record<Suit, string> = {
   spades: "黑桃",
   hearts: "红桃",

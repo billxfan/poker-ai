@@ -53,7 +53,11 @@ import {
   type AIThinkingPlan,
 } from "../core/aiThinking";
 import { rankLabel, SUIT_SYMBOLS } from "../core/cards";
-import { catCardAccessibleLabel, catCardArtSource } from "./cardArt";
+import {
+  CAT_CARD_ART_SOURCES,
+  catCardAccessibleLabel,
+  catCardArtSource,
+} from "./cardArt";
 import {
   applyAction,
   BIG_BLIND,
@@ -222,6 +226,47 @@ const CAT_CHARACTER_PROFILES: Record<
 const TABLE_CHARACTER_ASSET_SOURCES = Object.freeze(
   Object.values(CAT_CHARACTER_PROFILES).map(({ seatAsset }) => seatAsset),
 );
+
+async function warmImageCache(
+  sources: readonly string[],
+  { concurrency }: { concurrency: number },
+) {
+  let nextIndex = 0;
+  const workers = Array.from(
+    { length: Math.min(concurrency, sources.length) },
+    async () => {
+      while (nextIndex < sources.length) {
+        const source = sources[nextIndex];
+        nextIndex += 1;
+        await new Promise<void>((resolve) => {
+          const image = new Image();
+          image.decoding = "async";
+          image.onload = () => resolve();
+          image.onerror = () => resolve();
+          image.src = source;
+        });
+      }
+    },
+  );
+  await Promise.all(workers);
+}
+
+function currentHandCardArtSources(game: GameState): string[] {
+  const upcomingBoardCards = [
+    game.deck[1],
+    game.deck[2],
+    game.deck[3],
+    game.deck[5],
+    game.deck[7],
+  ].filter((card): card is Card => !!card);
+  return [
+    ...game.players[HUMAN_ID].holeCards,
+    ...game.communityCards,
+    ...upcomingBoardCards,
+  ]
+    .map(catCardArtSource)
+    .filter((source): source is string => !!source);
+}
 
 type TableInteractionKind = "egg" | "tomato" | "flower" | "slipper";
 
@@ -435,6 +480,7 @@ function PlayingCard({
   motionIndex?: number;
 }) {
   const openPreview = useContext(CardPreviewContext);
+  const [artLoaded, setArtLoaded] = useState(false);
   const motionClass = motion === "none" ? "" : `card-motion card-${motion}`;
   const motionStyle =
     motion === "none"
@@ -528,17 +574,27 @@ function PlayingCard({
       }
     >
       {catArtSource ? (
-        // Cat art is decorative; the accessible card name comes from the outer element.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          className="card-cat-art"
-          src={catArtSource}
-          alt=""
-          aria-hidden="true"
-          decoding="async"
-          loading={compact ? "lazy" : "eager"}
-          draggable={false}
-        />
+        <>
+          {!artLoaded ? (
+            <span className="card-art-fallback" aria-hidden="true">
+              <b>{rank}</b>
+              <i>{suit}</i>
+            </span>
+          ) : null}
+          {/* Cat art is decorative; the accessible card name comes from the outer element. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            className="card-cat-art"
+            src={catArtSource}
+            alt=""
+            aria-hidden="true"
+            decoding="async"
+            fetchPriority={compact ? "auto" : "high"}
+            loading={compact ? "lazy" : "eager"}
+            draggable={false}
+            onLoad={() => setArtLoaded(true)}
+          />
+        </>
       ) : (
         <>
           <span className="card-corner card-corner-top" aria-hidden="true">
@@ -3624,13 +3680,16 @@ function PokerGameContent() {
       }
     }
 
-    // Start downloading table characters from the home screen. The service
-    // worker caches them on demand, so opening a game normally needs no wait.
-    TABLE_CHARACTER_ASSET_SOURCES.forEach((source) => {
-      const image = new Image();
-      image.decoding = "async";
-      image.src = source;
-    });
+    // Warm the table art first, then the illustrated deck in small batches.
+    // This fills both the browser and service-worker caches without making all
+    // 58 images compete for bandwidth at once.
+    void warmImageCache(TABLE_CHARACTER_ASSET_SOURCES, {
+      concurrency: 6,
+    }).then(() =>
+      warmImageCache(CAT_CARD_ART_SOURCES, {
+        concurrency: 4,
+      }),
+    );
 
     return () => {
       window.clearTimeout(timer);
@@ -3645,6 +3704,9 @@ function PokerGameContent() {
       setHasArchive(false);
       return;
     }
+    void warmImageCache(currentHandCardArtSources(restored), {
+      concurrency: 7,
+    });
     setGame(restored);
     window.sessionStorage.setItem(ACTIVE_SCREEN_KEY, "game");
     setScreen("game");
@@ -3657,6 +3719,9 @@ function PokerGameContent() {
     const startingChips = Math.max(STARTING_CHIPS, profile.chips);
     const fundedProfile = syncProfileChips(profile, startingChips);
     const fresh = createGame(Date.now(), startingChips);
+    void warmImageCache(currentHandCardArtSources(fresh), {
+      concurrency: 7,
+    });
     saveProfile(fundedProfile);
     saveSession(fresh);
     setProfile(fundedProfile);

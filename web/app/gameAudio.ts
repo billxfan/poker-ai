@@ -28,6 +28,7 @@ let compressor: DynamicsCompressorNode | null = null;
 let ambienceSource: AudioBufferSourceNode | null = null;
 let ambienceGain: GainNode | null = null;
 const playedEventIds = new Set<string>();
+let ambienceRequested = false;
 
 function getAudioContext(): AudioContext | null {
   if (
@@ -38,6 +39,21 @@ function getAudioContext(): AudioContext | null {
   }
   audioContext ??= new window.AudioContext();
   return audioContext;
+}
+
+function runWhenAudioReady(play: (context: AudioContext) => void) {
+  const context = getAudioContext();
+  if (!context || context.state === "closed") return;
+  if (context.state === "running") {
+    play(context);
+    return;
+  }
+  void context
+    .resume()
+    .then(() => {
+      if (context.state === "running") play(context);
+    })
+    .catch(() => undefined);
 }
 
 function destination(context: AudioContext): AudioNode {
@@ -222,6 +238,7 @@ export function saveSoundPreference(enabled: boolean) {
 }
 
 export function syncTableAmbience(enabled: boolean) {
+  ambienceRequested = enabled;
   if (!enabled) {
     if (ambienceGain && audioContext) {
       ambienceGain.gain.cancelScheduledValues(audioContext.currentTime);
@@ -249,38 +266,36 @@ export function syncTableAmbience(enabled: boolean) {
     return;
   }
 
-  if (ambienceSource) return;
-  const context = getAudioContext();
-  if (!context) return;
-  if (context.state === "suspended") void context.resume();
+  runWhenAudioReady((context) => {
+    if (!ambienceRequested || ambienceSource) return;
+    const duration = 3.2;
+    const frameCount = Math.floor(context.sampleRate * duration);
+    const buffer = context.createBuffer(1, frameCount, context.sampleRate);
+    const samples = buffer.getChannelData(0);
+    let brown = 0;
+    for (let index = 0; index < frameCount; index += 1) {
+      const white = seededNoise(index, 7);
+      brown = (brown + 0.018 * white) / 1.018;
+      samples[index] = brown * 0.42;
+    }
 
-  const duration = 3.2;
-  const frameCount = Math.floor(context.sampleRate * duration);
-  const buffer = context.createBuffer(1, frameCount, context.sampleRate);
-  const samples = buffer.getChannelData(0);
-  let brown = 0;
-  for (let index = 0; index < frameCount; index += 1) {
-    const white = seededNoise(index, 7);
-    brown = (brown + 0.018 * white) / 1.018;
-    samples[index] = brown * 0.42;
-  }
-
-  const source = context.createBufferSource();
-  const lowpass = context.createBiquadFilter();
-  const gain = context.createGain();
-  source.buffer = buffer;
-  source.loop = true;
-  lowpass.type = "lowpass";
-  lowpass.frequency.value = 680;
-  lowpass.Q.value = 0.55;
-  gain.gain.setValueAtTime(0.0001, context.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.013, context.currentTime + 0.5);
-  source.connect(lowpass);
-  lowpass.connect(gain);
-  gain.connect(destination(context));
-  source.start();
-  ambienceSource = source;
-  ambienceGain = gain;
+    const source = context.createBufferSource();
+    const lowpass = context.createBiquadFilter();
+    const gain = context.createGain();
+    source.buffer = buffer;
+    source.loop = true;
+    lowpass.type = "lowpass";
+    lowpass.frequency.value = 680;
+    lowpass.Q.value = 0.55;
+    gain.gain.setValueAtTime(0.0001, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.013, context.currentTime + 0.5);
+    source.connect(lowpass);
+    lowpass.connect(gain);
+    gain.connect(destination(context));
+    source.start();
+    ambienceSource = source;
+    ambienceGain = gain;
+  });
 }
 
 export function unlockGameAudio(enabled: boolean) {
@@ -298,20 +313,18 @@ export function playDealSequence(
   eventKey = "deal-sequence",
 ) {
   if (!enabled) return;
-  const context = getAudioContext();
-  if (!context) return;
-  if (context.state === "suspended") void context.resume();
-
-  const count = Math.min(12, Math.max(1, Math.floor(cardCount)));
-  const baseVariation = variantFromKey(eventKey);
-  for (let index = 0; index < count; index += 1) {
-    cardSlide(
-      context,
-      index * spacingSeconds,
-      index === count - 1,
-      (baseVariation + index) % 5,
-    );
-  }
+  runWhenAudioReady((context) => {
+    const count = Math.min(12, Math.max(1, Math.floor(cardCount)));
+    const baseVariation = variantFromKey(eventKey);
+    for (let index = 0; index < count; index += 1) {
+      cardSlide(
+        context,
+        index * spacingSeconds,
+        index === count - 1,
+        (baseVariation + index) % 5,
+      );
+    }
+  });
 }
 
 export function playGameSound(
@@ -320,13 +333,10 @@ export function playGameSound(
   variation = 0,
 ) {
   if (!enabled) return;
-  const context = getAudioContext();
-  if (!context) return;
-  if (context.state === "suspended") void context.resume();
-
-  const pitch = 1 + (variation - 2) * 0.022;
-  const stagger = 1 + (variation - 2) * 0.025;
-  switch (sound) {
+  runWhenAudioReady((context) => {
+    const pitch = 1 + (variation - 2) * 0.022;
+    const stagger = 1 + (variation - 2) * 0.025;
+    switch (sound) {
     case "deal":
       cardSlide(context, 0, true, variation);
       break;
@@ -474,7 +484,8 @@ export function playGameSound(
     case "ui":
       tone(context, 560 * pitch, 0, 0.06, 0.022, "sine");
       break;
-  }
+    }
+  });
 }
 
 export function outcomeSoundForHumanDelta(humanDelta: number): GameSound {
