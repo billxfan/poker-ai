@@ -1,8 +1,10 @@
+name: poker-ai
+
 services:
   poker-ai:
     build:
-      context: ./web
-      dockerfile: Dockerfile
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
     image: poker-ai:local
     container_name: poker-ai
     restart: unless-stopped
