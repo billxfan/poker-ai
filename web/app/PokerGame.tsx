@@ -219,6 +219,10 @@ const CAT_CHARACTER_PROFILES: Record<
   },
 };
 
+const TABLE_CHARACTER_ASSET_SOURCES = Object.freeze(
+  Object.values(CAT_CHARACTER_PROFILES).map(({ seatAsset }) => seatAsset),
+);
+
 type TableInteractionKind = "egg" | "tomato" | "flower" | "slipper";
 
 type TableInteraction = {
@@ -607,6 +611,8 @@ function PlayerAvatar({
   size?: "small" | "normal";
   variant?: "avatar" | "table";
 }) {
+  const [tableArtLoaded, setTableArtLoaded] = useState(false);
+
   if (variant === "table") {
     const character =
       CAT_CHARACTER_PROFILES[player.id] ?? CAT_CHARACTER_PROFILES[0];
@@ -617,27 +623,30 @@ function PlayerAvatar({
       >
         <span className="character-floor-shadow" />
         <span className="character-rim-light" />
-        {/* The embedded portrait is visible immediately while the larger table
-            artwork loads. Keeping both sources in the same stage avoids an
-            empty seat on slow first visits. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          className="seat-character-placeholder character-layer"
-          src={AVATAR_SOURCES[player.id]}
-          alt=""
-          draggable={false}
-          style={{
-            position: "absolute",
-            zIndex: 1,
-            inset: "16%",
-            width: "68%",
-            height: "68%",
-            borderRadius: "50%",
-            objectFit: "cover",
-            opacity: 0.78,
-            pointerEvents: "none",
-          }}
-        />
+        {!tableArtLoaded ? (
+          <>
+            {/* The embedded portrait is visible immediately while the larger
+                table artwork loads, then is removed to prevent ghosting. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              className="seat-character-placeholder character-layer"
+              src={AVATAR_SOURCES[player.id]}
+              alt=""
+              draggable={false}
+              style={{
+                position: "absolute",
+                zIndex: 1,
+                inset: "16%",
+                width: "68%",
+                height: "68%",
+                borderRadius: "50%",
+                objectFit: "cover",
+                opacity: 0.78,
+                pointerEvents: "none",
+              }}
+            />
+          </>
+        ) : null}
         {/* A single connected puppet. The source art is not a segmented rig, so
             duplicating and moving clipped limbs creates visible seams. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -647,6 +656,7 @@ function PlayerAvatar({
           alt=""
           draggable={false}
           fetchPriority="high"
+          onLoad={() => setTableArtLoaded(true)}
         />
         <span className="character-fish-sparks" aria-hidden="true">
           <i />
@@ -3613,6 +3623,14 @@ function PokerGameContent() {
         void navigator.serviceWorker.register("/sw.js").catch(() => undefined);
       }
     }
+
+    // Start downloading table characters from the home screen. The service
+    // worker caches them on demand, so opening a game normally needs no wait.
+    TABLE_CHARACTER_ASSET_SOURCES.forEach((source) => {
+      const image = new Image();
+      image.decoding = "async";
+      image.src = source;
+    });
 
     return () => {
       window.clearTimeout(timer);

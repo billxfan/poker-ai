@@ -27,7 +27,6 @@ test("every AI profile avatar is embedded and requires no image request", async 
     "utf8",
   );
   assert.doesNotMatch(gameSource, /AI_PROFILE_AVATAR_SOURCES\.forEach/);
-  assert.doesNotMatch(gameSource, /new Image\(\)/);
   assert.match(gameSource, /player-avatar-fallback/);
 });
 
@@ -43,6 +42,9 @@ test("the poker table shows embedded character placeholders before full art load
 
   assert.match(gameSource, /seat-character-placeholder/);
   assert.match(gameSource, /src=\{AVATAR_SOURCES\[player\.id\]\}/);
+  assert.match(gameSource, /onLoad=\{\(\) => setTableArtLoaded\(true\)\}/);
+  assert.match(gameSource, /!tableArtLoaded \?/);
+  assert.match(gameSource, /TABLE_CHARACTER_ASSET_SOURCES\.forEach/);
   assert.match(gameSource, /fetchPriority="high"/);
   assert.match(serviceWorkerSource, /cache\.addAll\(APP_SHELL\)/);
   assert.doesNotMatch(serviceWorkerSource, /\.\.\.CAT_CARD_DECK/);
