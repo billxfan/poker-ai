@@ -1,46 +1,15 @@
-const CACHE_NAME = "poker-ai-web-v8-table-theatre";
+const CACHE_NAME = "poker-ai-web-v9-on-demand-art";
 const APP_SHELL = [
   "/",
   "/manifest.webmanifest",
   "/poker-ai-icon.png",
-  "/characters/v3/golden-player-back.webp",
-  "/characters/v3/british-left-side.webp",
-  "/characters/v3/siamese-far-left.webp",
-  "/characters/v3/maine-coon-far-center.webp",
-  "/characters/v3/orange-far-right.webp",
-  "/characters/v3/abyssinian-right-side.webp",
-  "/characters/portraits/golden-player.webp",
-  "/characters/portraits/british-shorthair.webp",
-  "/characters/portraits/siamese.webp",
-  "/characters/portraits/maine-coon.webp",
-  "/characters/portraits/orange-tabby.webp",
-  "/characters/portraits/abyssinian.webp",
 ];
-const CARD_SUITS = ["spades", "hearts", "diamonds", "clubs"];
-const CARD_RANKS = [
-  "a",
-  "k",
-  "q",
-  "j",
-  "10",
-  "9",
-  "8",
-  "7",
-  "6",
-  "5",
-  "4",
-  "3",
-  "2",
-];
-const CAT_CARD_DECK = CARD_SUITS.flatMap((suit) =>
-  CARD_RANKS.map((rank) => `/cards/deck-v2/${suit}-${rank}.webp`),
-);
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(CACHE_NAME)
-      .then((cache) => cache.addAll([...APP_SHELL, ...CAT_CARD_DECK])),
+      .then((cache) => cache.addAll(APP_SHELL)),
   );
   self.skipWaiting();
 });
