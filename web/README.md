@@ -29,6 +29,20 @@ Run the production verification:
 npm test
 ```
 
+## Docker / NAS
+
+From the repository root, build and start the web game:
+
+```bash
+docker compose up -d --build
+```
+
+Open `http://<NAS-IP>:3000`. Set `POKER_AI_PORT` to publish a different host
+port, for example `POKER_AI_PORT=8080 docker compose up -d --build`.
+
+Game progress and settings remain in each visitor's browser storage. The
+container has no database volume, user accounts, or cross-device sync.
+
 ## Desktop / Steam candidate
 
 The Electron shell runs the same production build from the stable local origin
@@ -42,8 +56,14 @@ npm run desktop
 # Headless startup assertion used by CI/local verification
 npm run desktop:smoke
 
+# Electron player flow and security assertions
+npm run desktop:e2e
+
 # Create an unpacked build for the current platform
 npm run desktop:pack
+
+# Cross-build an unpacked Windows x64 candidate
+npm run desktop:pack:win
 ```
 
 Create the Windows x64 NSIS installer on Windows, or from the documented

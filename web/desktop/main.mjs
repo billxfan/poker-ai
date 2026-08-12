@@ -34,6 +34,9 @@ protocol.registerSchemesAsPrivileged([
   },
 ]);
 
+if (process.env.POKER_AI_DESKTOP_USER_DATA) {
+  app.setPath("userData", path.resolve(process.env.POKER_AI_DESKTOP_USER_DATA));
+}
 app.enableSandbox();
 
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
@@ -83,12 +86,14 @@ function createMainWindow(icon) {
     );
   });
   window.once("ready-to-show", () => window.show());
-  if (process.env.POKER_AI_DESKTOP_SMOKE === "1") {
+  const smokeMode = process.env.POKER_AI_DESKTOP_SMOKE;
+  if (smokeMode === "write" || smokeMode === "read") {
     window.webContents.once("did-finish-load", async () => {
-      const snapshot = await window.webContents.executeJavaScript(
-        "({ title: document.title, text: document.body.innerText.slice(0, 300) })",
-        true,
-      );
+      const expression =
+        smokeMode === "write"
+          ? "localStorage.setItem('poker-ai-desktop-smoke', 'persisted'); ({ title: document.title, text: document.body.innerText.slice(0, 300), storage: localStorage.getItem('poker-ai-desktop-smoke') })"
+          : "({ title: document.title, text: document.body.innerText.slice(0, 300), storage: localStorage.getItem('poker-ai-desktop-smoke') })";
+      const snapshot = await window.webContents.executeJavaScript(expression, true);
       process.stdout.write(`[desktop-smoke]${JSON.stringify(snapshot)}\n`);
       app.quit();
     });

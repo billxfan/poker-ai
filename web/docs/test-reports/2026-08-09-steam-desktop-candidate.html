@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Steam 桌面候选版验收报告</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, "PingFang SC", sans-serif; background: #0b1020; color: #eef2ff; }
+    body { margin: 0; padding: 40px 20px; }
+    main { max-width: 960px; margin: auto; }
+    h1 { font-size: clamp(28px, 5vw, 48px); margin-bottom: 8px; }
+    h2 { margin-top: 36px; }
+    .lead { color: #a5b4fc; font-size: 18px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+    .card { background: #151c33; border: 1px solid #2b365d; border-radius: 14px; padding: 18px; }
+    .value { color: #86efac; font-size: 28px; font-weight: 750; }
+    table { width: 100%; border-collapse: collapse; background: #11182c; }
+    th, td { text-align: left; padding: 12px; border-bottom: 1px solid #2b365d; }
+    th { color: #a5b4fc; }
+    .pass { color: #86efac; font-weight: 700; }
+    .gate { color: #fde68a; font-weight: 700; }
+    code { color: #c4b5fd; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Steam 桌面候选版</h1>
+  <p class="lead">2026-08-09 · 开发候选版通过，公共 Steam depot 尚未放行</p>
+
+  <section class="grid" aria-label="质量概览">
+    <article class="card"><div class="value">73 / 73</div><div>自动化测试通过</div></article>
+    <article class="card"><div class="value">10,000</div><div>确定性模拟无死循环或筹码丢失</div></article>
+    <article class="card"><div class="value">0</div><div>运行时已知依赖漏洞</div></article>
+    <article class="card"><div class="value">2 平台</div><div>macOS 与 Windows 目录包产出</div></article>
+  </section>
+
+  <h2>验收结果</h2>
+  <table>
+    <thead><tr><th>范围</th><th>结果</th><th>证据</th></tr></thead>
+    <tbody>
+      <tr><td>代码、规则与构建</td><td class="pass">通过</td><td>ESLint、73 项测试、生产构建</td></tr>
+      <tr><td>桌面启动与存档</td><td class="pass">通过</td><td>两次独立 Electron 启动，第二次读取首启写入值</td></tr>
+      <tr><td>玩家主路径</td><td class="pass">通过</td><td>首页 → 新开始 → 确认 → 首手牌桌</td></tr>
+      <tr><td>隔离与离线</td><td class="pass">通过</td><td>无 Node 权限、无新窗口、主路径无 HTTP(S) 请求</td></tr>
+      <tr><td>成品内容</td><td class="pass">通过</td><td>仅运行模块、生产资源与许可证；无开发依赖/测试脚本</td></tr>
+      <tr><td>Windows 原生验收</td><td class="gate">待完成</td><td>已产出 <code>PokerAITrainer.exe</code>，尚未在 Windows 10/11 运行</td></tr>
+    </tbody>
+  </table>
+
+  <h2>成品</h2>
+  <ul>
+    <li>macOS ARM64 目录包：<code>release/mac-arm64/德扑 AI 训练器.app</code></li>
+    <li>Windows x64 目录包：<code>release/win-unpacked/PokerAITrainer.exe</code></li>
+    <li>Windows 可执行文件 SHA-256：<code>c048374fea6fb1135332869ee16d066e617621b53c09f66e3e4e88c8fa744923</code></li>
+  </ul>
+
+  <h2>公共上架闸门</h2>
+  <p>干净 Windows 10/11 启动与离线存档、NSIS 安装器、代码签名、Steam AppID/depot、私密分支测试、商店素材，以及生成式 AI 内容披露和美术权利凭证。</p>
+</main>
+</body>
+</html>
