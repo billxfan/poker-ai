@@ -4166,6 +4166,26 @@ button:disabled {
   user-select: none;
 }
 
+.card-art-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  color: var(--card-index-color);
+  font-family: Georgia, "Times New Roman", serif;
+  line-height: 0.9;
+}
+
+.card-art-fallback b {
+  font-size: 21px;
+}
+
+.card-art-fallback i {
+  font-size: 18px;
+  font-style: normal;
+}
+
 .card-illustrated::before {
   position: absolute;
   z-index: 2;
