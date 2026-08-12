@@ -1,0 +1,23 @@
+# Local dependencies and generated build artifacts
+node_modules/
+.next/
+.vinext/
+dist/
+release/
+output/
+outputs/
+work/
+.wrangler/
+.playwright-cli/
+
+# Desktop-only sources and project documentation are not required by the site
+desktop/
+docs/
+tests/
+
+# Local configuration and temporary files
+.env*
+.vercel/
+*.tsbuildinfo
+*.log
+.DS_Store
