@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import type { CSSProperties, ReactNode } from "react";
 import {
   loadSoundPreference,
@@ -111,6 +112,35 @@ function readableCardsLabel(cards: Card[]): string {
   return cards.map(readableCardLabel).join("、");
 }
 
+type DialogInertLock = {
+  count: number;
+  originalValue: boolean;
+};
+
+const dialogInertLocks = new Map<HTMLElement, DialogInertLock>();
+
+function lockDialogBranch(element: HTMLElement) {
+  const existing = dialogInertLocks.get(element);
+  if (existing) {
+    existing.count += 1;
+    return;
+  }
+  dialogInertLocks.set(element, {
+    count: 1,
+    originalValue: element.inert,
+  });
+  element.inert = true;
+}
+
+function unlockDialogBranch(element: HTMLElement) {
+  const existing = dialogInertLocks.get(element);
+  if (!existing) return;
+  existing.count -= 1;
+  if (existing.count > 0) return;
+  element.inert = existing.originalValue;
+  dialogInertLocks.delete(element);
+}
+
 function useDialogFocus<T extends HTMLElement>(
   active: boolean,
   onClose: () => void,
@@ -127,15 +157,14 @@ function useDialogFocus<T extends HTMLElement>(
     const root = rootRef.current;
     const previousFocus = document.activeElement as HTMLElement | null;
     const overlay = root.closest<HTMLElement>(
-      ".drawer-backdrop, .modal-backdrop, .seat-interaction-menu",
+      ".drawer-backdrop, .modal-backdrop, .table-interaction-overlay",
     ) ?? root;
-    const outsideBranches: Array<{ element: HTMLElement; inert: boolean }> = [];
+    const outsideBranches = new Set<HTMLElement>();
     let branch: HTMLElement = overlay;
     while (branch.parentElement && branch.parentElement !== document.body) {
       Array.from(branch.parentElement.children).forEach((element) => {
         if (element instanceof HTMLElement && element !== branch) {
-          outsideBranches.push({ element, inert: element.inert });
-          element.inert = true;
+          outsideBranches.add(element);
         }
       });
       branch = branch.parentElement;
@@ -143,11 +172,11 @@ function useDialogFocus<T extends HTMLElement>(
     if (branch.parentElement === document.body) {
       Array.from(document.body.children).forEach((element) => {
         if (element instanceof HTMLElement && element !== branch) {
-          outsideBranches.push({ element, inert: element.inert });
-          element.inert = true;
+          outsideBranches.add(element);
         }
       });
     }
+    outsideBranches.forEach(lockDialogBranch);
 
     const focusable = () =>
       Array.from(
@@ -162,9 +191,7 @@ function useDialogFocus<T extends HTMLElement>(
     function handleKey(event: KeyboardEvent) {
       if (event.key === "Escape") {
         event.preventDefault();
-        const focusTarget = previousFocus;
         closeRef.current();
-        window.requestAnimationFrame(() => focusTarget?.focus());
         return;
       }
       if (event.key !== "Tab") return;
@@ -188,37 +215,20 @@ function useDialogFocus<T extends HTMLElement>(
     window.addEventListener("keydown", handleKey);
     return () => {
       window.removeEventListener("keydown", handleKey);
-      outsideBranches.forEach(({ element, inert }) => {
-        element.inert = inert;
+      outsideBranches.forEach(unlockDialogBranch);
+      window.requestAnimationFrame(() => {
+        if (
+          previousFocus?.isConnected &&
+          !previousFocus.inert &&
+          !previousFocus.closest("[inert]")
+        ) {
+          previousFocus.focus();
+        }
       });
-      previousFocus?.focus();
     };
   }, [active]);
 
   return rootRef;
-}
-
-function keepTabInsideDialog(event: React.KeyboardEvent<HTMLElement>) {
-  if (event.key !== "Tab") return;
-  const items = Array.from(
-    event.currentTarget.querySelectorAll<HTMLElement>(
-      'button:not(:disabled), [href], [tabindex]:not([tabindex="-1"])',
-    ),
-  );
-  if (!items.length) {
-    event.preventDefault();
-    event.currentTarget.focus();
-    return;
-  }
-  const first = items[0];
-  const last = items[items.length - 1];
-  if (event.shiftKey && document.activeElement === first) {
-    event.preventDefault();
-    last.focus();
-  } else if (!event.shiftKey && document.activeElement === last) {
-    event.preventDefault();
-    first.focus();
-  }
 }
 
 function describeEvaluatedHand(hand: EvaluatedHand): string {
@@ -385,6 +395,12 @@ type TableInteraction = {
   targetId: number;
   kind: TableInteractionKind;
 };
+
+type TableOverlayState =
+  | { kind: "interaction"; seatId: number }
+  | { kind: "quick-bet" }
+  | { kind: "action-log" }
+  | null;
 
 const TABLE_INTERACTIONS: ReadonlyArray<{
   kind: TableInteractionKind;
@@ -763,7 +779,6 @@ function CardPreviewModal({
         aria-modal="true"
         aria-label={`${label}大图`}
         tabIndex={-1}
-        onKeyDown={keepTabInsideDialog}
         onClick={(event) => event.stopPropagation()}
       >
         <button
@@ -809,7 +824,6 @@ function ConfirmDialog({
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        onKeyDown={keepTabInsideDialog}
         onClick={(event) => event.stopPropagation()}
       >
         <small>{eyebrow}</small>
@@ -997,7 +1011,6 @@ function Seat({
   interactionMenuOpen = false,
   interaction = null,
   onToggleInteractionMenu,
-  onSendInteraction,
 }: {
   player: Player;
   active: boolean;
@@ -1012,23 +1025,29 @@ function Seat({
   interactionMenuOpen?: boolean;
   interaction?: TableInteraction | null;
   onToggleInteractionMenu?: (seatId: number) => void;
-  onSendInteraction?: (
-    seatId: number,
-    kind: TableInteractionKind,
-  ) => void;
 }) {
   const hiddenCards = !player.isHuman && !reveal;
   const character =
     CAT_CHARACTER_PROFILES[player.id] ?? CAT_CHARACTER_PROFILES[0];
   const systemActionLabel = performance?.actionLabel ?? player.lastAction;
+  const blindAction = systemActionLabel?.match(/^(?:小盲|大盲)\s*(\d[\d,]*)$/);
+  const mobileActionLabel = systemActionLabel
+    ? blindAction
+      ? `投入 ${blindAction[1]}`
+      : systemActionLabel === "弃牌"
+      ? "已弃牌"
+      : systemActionLabel === "过牌"
+        ? "已过牌"
+        : systemActionLabel
+    : player.bet > 0
+      ? `已投入 ${player.bet.toLocaleString()}`
+      : active
+        ? "行动中"
+        : "";
   const canInteract = !player.isHuman && player.status !== "out";
   const interactionPresentation = interaction
     ? TABLE_INTERACTIONS.find((item) => item.kind === interaction.kind)
     : null;
-  const interactionDialogRef = useDialogFocus<HTMLDivElement>(
-    interactionMenuOpen && canInteract,
-    () => onToggleInteractionMenu?.(player.id),
-  );
   return (
     <article
       className={`game-seat seat-${player.id} ${player.isHuman ? "seat-human" : ""} ${
@@ -1045,13 +1064,12 @@ function Seat({
       aria-label={`${player.name}，${player.position}，${player.chips} 小鱼干`}
     >
       <button
-        key={performance?.eventId ?? "idle-character"}
         className="seat-character-button"
         aria-label={
           canInteract ? `与${player.name}互动` : `查看${player.name}的猫咪角色`
         }
         aria-expanded={canInteract ? interactionMenuOpen : undefined}
-        aria-haspopup={canInteract ? "menu" : undefined}
+        aria-haspopup={canInteract ? "dialog" : undefined}
         title={
           canInteract
             ? `与${player.name}互动 · ${character.breed}`
@@ -1063,54 +1081,6 @@ function Seat({
       >
         <PlayerAvatar player={player} variant="table" />
       </button>
-      {interactionMenuOpen && canInteract ? (
-        <>
-          <button
-            type="button"
-            className="seat-interaction-backdrop"
-            aria-label="关闭互动面板"
-            onClick={() => onToggleInteractionMenu?.(player.id)}
-          />
-          <div
-            ref={interactionDialogRef}
-            className="seat-interaction-menu"
-            role="menu"
-            tabIndex={-1}
-            onKeyDown={keepTabInsideDialog}
-          >
-            <header>
-              <span>
-                <strong>与{player.name}互动</strong>
-                <small>
-                  {character.breed} · {character.persona}
-                </small>
-              </span>
-              <button
-                type="button"
-                className="seat-interaction-close"
-                aria-label="关闭互动面板"
-                onClick={() => onToggleInteractionMenu?.(player.id)}
-              >
-                ×
-              </button>
-            </header>
-            <div>
-              {TABLE_INTERACTIONS.map((item) => (
-                <button
-                  key={item.kind}
-                  type="button"
-                  role="menuitem"
-                  aria-label={`向${player.name}送出${item.label}`}
-                  onClick={() => onSendInteraction?.(player.id, item.kind)}
-                >
-                  <span aria-hidden="true">{item.projectile}</span>
-                  <small>{item.label}</small>
-                </button>
-              ))}
-            </div>
-          </div>
-        </>
-      ) : null}
       {interaction && interactionPresentation ? (
         <span
           key={interaction.eventId}
@@ -1173,21 +1143,18 @@ function Seat({
           />
         ) : null}
       </span>
-      <span className="seat-mobile-status" aria-hidden="true">
-        <span>
-          {systemActionLabel ??
-            (player.bet > 0
-              ? `本轮 ${player.bet.toLocaleString()}`
-              : player.status === "folded"
-              ? "已弃牌"
-              : active
-                ? "行动中"
-                : "等待")}
+      {mobileActionLabel ? (
+        <span
+          className={`seat-mobile-status ${player.status === "folded" ? "is-muted" : ""}`}
+          aria-hidden="true"
+        >
+          <span>{mobileActionLabel}</span>
         </span>
-      </span>
+      ) : null}
       {thinkingLabel || reactionLabel ? (
         <span
           className={`thought-bubble ${reactionLabel ? "thought-reaction" : `thought-${thinkingMode ?? "measured"}`}`}
+          data-kind={reactionLabel ? "reaction" : "thinking"}
           aria-live="polite"
         >
           {!reactionLabel ? (
@@ -1215,6 +1182,82 @@ function Seat({
         </span>
       ) : null}
     </article>
+  );
+}
+
+function TableInteractionMenu({
+  player,
+  onClose,
+  onSend,
+}: {
+  player: Player;
+  onClose: () => void;
+  onSend: (kind: TableInteractionKind) => void;
+}) {
+  const character =
+    CAT_CHARACTER_PROFILES[player.id] ?? CAT_CHARACTER_PROFILES[0];
+  const dialogRef = useDialogFocus<HTMLDivElement>(true, onClose);
+
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <div
+      className="table-interaction-overlay"
+      data-overlay="table-interaction"
+      data-target-seat={player.id}
+    >
+      <button
+        type="button"
+        className="seat-interaction-backdrop"
+        data-overlay-dismiss="true"
+        aria-label="关闭互动面板"
+        tabIndex={-1}
+        onClick={onClose}
+      />
+      <div
+        ref={dialogRef}
+        className="seat-interaction-menu"
+        data-component="table-interaction-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`与${player.name}互动`}
+        tabIndex={-1}
+      >
+        <header>
+          <PlayerAvatar player={player} size="small" />
+          <span>
+            <strong>与{player.name}互动</strong>
+            <small>
+              {character.breed} · {character.persona}
+            </small>
+          </span>
+          <button
+            type="button"
+            className="seat-interaction-close"
+            data-autofocus="true"
+            aria-label="关闭互动面板"
+            onClick={onClose}
+          >
+            ×
+          </button>
+        </header>
+        <div>
+          {TABLE_INTERACTIONS.map((item) => (
+            <button
+              key={item.kind}
+              type="button"
+              data-interaction-kind={item.kind}
+              aria-label={`向${player.name}送出${item.label}`}
+              onClick={() => onSend(item.kind)}
+            >
+              <span aria-hidden="true">{item.projectile}</span>
+              <small>{item.label}</small>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -1893,7 +1936,6 @@ function HistoryDetailModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="history-detail-title"
-        onKeyDown={keepTabInsideDialog}
         onClick={(event) => event.stopPropagation()}
       >
         <header>
@@ -2733,7 +2775,6 @@ function QuickBetPanel({
       aria-modal="true"
       aria-label="快捷加注尺度"
       tabIndex={-1}
-      onKeyDown={keepTabInsideDialog}
     >
       <header>
         <div>
@@ -2784,7 +2825,6 @@ function ActionDrawer({
         role="dialog"
         aria-modal="true"
         aria-label="本局行动记录"
-        onKeyDown={keepTabInsideDialog}
         onClick={(event) => event.stopPropagation()}
       >
         <header>
@@ -2887,7 +2927,6 @@ function HandResultModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="hand-result-title"
-        onKeyDown={keepTabInsideDialog}
       >
         <header className="result-heading">
           <small>第 {game.handNumber} 手</small>
@@ -3084,12 +3123,7 @@ function GameScreen({
   onExit: () => void;
   onSoundToggle: (enabled: boolean) => void;
 }) {
-  const [showActionLog, setShowActionLog] = useState(false);
-  const [showQuickBet, setShowQuickBet] = useState(false);
-  const [thinkingProgress, setThinkingProgress] = useState({
-    key: "",
-    step: 0,
-  });
+  const [tableOverlay, setTableOverlay] = useState<TableOverlayState>(null);
   const [recentThinkingSteps, setRecentThinkingSteps] = useState<
     Record<number, string[]>
   >({});
@@ -3099,9 +3133,6 @@ function GameScreen({
   const [dialogueBySeat, setDialogueBySeat] = useState<Record<number, string>>(
     {},
   );
-  const [interactionMenuSeatId, setInteractionMenuSeatId] = useState<
-    number | null
-  >(null);
   const [tableInteraction, setTableInteraction] =
     useState<TableInteraction | null>(null);
   const [resultVisibleHand, setResultVisibleHand] = useState<string | null>(
@@ -3132,6 +3163,14 @@ function GameScreen({
     null,
   );
   const human = game.players[HUMAN_ID];
+  const showActionLog = tableOverlay?.kind === "action-log";
+  const showQuickBet = tableOverlay?.kind === "quick-bet";
+  const interactionMenuSeatId =
+    tableOverlay?.kind === "interaction" ? tableOverlay.seatId : null;
+  const interactionMenuPlayer =
+    interactionMenuSeatId === null
+      ? null
+      : (game.players[interactionMenuSeatId] ?? null);
   const legal = useMemo(() => legalActions(game, HUMAN_ID), [game]);
   const isHumanTurn =
     game.phase === "playing" && game.currentActor === HUMAN_ID;
@@ -3204,16 +3243,7 @@ function GameScreen({
     recentStepsForThinkingPlayer,
     thinkingId,
   ]);
-  const thinkingKey =
-    thinkingId === null
-      ? ""
-      : `${game.handNumber}-${game.actionSequence}-${thinkingId}`;
-  const thinkingStep =
-    thinkingProgress.key === thinkingKey ? thinkingProgress.step : 0;
-  const thinkingLabel = thinkingDialogueChoices.length
-    ? (thinkingDialogueChoices[thinkingStep % thinkingDialogueChoices.length]
-        ?.text ?? null)
-    : null;
+  const thinkingLabel = thinkingId === null ? null : "思考中";
   const rebuyNoticeText = game.rebuyPlayerIds.length
     ? `${game.rebuyPlayerIds
         .map((playerId) => game.players[playerId]?.name)
@@ -3243,8 +3273,7 @@ function GameScreen({
     dealSeatIds.map((playerId, index) => [playerId, index]),
   );
   function act(type: ActionType, amount?: number) {
-    setShowQuickBet(false);
-    setInteractionMenuSeatId(null);
+    setTableOverlay(null);
     unlockGameAudio(soundEnabled);
     onGameChange(applyAction(game, { playerId: HUMAN_ID, type, amount }));
   }
@@ -3252,8 +3281,10 @@ function GameScreen({
   function toggleInteractionMenu(seatId: number) {
     unlockGameAudio(soundEnabled);
     playGameSound("ui", soundEnabled, seatId % 5);
-    setInteractionMenuSeatId((current) =>
-      current === seatId ? null : seatId,
+    setTableOverlay((current) =>
+      current?.kind === "interaction" && current.seatId === seatId
+        ? null
+        : { kind: "interaction", seatId },
     );
   }
 
@@ -3264,7 +3295,7 @@ function GameScreen({
     const target = game.players[targetId];
     if (!target || target.isHuman || target.status === "out") return;
 
-    setInteractionMenuSeatId(null);
+    setTableOverlay(null);
     unlockGameAudio(soundEnabled);
     playGameSound("deal", soundEnabled, targetId % 5);
     interactionSequenceRef.current += 1;
@@ -3327,15 +3358,6 @@ function GameScreen({
       return;
     }
     const actorId = thinkingId;
-    let elapsed = 0;
-    const progressTimers = thinkingPlan.stepDurations
-      .slice(0, -1)
-      .map((stepDuration, index) => {
-        elapsed += stepDuration;
-        return window.setTimeout(() => {
-          setThinkingProgress({ key: thinkingKey, step: index + 1 });
-        }, elapsed);
-      });
     const timer = window.setTimeout(() => {
       const action = pendingAIAction;
       spokeBeforeActionRef.current[actorId] =
@@ -3366,9 +3388,6 @@ function GameScreen({
     }, thinkingPlan.totalMs);
     return () => {
       window.clearTimeout(timer);
-      progressTimers.forEach((progressTimer) =>
-        window.clearTimeout(progressTimer),
-      );
     };
   }, [
     aiProfiles,
@@ -3377,7 +3396,6 @@ function GameScreen({
     onGameChange,
     soundEnabled,
     thinkingId,
-    thinkingKey,
     thinkingPlan,
     thinkingDialogueChoices,
     pendingAIAction,
@@ -3407,25 +3425,6 @@ function GameScreen({
       presentationTimers.forEach((timer) => window.clearTimeout(timer));
     };
   }, []);
-
-  useEffect(() => {
-    if (interactionMenuSeatId === null) return;
-    const closeOnOutsidePress = (event: PointerEvent) => {
-      const target = event.target;
-      if (
-        target instanceof Element &&
-        target.closest(
-          `[data-interaction-seat="${interactionMenuSeatId}"]`,
-        )
-      ) {
-        return;
-      }
-      setInteractionMenuSeatId(null);
-    };
-    document.addEventListener("pointerdown", closeOnOutsidePress);
-    return () =>
-      document.removeEventListener("pointerdown", closeOnOutsidePress);
-  }, [interactionMenuSeatId]);
 
   useEffect(() => {
     const nextSnapshot = buildPublicPresentationSnapshot(game);
@@ -3635,25 +3634,16 @@ function GameScreen({
 
   useEffect(() => {
     function handleKey(event: KeyboardEvent) {
-      if (interactionMenuSeatId !== null && event.key === "Escape") {
-        setInteractionMenuSeatId(null);
-        return;
-      }
-      if (showActionLog) {
-        if (event.key === "Escape") setShowActionLog(false);
-        return;
-      }
-      if (showQuickBet && event.key === "Escape") {
-        setShowQuickBet(false);
-        return;
-      }
+      if (tableOverlay || document.querySelector('[aria-modal="true"]')) return;
       if (!isHumanTurn || event.repeat) return;
       const key = event.key.toLowerCase();
       if (key === "f" && legal.canFold) act("fold");
       if (key === "c" && (legal.canCheck || legal.canCall)) {
         act(legal.canCheck ? "check" : "call");
       }
-      if (key === "r" && legal.canRaise) setShowQuickBet(true);
+      if (key === "r" && legal.canRaise) {
+        setTableOverlay({ kind: "quick-bet" });
+      }
       if (key === "a" && legal.canAllIn) act("all-in");
     }
     window.addEventListener("keydown", handleKey);
@@ -3661,7 +3651,10 @@ function GameScreen({
   });
 
   return (
-    <main className="game-page">
+    <main
+      className="game-page"
+      data-table-overlay={tableOverlay?.kind ?? "none"}
+    >
       <header className="game-topbar">
         <button className="round-nav-button" onClick={onExit}>
           <BackIcon />
@@ -3695,7 +3688,7 @@ function GameScreen({
             aria-label="打开本局行动记录"
             onClick={() => {
               playGameSound("ui", soundEnabled);
-              setShowActionLog(true);
+              setTableOverlay({ kind: "action-log" });
             }}
           >
             <MenuIcon />
@@ -3704,7 +3697,7 @@ function GameScreen({
         </div>
       </header>
 
-      <section className="game-stage">
+      <section className="game-stage" data-component="table-arena">
         {rebuyNotice ? (
           <div className="table-notice" role="status">
             <i aria-hidden="true" />
@@ -3723,6 +3716,7 @@ function GameScreen({
 
         <div
           className={`community-board ${game.communityCards.length ? "has-cards" : "is-empty"}`}
+          data-table-lane="community-cards"
           aria-label="公共牌"
         >
           {Array.from({ length: 5 }, (_, index) =>
@@ -3741,7 +3735,7 @@ function GameScreen({
           )}
         </div>
 
-        <div className="opponents-layout">
+        <div className="opponents-layout" data-table-layer="seats">
           <div className="opponents-top">
             {[opponents.topLeft, opponents.topCenter, opponents.topRight].map(
               (player) => (
@@ -3770,7 +3764,6 @@ function GameScreen({
                       : null
                   }
                   onToggleInteractionMenu={toggleInteractionMenu}
-                  onSendInteraction={sendTableInteraction}
                 />
               ),
             )}
@@ -3798,7 +3791,6 @@ function GameScreen({
                     : null
                 }
                 onToggleInteractionMenu={toggleInteractionMenu}
-                onSendInteraction={sendTableInteraction}
               />
             ))}
           </div>
@@ -3807,8 +3799,7 @@ function GameScreen({
 
       <section
         className={`game-bottom-dock ${showQuickBet ? "has-quick-bet" : ""}`}
-        inert={interactionMenuSeatId !== null}
-        aria-hidden={interactionMenuSeatId !== null}
+        data-component="player-action-dock"
       >
         <Seat
           player={human}
@@ -3824,21 +3815,23 @@ function GameScreen({
         />
 
         {game.phase === "playing" ? (
-          isHumanTurn ? (
-            <>
-              <div className="human-decision-status" role="status">
-                <strong>
-                  轮到你 ·
-                  {legal.canCheck ? " 可以过牌" : ` 跟注 ${legal.callAmount}`}
-                </strong>
-              </div>
-              <div
-                className="player-actions"
-                aria-hidden={showQuickBet}
-              >
+          <>
+            <div className="human-decision-status" role="status" aria-live="polite">
+              <strong>
+                {isHumanTurn
+                  ? `轮到你 ·${legal.canCheck ? " 可以过牌" : ` 跟注 ${legal.callAmount}`}`
+                  : thinkingId !== null
+                    ? `${game.players[thinkingId].name}正在思考`
+                    : "等待下一步行动"}
+              </strong>
+            </div>
+            <div
+              className={`player-actions ${isHumanTurn ? "" : "is-waiting"}`}
+              aria-hidden={showQuickBet}
+            >
                 <button
                   className="player-action fold"
-                  disabled={!legal.canFold}
+                  disabled={!isHumanTurn || !legal.canFold}
                   onClick={() => act("fold")}
                 >
                   弃牌
@@ -3846,7 +3839,7 @@ function GameScreen({
                 </button>
                 <button
                   className="player-action call"
-                  disabled={!legal.canCheck && !legal.canCall}
+                  disabled={!isHumanTurn || (!legal.canCheck && !legal.canCall)}
                   onClick={() => act(legal.canCheck ? "check" : "call")}
                 >
                   {legal.canCheck ? "过牌" : `跟注 ${legal.callAmount}`}
@@ -3854,38 +3847,29 @@ function GameScreen({
                 </button>
                 <button
                   className="player-action raise"
-                  disabled={!legal.canRaise}
+                  disabled={!isHumanTurn || !legal.canRaise}
                   aria-expanded={showQuickBet}
-                  onClick={() => setShowQuickBet((current) => !current)}
+                  onClick={() =>
+                    setTableOverlay((current) =>
+                      current?.kind === "quick-bet"
+                        ? null
+                        : { kind: "quick-bet" },
+                    )
+                  }
                 >
                   加注
                   <kbd>R</kbd>
                 </button>
                 <button
                   className="player-action all-in"
-                  disabled={!legal.canAllIn}
+                  disabled={!isHumanTurn || !legal.canAllIn}
                   onClick={() => act("all-in")}
                 >
                   全下
                   <kbd>A</kbd>
                 </button>
-              </div>
-            </>
-          ) : (
-            <div className="player-turn-status" role="status" aria-live="polite">
-              <span className="thinking-dots" aria-hidden="true">
-                <i />
-                <i />
-                <i />
-              </span>
-              <strong>
-                {thinkingId !== null
-                  ? `${game.players[thinkingId].name}正在思考`
-                  : "等待下一步行动"}
-              </strong>
-              <small>你的操作区会在轮到你时出现</small>
             </div>
-          )
+          </>
         ) : null}
 
         {showQuickBet && legal.canRaise ? (
@@ -3896,10 +3880,20 @@ function GameScreen({
             minRaiseTarget={legal.minRaiseTarget}
             maxRaiseTarget={legal.maxRaiseTarget}
             onSelect={(amount) => act("raise", amount)}
-            onCancel={() => setShowQuickBet(false)}
+            onCancel={() => setTableOverlay(null)}
           />
         ) : null}
       </section>
+
+      {interactionMenuPlayer ? (
+        <TableInteractionMenu
+          player={interactionMenuPlayer}
+          onClose={() => setTableOverlay(null)}
+          onSend={(kind) =>
+            sendTableInteraction(interactionMenuPlayer.id, kind)
+          }
+        />
+      ) : null}
 
       {game.result && resultVisibleHand !== game.handId ? (
         <div className="table-result-beat" role="status" aria-live="assertive">
@@ -3916,7 +3910,7 @@ function GameScreen({
       ) : null}
 
       {showActionLog ? (
-        <ActionDrawer game={game} onClose={() => setShowActionLog(false)} />
+        <ActionDrawer game={game} onClose={() => setTableOverlay(null)} />
       ) : null}
 
       {game.result && resultVisibleHand === game.handId ? (
@@ -3924,14 +3918,14 @@ function GameScreen({
           game={game}
           onExit={onExit}
           onRebuy={() => {
-            setInteractionMenuSeatId(null);
+            setTableOverlay(null);
             setTableInteraction(null);
             onGameChange(
               rebuyHumanAndStartNextHand(game, STARTING_CHIPS, Date.now()),
             );
           }}
           onNextHand={() => {
-            setInteractionMenuSeatId(null);
+            setTableOverlay(null);
             setTableInteraction(null);
             onGameChange(startNewHand(game, Date.now()));
           }}
