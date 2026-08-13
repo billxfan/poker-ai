@@ -9817,3 +9817,606 @@ button:disabled {
     left: calc(100% - 17px);
   }
 }
+
+/* Final mobile table contract. Keep this block last. */
+@media (max-width: 759px) {
+  .game-page {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .game-topbar {
+    min-height: calc(62px + env(safe-area-inset-top));
+    flex: 0 0 auto;
+  }
+
+  .game-stage {
+    --opponent-seat-width: clamp(94px, 29vw, 112px);
+    --opponent-seat-height: 88px;
+    --opponent-avatar-size: clamp(44px, 12vw, 48px);
+    --opponent-card-width: clamp(23px, 6.2vw, 26px);
+    --board-card-width: clamp(44px, 11.3vw, 48px);
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .opponents-layout {
+    top: 58px;
+    right: 5px;
+    bottom: 7px;
+    left: 5px;
+    width: auto;
+    height: auto;
+    overflow: visible;
+  }
+
+  .game-stage .game-seat {
+    width: var(--opponent-seat-width);
+    min-height: var(--opponent-seat-height);
+    height: var(--opponent-seat-height);
+    padding: 0;
+  }
+
+  .game-stage .seat-2,
+  .game-stage .seat-3,
+  .game-stage .seat-4 {
+    top: 0;
+  }
+
+  .game-stage .seat-1,
+  .game-stage .seat-5 {
+    top: auto;
+    bottom: -8px;
+  }
+
+  .game-stage .seat-character-button,
+  .game-stage .seat-1 .seat-character-button,
+  .game-stage .seat-2 .seat-character-button,
+  .game-stage .seat-3 .seat-character-button {
+    top: 0;
+    left: calc(var(--opponent-avatar-size) / 2);
+    min-width: 44px;
+    min-height: 44px;
+    transform: translateX(-50%);
+  }
+
+  .game-stage .seat-4 .seat-character-button,
+  .game-stage .seat-5 .seat-character-button {
+    right: 0;
+    left: auto;
+    transform: none;
+  }
+
+  .game-stage .seat-character-button:hover,
+  .game-stage .seat-character-button:focus-visible,
+  .game-stage .game-seat.is-thinking .seat-character-button,
+  .game-stage .game-seat.is-thinking.has-performance .seat-character-button,
+  .game-stage .game-seat.is-thinking.is-active .seat-character-button {
+    transform: translateX(-50%) !important;
+  }
+
+  .game-stage .seat-4 .seat-character-button:hover,
+  .game-stage .seat-4 .seat-character-button:focus-visible,
+  .game-stage .seat-5 .seat-character-button:hover,
+  .game-stage .seat-5 .seat-character-button:focus-visible,
+  .game-stage .seat-4.is-thinking .seat-character-button,
+  .game-stage .seat-5.is-thinking .seat-character-button {
+    transform: none !important;
+  }
+
+  .game-stage .seat-cards,
+  .game-stage .seat-1 .seat-cards,
+  .game-stage .seat-2 .seat-cards,
+  .game-stage .seat-3 .seat-cards {
+    top: 5px;
+    right: 0;
+    left: auto;
+    transform: none;
+  }
+
+  .game-stage .seat-4 .seat-cards,
+  .game-stage .seat-5 .seat-cards {
+    top: 5px;
+    right: auto;
+    left: 0;
+    transform: none;
+  }
+
+  .game-stage .seat-identity {
+    top: 48px;
+    right: 0;
+    left: 0;
+    display: flex;
+    min-height: 22px;
+    height: 22px;
+    grid-template-columns: none;
+    align-items: center;
+    align-content: normal;
+    justify-content: center;
+    gap: 2px;
+    padding: 2px 3px;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .game-stage .seat-player-name {
+    max-width: 31%;
+    flex: 0 1 auto;
+    font-size: 11px;
+  }
+
+  .game-stage .seat-stack {
+    min-width: 0;
+    grid-column: auto;
+    flex: 0 1 auto;
+    justify-content: flex-start;
+    overflow: hidden;
+    font-size: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .game-stage .seat-stack > .dried-fish-icon {
+    display: none;
+  }
+
+  .game-stage .seat-mobile-status {
+    z-index: 13;
+    top: 72px;
+    right: auto;
+    bottom: auto;
+    left: 50%;
+    display: inline-flex;
+    width: max-content;
+    min-width: 0;
+    max-width: calc(100% - 12px);
+    min-height: 20px;
+    height: auto;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 8px;
+    overflow: visible;
+    border: 1px solid rgb(119 205 174 / 0.2);
+    border-radius: 999px;
+    background: rgb(2 54 41 / 0.92);
+    color: rgb(240 255 249 / 0.82);
+    box-shadow: 0 4px 10px rgb(0 25 18 / 0.16);
+    font-size: 10px;
+    font-weight: 750;
+    line-height: 1.2;
+    white-space: nowrap;
+    transform: translateX(-50%);
+  }
+
+  .game-stage .seat-mobile-status.is-muted {
+    border-color: transparent;
+    background: rgb(1 45 35 / 0.72);
+    color: rgb(255 255 255 / 0.56);
+    box-shadow: none;
+  }
+
+  .game-stage .seat-1 .seat-mobile-status,
+  .game-stage .seat-2 .seat-mobile-status {
+    right: auto;
+    left: 0;
+    transform: none;
+  }
+
+  .game-stage .seat-4 .seat-mobile-status,
+  .game-stage .seat-5 .seat-mobile-status {
+    right: 0;
+    left: auto;
+    transform: none;
+  }
+
+  .game-stage .seat-mobile-status > b {
+    font-size: 11px;
+  }
+
+  .game-stage .seat-mobile-status > span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .community-board,
+  .community-board.has-cards {
+    top: 58%;
+    gap: 2px;
+    padding: 3px 6px;
+  }
+
+  .community-board .playing-card,
+  .community-board .community-slot {
+    width: var(--board-card-width);
+  }
+
+  .community-board.has-cards .playing-card.is-previewable {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .game-stage .thought-bubble,
+  .game-stage .seat-1 .thought-bubble,
+  .game-stage .seat-2 .thought-bubble,
+  .game-stage .seat-3 .thought-bubble,
+  .game-stage .seat-4 .thought-bubble,
+  .game-stage .seat-5 .thought-bubble {
+    z-index: 18;
+    top: 74px;
+    right: auto;
+    bottom: auto;
+    left: 50%;
+    width: max-content;
+    min-width: 70px;
+    max-width: calc(100% - 4px);
+    min-height: 20px;
+    padding: 3px 7px;
+    color: #e7fff6;
+    font-size: 10px;
+    line-height: 1.2;
+    text-align: center;
+    white-space: nowrap;
+    pointer-events: none;
+    transform: translateX(-50%);
+  }
+
+  .game-stage .thought-bubble[data-kind="thinking"] {
+    min-width: 70px;
+    max-width: calc(100% - 4px);
+    min-height: 20px;
+    padding: 3px 7px;
+    color: #e7fff6;
+    font-size: 10px;
+  }
+
+  .game-stage .thought-bubble::before,
+  .game-stage .seat-1 .thought-bubble::before,
+  .game-stage .seat-2 .thought-bubble::before,
+  .game-stage .seat-3 .thought-bubble::before,
+  .game-stage .seat-4 .thought-bubble::before,
+  .game-stage .seat-5 .thought-bubble::before {
+    display: none;
+  }
+
+  .game-stage .game-seat.is-thinking .seat-mobile-status {
+    display: none;
+  }
+
+  .game-bottom-dock {
+    position: relative;
+    z-index: 24;
+    flex: 0 0 auto;
+    min-height: 0;
+    padding: 0;
+    margin: 0;
+  }
+
+  .game-bottom-dock > .seat-human {
+    width: min(244px, 76vw);
+    min-height: 104px;
+    height: 104px;
+    padding: 0;
+    margin: 0 auto;
+  }
+
+  .game-bottom-dock > .seat-human .seat-cards {
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .game-bottom-dock > .seat-human .playing-card {
+    width: clamp(54px, 15vw, 62px);
+  }
+
+  .game-bottom-dock > .seat-human .seat-identity {
+    top: 76px;
+    min-height: 27px;
+  }
+
+  .game-bottom-dock > .seat-human .seat-contribution {
+    top: 34px;
+    right: 8px;
+  }
+
+  .human-decision-status {
+    min-height: 30px;
+    height: 30px;
+    padding-block: 4px;
+    font-size: 11px;
+  }
+
+  .human-decision-status strong {
+    font-size: 12px;
+  }
+
+  .player-actions {
+    min-height: calc(58px + env(safe-area-inset-bottom));
+    padding: 6px 8px max(8px, env(safe-area-inset-bottom));
+  }
+
+  .player-action {
+    min-height: 44px;
+    font-size: 12px;
+  }
+
+  .quick-bet-panel {
+    bottom: calc(154px + env(safe-area-inset-bottom));
+  }
+
+  .quick-bet-panel header button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .table-interaction-overlay,
+  .table-interaction-overlay .seat-interaction-backdrop {
+    position: fixed;
+    inset: 0;
+  }
+
+  .table-interaction-overlay {
+    z-index: 100;
+  }
+
+  .table-interaction-overlay .seat-interaction-backdrop {
+    z-index: 0;
+    display: block;
+    border: 0;
+    background: rgb(0 18 13 / 0.72);
+    pointer-events: auto;
+  }
+
+  .table-interaction-overlay .seat-interaction-menu {
+    position: absolute;
+    z-index: 1;
+    top: auto;
+    right: 12px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    left: 12px;
+    width: auto;
+    min-height: 154px;
+    max-height: calc(100dvh - max(24px, env(safe-area-inset-top)) - max(24px, env(safe-area-inset-bottom)));
+    padding: 12px;
+    overflow-y: auto;
+    pointer-events: auto;
+    transform: none;
+    animation: mobile-interaction-sheet-in 180ms var(--curve-deal) both;
+  }
+
+  .seat-interaction-menu > div {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .seat-interaction-menu button {
+    min-width: 44px;
+    min-height: 60px;
+  }
+
+  .seat-interaction-menu button > small {
+    font-size: 11px;
+  }
+
+  .game-stage::before,
+  .game-stage::after,
+  .seat-character-material,
+  .seat-identity,
+  .seat-mobile-status,
+  .thought-bubble,
+  .seat-contribution,
+  .dried-fish-pile,
+  .dried-fish-icon,
+  .community-slot,
+  .interaction-projectile,
+  .interaction-impact,
+  .interaction-particle {
+    pointer-events: none;
+  }
+}
+
+@keyframes mobile-interaction-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Mobile visual hierarchy revision: seat geometry follows the felt instead of
+   the viewport edges, while the player dock keeps a stable interaction lane. */
+@media (max-width: 759px) {
+  .game-stage::before {
+    inset: 58px 8px 7px;
+    border-radius: 46% / 18%;
+  }
+
+  .game-stage::after {
+    inset: 63px 13px 12px;
+    border-radius: 46% / 18%;
+  }
+
+  .opponents-layout {
+    top: 58px;
+    right: 8px;
+    bottom: 8px;
+    left: 8px;
+  }
+
+  .game-stage .seat-2,
+  .game-stage .seat-4 {
+    top: 7%;
+  }
+
+  .game-stage .seat-3 {
+    top: 1%;
+  }
+
+  .game-stage .seat-1,
+  .game-stage .seat-5 {
+    top: 56%;
+    bottom: auto;
+  }
+
+  .game-stage .seat-character-button,
+  .game-stage .seat-1 .seat-character-button,
+  .game-stage .seat-2 .seat-character-button,
+  .game-stage .seat-3 .seat-character-button,
+  .game-stage .seat-4 .seat-character-button,
+  .game-stage .seat-5 .seat-character-button {
+    width: var(--opponent-avatar-size);
+    height: var(--opponent-avatar-size);
+  }
+
+  .game-stage .seat-identity {
+    min-height: 26px;
+    height: 26px;
+    border-radius: 8px;
+  }
+
+  .game-stage .seat-player-name {
+    font-size: 12px;
+  }
+
+  .game-stage .seat-stack {
+    font-size: 11px;
+  }
+
+  .community-board,
+  .community-board.has-cards {
+    top: 49%;
+  }
+
+  .community-board.is-empty {
+    display: flex;
+    width: 106px;
+    min-height: 34px;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 0;
+    visibility: visible;
+    border: 1px solid rgb(255 255 255 / 0.08);
+    border-radius: 999px;
+    background: rgb(1 45 34 / 0.52);
+    box-shadow: inset 0 1px rgb(255 255 255 / 0.04);
+  }
+
+  .community-board.is-empty::after {
+    color: rgb(229 255 246 / 0.48);
+    content: "等待翻牌";
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+
+  .community-board.is-empty .community-slot {
+    display: none;
+  }
+
+  .community-board.has-cards .playing-card,
+  .community-board.has-cards .community-slot {
+    width: clamp(46px, 12.3vw, 52px);
+  }
+
+  .game-stage .seat-mobile-status {
+    top: 78px;
+  }
+
+  .game-stage .thought-bubble,
+  .game-stage .seat-1 .thought-bubble,
+  .game-stage .seat-2 .thought-bubble,
+  .game-stage .seat-3 .thought-bubble,
+  .game-stage .seat-4 .thought-bubble,
+  .game-stage .seat-5 .thought-bubble {
+    top: 78px;
+    min-height: 24px;
+  }
+
+  .game-bottom-dock {
+    height: 194px;
+    min-height: 194px;
+  }
+
+  .game-bottom-dock > .seat-human {
+    flex: 0 0 104px;
+  }
+
+  .human-decision-status {
+    flex: 0 0 30px;
+  }
+
+  .player-actions {
+    flex: 0 0 calc(60px + env(safe-area-inset-bottom));
+  }
+
+  .player-actions.is-waiting {
+    pointer-events: none;
+  }
+
+  .player-actions.is-waiting .player-action {
+    opacity: 0.18;
+  }
+
+  .seat-interaction-menu > header {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) 44px;
+    gap: 8px;
+  }
+
+  .seat-interaction-menu > header > .player-avatar {
+    width: 40px;
+    height: 40px;
+    margin: 0;
+  }
+}
+
+@media (max-width: 759px) and (max-height: 700px) {
+  .game-stage {
+    --opponent-seat-height: 76px;
+  }
+
+  .game-stage .seat-2,
+  .game-stage .seat-3,
+  .game-stage .seat-4 {
+    top: 0;
+  }
+
+  .game-stage .seat-1,
+  .game-stage .seat-5 {
+    top: auto;
+    bottom: 0;
+  }
+
+  .community-board,
+  .community-board.has-cards {
+    top: 61.5%;
+    padding-block: 2px;
+  }
+
+  .game-stage .seat-mobile-status {
+    display: inline-flex;
+  }
+
+  .game-stage .seat-1 .seat-mobile-status {
+    top: 48px;
+    right: auto;
+    left: calc(100% + 4px);
+  }
+
+  .game-stage .seat-5 .seat-mobile-status {
+    top: 48px;
+    right: calc(100% + 4px);
+    left: auto;
+  }
+
+  .game-stage .thought-bubble {
+    display: none;
+  }
+}
