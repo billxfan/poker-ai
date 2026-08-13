@@ -8338,6 +8338,251 @@ button:disabled {
   }
 }
 
+/* Interaction placement has two deliberate modes only: phones use the bottom
+   sheet above; tablet, laptop and desktop widths use the centered dialog. */
+@media (min-width: 760px) and (max-width: 1119px) {
+  .table-interaction-overlay {
+    position: fixed;
+    z-index: 100;
+    width: 100vw;
+    height: 100dvh;
+    inset: 0;
+  }
+
+  .table-interaction-overlay .seat-interaction-backdrop {
+    position: absolute;
+    z-index: 0;
+    display: block;
+    border: 0;
+    background: rgb(0 18 13 / 0.68);
+    inset: 0;
+  }
+
+  .table-interaction-overlay .seat-interaction-menu {
+    position: absolute;
+    z-index: 1;
+    top: 50%;
+    left: 50%;
+    width: min(360px, calc(100vw - 32px));
+    min-height: 176px;
+    padding: 16px;
+    margin: 0;
+    border-radius: 20px;
+    transform: translate(-50%, -50%);
+    animation: desktop-interaction-dialog-in 180ms var(--curve-deal) both;
+  }
+
+  .table-interaction-overlay .seat-interaction-menu::before {
+    display: none;
+  }
+
+  .table-interaction-overlay .seat-interaction-menu > header {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) 44px;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .table-interaction-overlay .seat-interaction-menu > header > .player-avatar {
+    width: 48px;
+    height: 48px;
+    margin: 0;
+  }
+
+  .table-interaction-overlay .seat-interaction-close {
+    width: 44px;
+    height: 44px;
+  }
+
+  .table-interaction-overlay .seat-interaction-menu button {
+    min-height: 64px;
+  }
+}
+
+/* Desktop table contract. Mobile owns the compact bottom sheet and perimeter
+   lanes above; desktop keeps the same semantics but uses one centered dialog
+   and one self-contained visual envelope per opponent. */
+@media (min-width: 1120px) {
+  body:has(.game-page) {
+    background: #071410;
+  }
+
+  .game-page {
+    width: min(1540px, 100%);
+  }
+
+  .table-interaction-overlay {
+    position: fixed;
+    z-index: 100;
+    width: 100vw;
+    height: 100dvh;
+    inset: 0;
+  }
+
+  .table-interaction-overlay .seat-interaction-backdrop {
+    position: absolute;
+    z-index: 0;
+    display: block;
+    border: 0;
+    background: rgb(0 18 13 / 0.68);
+    inset: 0;
+  }
+
+  .table-interaction-overlay .seat-interaction-menu {
+    position: absolute;
+    z-index: 1;
+    top: 50%;
+    left: 50%;
+    width: 360px;
+    min-height: 176px;
+    padding: 16px;
+    margin: 0;
+    border-radius: 20px;
+    transform: translate(-50%, -50%);
+    animation: desktop-interaction-dialog-in 180ms var(--curve-deal) both;
+  }
+
+  .table-interaction-overlay .seat-interaction-menu::before {
+    display: none;
+  }
+
+  .table-interaction-overlay .seat-interaction-menu > header {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) 44px;
+    gap: 10px;
+  }
+
+  .table-interaction-overlay .seat-interaction-menu > header > .player-avatar {
+    width: 48px;
+    height: 48px;
+    margin: 0;
+  }
+
+  .table-interaction-overlay .seat-interaction-close {
+    width: 44px;
+    height: 44px;
+  }
+
+  .table-interaction-overlay .seat-interaction-menu button {
+    min-height: 64px;
+  }
+
+  .game-stage .game-seat {
+    width: 184px;
+    min-height: 210px;
+  }
+
+  .game-stage .seat-1 {
+    --character-anchor-x: 50%;
+    left: 5.5%;
+  }
+
+  .game-stage .seat-5 {
+    --character-anchor-x: 50%;
+    right: 5.5%;
+  }
+
+  .game-stage .seat-1 .seat-character-button,
+  .game-stage .seat-5 .seat-character-button {
+    left: 50%;
+  }
+
+  .game-stage .seat-character-button,
+  .game-stage .seat-2 .seat-character-button,
+  .game-stage .seat-3 .seat-character-button,
+  .game-stage .seat-4 .seat-character-button {
+    top: -42px;
+    width: 138px;
+    height: 138px;
+  }
+
+  .game-stage .seat-cards,
+  .game-stage .seat-1 .seat-cards,
+  .game-stage .seat-2 .seat-cards,
+  .game-stage .seat-3 .seat-cards,
+  .game-stage .seat-4 .seat-cards,
+  .game-stage .seat-5 .seat-cards {
+    top: 82px;
+    left: 50%;
+  }
+
+  .game-stage .seat-identity {
+    top: 137px;
+    right: 4px;
+    left: 4px;
+    min-height: 30px;
+  }
+
+  .game-stage .seat-badges {
+    top: 143px;
+    left: 10px;
+  }
+
+  .game-stage .seat-player-name {
+    font-size: 12px;
+  }
+
+  .game-stage .seat-stack {
+    font-size: 11px;
+  }
+
+  .game-stage .last-action {
+    right: 4px;
+    bottom: 7px;
+    left: 4px;
+    min-height: 24px;
+    font-size: 10px;
+    line-height: 24px;
+  }
+
+  .game-stage .seat-contribution {
+    top: 103px;
+    right: -8px;
+    left: auto;
+  }
+
+  .game-stage .seat-4 .seat-contribution,
+  .game-stage .seat-5 .seat-contribution {
+    right: auto;
+    left: -8px;
+  }
+
+  .game-stage .dried-fish-wager.is-compact {
+    min-height: 32px;
+  }
+
+  .game-stage .dried-fish-wager.is-compact .dried-fish-pile {
+    display: none;
+  }
+
+  .game-stage .dried-fish-wager.is-compact > b {
+    min-width: 46px;
+    padding: 5px 7px;
+  }
+
+  .game-bottom-dock > .seat-human .seat-contribution {
+    top: 63px;
+    right: -3px;
+    left: auto;
+  }
+
+  .game-bottom-dock > .seat-human .dried-fish-wager.is-compact .dried-fish-pile {
+    display: none;
+  }
+}
+
+@keyframes desktop-interaction-dialog-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 14px)) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
 /* The action dock keeps a stable height while an opponent is acting. */
 .player-turn-status {
   display: grid;

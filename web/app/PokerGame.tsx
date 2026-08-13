@@ -959,13 +959,13 @@ function SeatPositionBadges({
         </b>
       ) : null}
       {isSmallBlind ? (
-        <strong className="blind-badge small-blind">
-          小盲 <em>{SMALL_BLIND}</em>
+        <strong className="blind-badge small-blind" aria-label={`小盲 ${SMALL_BLIND}`}>
+          小盲
         </strong>
       ) : null}
       {isBigBlind ? (
-        <strong className="blind-badge big-blind">
-          大盲 <em>{BIG_BLIND}</em>
+        <strong className="blind-badge big-blind" aria-label={`大盲 ${BIG_BLIND}`}>
+          大盲
         </strong>
       ) : null}
     </div>
@@ -1167,12 +1167,12 @@ function Seat({
           {reactionLabel ?? thinkingLabel}
         </span>
       ) : null}
-      {systemActionLabel ? (
+      {mobileActionLabel ? (
         <span
-          key={`${performance?.eventId ?? "state"}:${systemActionLabel}`}
+          key={`${performance?.eventId ?? "state"}:${mobileActionLabel}`}
           className="last-action"
         >
-          {systemActionLabel}
+          {mobileActionLabel}
         </span>
       ) : null}
       {performance ? (
