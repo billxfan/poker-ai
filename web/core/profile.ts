@@ -320,6 +320,15 @@ export function resetLearningData(profile: LocalProfile): LocalProfile {
   };
 }
 
+/** Starts a genuinely fresh training run without touching account resources. */
+export function resetTrainingData(profile: LocalProfile): LocalProfile {
+  return {
+    ...profile,
+    history: [],
+    aiProfiles: {},
+  };
+}
+
 export function syncProfileChips(
   profile: LocalProfile,
   chips: number,

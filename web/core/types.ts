@@ -58,6 +58,10 @@ export type OpponentRead = {
   pressureOpportunities: number;
   foldsToAggression: number;
   continuesVsAggression: number;
+  /** Recent pots won after being the last public aggressor. */
+  pressureWins: number;
+  /** Recent public showdowns lost after being the last public aggressor. */
+  pressureFailures: number;
 };
 
 // Kept as an alias because the profile screen still presents the human read.
@@ -75,6 +79,19 @@ export type AILearningSnapshot = {
 export type AILearningState = {
   handsPlayed: number;
   totalProfit: number;
+  /** Decayed recent chip result, used so a fresh downswing is not diluted by old wins. */
+  recentProfit: number;
+  /** Number of hands ending with no chips. */
+  bustCount: number;
+  /** Number of automatic table reloads caused by those busts. */
+  rebuyCount: number;
+  /** Decayed bust signal used only by the transient persona emotion layer. */
+  recentBustPressure: number;
+  /** Decayed recent result, used for short-lived confidence or frustration only. */
+  recentMomentum: number;
+  /** Decayed loss after a publicly settled high-equity decision. */
+  recentBadBeatPressure: number;
+  consecutiveLosses: number;
   aggressionBias: number;
   tightnessBias: number;
   bluffBias: number;
@@ -105,6 +122,9 @@ export type AIDecisionTrace = {
     stackToPotRatio: number;
     activePlayerCount: number;
     hasInitiative: boolean;
+    estimatedEquity?: number;
+    potOdds?: number;
+    rangePressure?: number;
   };
   tuning?: {
     aggressiveThreshold: number;
@@ -199,6 +219,7 @@ export type GameState = {
   /** Stable identifier for the current hand within the session. */
   handId: string;
   players: Player[];
+  /** Bots that reloaded immediately before the current hand. */
   rebuyPlayerIds: number[];
   deck: Card[];
   communityCards: Card[];

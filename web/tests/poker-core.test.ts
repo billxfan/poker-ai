@@ -596,7 +596,7 @@ test("folding down to one player settles immediately and conserves chips", () =>
   );
 });
 
-test("an eliminated AI automatically rebuys before the next hand", () => {
+test("an eliminated AI automatically reloads before the next hand", () => {
   let game = createGame(149);
   game = startNewHand(game, 151);
   assert.equal(game.dealerId, 0);
@@ -610,6 +610,18 @@ test("an eliminated AI automatically rebuys before the next hand", () => {
   assert.equal(game.players[1].position, "BTN");
   assert.equal(game.players[2].position, "SB");
   assert.equal(game.players[3].position, "BB");
+});
+
+test("repeated Bot reloads preserve a continuous table", () => {
+  let game = createGame(150);
+  for (const seed of [151, 152, 153, 154, 155, 156]) {
+    game.players[1].chips = 0;
+    game.players[1].status = "out";
+    game = startNewHand(game, seed);
+    assert.deepEqual(game.rebuyPlayerIds, [1]);
+    assert.equal(game.players[1].status, "active");
+    assert.equal(game.phase, "playing");
+  }
 });
 
 test("a busted human can buy in and continue without resetting the table", () => {
@@ -813,7 +825,7 @@ test("the five native-inspired AI profiles use distinct engines and curves", () 
   );
 });
 
-test("AI personas produce observably different action distributions", () => {
+test("AI personas keep recognizable but non-pathological action distributions", () => {
   const base = createGame(169);
   const counts = new Map<
     number,
@@ -847,13 +859,17 @@ test("AI personas produce observably different action distributions", () => {
     counts.set(playerId, result);
   }
 
-  assert.ok(counts.get(2)!.aggressive > counts.get(1)!.aggressive * 3);
-  assert.ok(counts.get(3)!.fold > counts.get(4)!.fold * 8);
-  assert.ok(counts.get(4)!.passive > counts.get(5)!.passive * 1.7);
-  assert.ok(counts.get(5)!.aggressive > counts.get(1)!.aggressive * 3);
+  assert.ok(counts.get(2)!.aggressive > counts.get(1)!.aggressive * 2);
+  assert.ok(counts.get(1)!.fold > counts.get(2)!.fold);
+  assert.ok(counts.get(3)!.fold > counts.get(4)!.fold);
+  assert.ok(counts.get(4)!.passive > counts.get(3)!.passive * 2);
+  assert.ok(counts.get(4)!.passive > counts.get(4)!.aggressive * 8);
+  assert.ok(counts.get(5)!.passive > counts.get(5)!.aggressive);
+  assert.ok(counts.get(5)!.aggressive > counts.get(3)!.aggressive);
+  assert.ok(counts.get(5)!.fold > counts.get(2)!.fold * 0.3);
 });
 
-test("AI learning records contexts and decays exploration within style bounds", () => {
+test("AI learning keeps recency-weighted opponent reads and bounded exploration", () => {
   let game = createGame(173);
   const random = seededRandom(991);
   let actions = 0;
@@ -872,10 +888,10 @@ test("AI learning records contexts and decays exploration within style bounds", 
 
   assert.equal(learning.handsPlayed, 120);
   assert.equal(learning.snapshots.length, 60);
-  assert.ok(Object.keys(learning.contextPolicies).length > 0);
-  assert.ok(Math.abs(learning.aggressionBias) <= 1);
-  assert.ok(Math.abs(learning.tightnessBias) <= 1);
-  assert.ok(Math.abs(learning.bluffBias) <= 1);
+  assert.deepEqual(learning.contextPolicies, {});
+  assert.equal(learning.aggressionBias, 0);
+  assert.equal(learning.tightnessBias, 0);
+  assert.equal(learning.bluffBias, 0);
   assert.ok(currentAIExplorationRate(style, learning) < style.initialExploration);
   assert.ok(
     currentAIExplorationRate(style, learning) >= style.minimumExploration,
@@ -889,6 +905,11 @@ test("AI learning records contexts and decays exploration within style bounds", 
   assert.ok(
     Object.values(learning.opponentReads).some(
       (read) => read.handsObserved > 0,
+    ),
+  );
+  assert.ok(
+    Object.values(learning.opponentReads).every(
+      (read) => read.handsObserved < 30,
     ),
   );
 });
@@ -944,12 +965,12 @@ test("AI uses effective stacks and commits strong hands at shallow SPR", () => {
   base.minimumRaiseIncrement = 20;
   base.pot = 100;
   base.players[1].bet = 0;
-  base.players[1].chips = 100;
+  base.players[1].chips = 70;
   base.players[1].holeCards = [card(14, "spades"), card(14, "hearts")];
   base.players
     .filter((player) => player.id !== 1 && player.status !== "out")
     .forEach((player) => {
-      player.chips = 100;
+      player.chips = 70;
     });
   const deep = structuredClone(base);
   deep.players.forEach((player) => {

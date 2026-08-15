@@ -1,7 +1,16 @@
 import type { PersonaState } from "./characterState.ts";
-import type { AIArchetype, ActionType } from "./types.ts";
+import {
+  ACTION_VARIANTS,
+  CONTEXT_LINES,
+  INTERACTION_LINES,
+  type DialogueLocale,
+  type DialogueTrigger,
+  type InteractionRole,
+  type TableInteractionKind,
+} from "./dialogueCatalogs.ts";
+import type { AIArchetype, Street } from "./types.ts";
 
-export type DialogueTrigger = "turn" | ActionType | "win" | "lose";
+export type { DialogueTrigger, TableInteractionKind } from "./dialogueCatalogs.ts";
 
 export type DialogueChoice = {
   id: string;
@@ -14,11 +23,12 @@ export type DialogueContext = {
   personaState?: PersonaState;
   /** Public pressure from 0 to 1. It changes wording, never poker policy. */
   pressure?: number;
+  street?: Street;
+  activePlayerCount?: number;
+  stackInBigBlinds?: number;
 };
 
 type PersonaDialogue = Record<DialogueTrigger, readonly string[]>;
-
-type DialogueLocale = "zh-CN" | "en";
 
 // Shared language is deliberate. Real players reuse the same small procedural
 // vocabulary; individuality comes from frequency, syntax, catchphrases and mood.
@@ -79,8 +89,8 @@ const EN_CATALOG: Record<AIArchetype, PersonaDialogue> = {
   "tight-aggressive": {
     turn: ["One moment.", "Let me count.", "My turn?", "No rush.", "Hmm…"],
     check: ["Check.", "Your move.", "I'll check.", "Nothing yet."],
-    call: ["Call.", "I'm in.", "Fair price.", "Matched."],
-    raise: ["Raise.", "A little more.", "I'll make it this much.", "Try this number."],
+    call: ["Call.", "I'm in.", "Okay, I call.", "Let's see it."],
+    raise: ["Raise.", "A little more.", "I'll make it this much.", "Make it this."],
     "all-in": ["All-in.", "That's all of it.", "No more counting.", "Let's go."],
     fold: ["I'm out.", "You can have it.", "Not this hand.", "Fold."],
     win: ["Good.", "I'll take it.", "Next hand.", "That works."],
@@ -103,7 +113,7 @@ const EN_CATALOG: Record<AIArchetype, PersonaDialogue> = {
     raise: ["A small raise.", "I'll raise.", "Only this much.", "Let's try it."],
     "all-in": ["A-all-in.", "That's everything.", "I'm all-in.", "No changing it."],
     fold: ["Never mind.", "Too expensive.", "You play.", "I fold."],
-    win: ["Whew…", "That was close.", "Finally.", "Keep it safe."],
+    win: ["Whew…", "That was close.", "Finally.", "Don't jinx it."],
     lose: ["I knew it.", "Should've known.", "Gone again.", "Give me a moment."],
   },
   "loose-weak": {
@@ -113,14 +123,14 @@ const EN_CATALOG: Record<AIArchetype, PersonaDialogue> = {
     raise: ["I'll add some.", "Hey, I raise.", "Just a tiny raise.", "Let's try."],
     "all-in": ["What? All-in!", "I'll show you everything.", "Nothing left behind."],
     fold: ["That's too much.", "Then I won't look.", "Why raise again?", "I'm out."],
-    win: ["It actually hit!", "Good thing I stayed.", "Nice profit.", "One more hand."],
+    win: ["It actually hit!", "Good thing I stayed.", "I'll take that.", "One more hand."],
     lose: ["The river again.", "So close.", "Oh no.", "Maybe next time."],
   },
   balanced: {
     turn: ["One moment.", "How much?", "Let me think.", "My turn.", "Okay…"],
     check: ["Check.", "Your move.", "Take a card.", "No bet."],
-    call: ["Call.", "I'll see it.", "Fair price.", "Matched."],
-    raise: ["I raise.", "A little higher.", "Let's change the number.", "Your decision."],
+    call: ["Call.", "I'll see it.", "Okay, I call.", "Let's see it."],
+    raise: ["I raise.", "A little higher.", "Make it this.", "Back to you."],
     "all-in": ["All-in.", "No room left.", "Now or never.", "Your decision."],
     fold: ["It's yours.", "Not this hand.", "I fold.", "Next time."],
     win: ["Got it.", "Next hand.", "Good run.", "Thanks."],
@@ -156,24 +166,24 @@ const TOPIC_LINES: Record<
 
 const EN_TOPIC_LINES: typeof TOPIC_LINES = {
   "tight-aggressive": {
-    "running-hot": ["Cards are running well.", "Stay steady.", "That last pot was enough."],
-    "rough-run": ["Tough table today.", "One hand at a time.", "Settle the pace."],
+    "running-hot": ["Good run so far.", "Don't jinx it.", "Nice pot, that one."],
+    "rough-run": ["Cards are cold.", "One hand at a time.", "Need one to turn it around."],
   },
   "loose-aggressive": {
-    "running-hot": ["I've won plenty today.", "Still running hot.", "Deal again."],
-    "rough-run": ["I don't believe this.", "Again?", "I'm still here."],
+    "running-hot": ["I'm on a heater.", "Still running hot.", "Deal again."],
+    "rough-run": ["You have to be kidding.", "Again?", "I'm still here."],
   },
   "tight-weak": {
-    "running-hot": ["Going well today.", "Don't get wild.", "A little profit is enough."],
-    "rough-run": ["Why every time?", "Not my day.", "I should slow down."],
+    "running-hot": ["Going well today.", "Don't get wild.", "Please keep this going."],
+    "rough-run": ["Why every time?", "Not my day.", "Maybe I should sit one out."],
   },
   "loose-weak": {
-    "running-hot": ["Everything is hitting today.", "Lucky me.", "Deal, deal."],
-    "rough-run": ["I've lost so many.", "Where are my cards?", "One last hand."],
+    "running-hot": ["Everything is hitting!", "Lucky me.", "Deal, deal."],
+    "rough-run": ["How many have I lost?", "Where are my cards?", "Okay, one more hand."],
   },
   balanced: {
-    "running-hot": ["Feeling good today.", "The last few went well.", "Keep playing normally."],
-    "rough-run": ["Rough stretch.", "The last few were off.", "Reset."],
+    "running-hot": ["Nice run today.", "The last few went well.", "Don't jinx it."],
+    "rough-run": ["Rough stretch.", "Nothing's landing today.", "Deal the next one."],
   },
 };
 
@@ -209,13 +219,27 @@ export const FORBIDDEN_LIVE_DIALOGUE_TERMS = [
   "牌力",
   "blocker",
   "诈唬频率",
+  "range",
+  "combos",
+  "effective stack",
+  "pot control",
+  "betting line",
 ] as const;
 
 export function dialogueCatalogSize(archetype: AIArchetype): number {
-  return Object.values(CATALOG[archetype]).reduce(
+  const base = Object.values(CATALOG[archetype]).reduce(
     (sum, phrases) => sum + phrases.length,
     0,
   );
+  const variants = Object.values(ACTION_VARIANTS["zh-CN"][archetype]).reduce(
+    (sum, phrases) => sum + phrases.length,
+    0,
+  );
+  const contextual = Object.values(CONTEXT_LINES["zh-CN"][archetype]).reduce(
+    (sum, phrases) => sum + phrases.length,
+    0,
+  );
+  return base + variants + contextual;
 }
 
 function mixSeed(seed: number, salt: number): number {
@@ -269,7 +293,15 @@ export function choosePersonaDialogue({
             phrases: topicLines[archetype][state.monologueTopic],
           },
         ]
-      : [{ key: trigger, phrases: catalog[archetype][trigger] }];
+      : [
+          {
+            key: trigger,
+            phrases: [
+              ...catalog[archetype][trigger],
+              ...ACTION_VARIANTS[locale][archetype][trigger],
+            ],
+          },
+        ];
   if (trigger === "turn" && (context?.pressure ?? 0) >= 0.32) {
     sources.push({ key: "pressure", phrases: pressureLines[archetype] });
   }
@@ -281,6 +313,28 @@ export function choosePersonaDialogue({
     sources.push({
       key: state.monologueTopic,
       phrases: topicLines[archetype][state.monologueTopic],
+    });
+  }
+  if (trigger === "turn" && context?.activePlayerCount === 2) {
+    sources.push({
+      key: "heads-up",
+      phrases: CONTEXT_LINES[locale][archetype]["heads-up"],
+    });
+  }
+  if (trigger === "turn" && context?.street === "river") {
+    sources.push({
+      key: "river",
+      phrases: CONTEXT_LINES[locale][archetype].river,
+    });
+  }
+  if (
+    trigger === "turn" &&
+    context?.stackInBigBlinds !== undefined &&
+    context.stackInBigBlinds <= 20
+  ) {
+    sources.push({
+      key: "short-stack",
+      phrases: CONTEXT_LINES[locale][archetype]["short-stack"],
     });
   }
 
@@ -303,4 +357,32 @@ export function choosePersonaDialogue({
     : choices.filter((choice) => !recentIdSet.has(choice.id));
   if (!pool.length) return null;
   return pool[mixSeed(seed, 0x9e37) % pool.length];
+}
+
+export function chooseInteractionDialogue({
+  archetype,
+  kind,
+  role,
+  seed,
+  recentIds = [],
+  locale = "zh-CN",
+}: {
+  archetype: AIArchetype;
+  kind: TableInteractionKind;
+  role: InteractionRole;
+  seed: number;
+  recentIds?: readonly string[];
+  locale?: DialogueLocale;
+}): DialogueChoice {
+  const phrases = INTERACTION_LINES[locale][archetype][kind][role];
+  const choices = phrases.map((text, index) => ({
+    id: `${archetype}:interaction:${kind}:${role}:${index}`,
+    family: `${archetype}:interaction:${kind}:${role}`,
+    kind: "speech" as const,
+    text,
+  }));
+  const recent = new Set(recentIds.slice(-12));
+  const fresh = choices.filter((choice) => !recent.has(choice.id));
+  const pool = fresh.length ? fresh : choices;
+  return pool[mixSeed(seed, role === "sender" ? 0x1a2b : 0x3c4d) % pool.length];
 }

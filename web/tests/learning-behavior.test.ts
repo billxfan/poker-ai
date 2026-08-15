@@ -4,9 +4,11 @@ import {
   currentAILearningRate,
   defaultAILearningState,
   getAIDecisionTuning,
+  updateAILearningAfterHand,
   type AIDecisionTuning,
 } from "../core/aiLearning.ts";
 import { aiStyleForPlayerId } from "../core/aiProfiles.ts";
+import { createGame } from "../core/engine.ts";
 import type { OpponentRead } from "../core/types.ts";
 
 function read(overrides: Partial<OpponentRead>): OpponentRead {
@@ -19,6 +21,8 @@ function read(overrides: Partial<OpponentRead>): OpponentRead {
     pressureOpportunities: 100,
     foldsToAggression: 50,
     continuesVsAggression: 50,
+    pressureWins: 0,
+    pressureFailures: 0,
     ...overrides,
   };
 }
@@ -105,4 +109,136 @@ test("learning keeps a nonzero adaptation floor after very long sessions", () =>
     currentAILearningRate(style, learning),
     style.learningRate * 0.15,
   );
+});
+
+test("loss emotion stays transient and persona-specific without a lifetime rebuy ratchet", () => {
+  const lagStyle = aiStyleForPlayerId(2);
+  const tightStyle = aiStyleForPlayerId(3);
+  const stable = defaultAILearningState();
+  stable.handsPlayed = 100;
+  const lifetimeRebuysOnly = structuredClone(stable);
+  lifetimeRebuysOnly.bustCount = 80;
+  lifetimeRebuysOnly.rebuyCount = 80;
+  const recentLoss = structuredClone(lifetimeRebuysOnly);
+  recentLoss.recentProfit = -1_200;
+  recentLoss.recentBustPressure = 2;
+  recentLoss.consecutiveLosses = 6;
+
+  const lagBaseline = getAIDecisionTuning(
+    lagStyle,
+    stable,
+    "preflop|CO|facing-bet|marginal|mw|deep",
+  );
+  const lagRebuysOnly = getAIDecisionTuning(
+    lagStyle,
+    lifetimeRebuysOnly,
+    "preflop|CO|facing-bet|marginal|mw|deep",
+  );
+  const lagTilt = getAIDecisionTuning(
+    lagStyle,
+    recentLoss,
+    "preflop|CO|facing-bet|marginal|mw|deep",
+  );
+  const tightBaseline = getAIDecisionTuning(
+    tightStyle,
+    stable,
+    "preflop|CO|facing-bet|marginal|mw|deep",
+  );
+  const tightTilt = getAIDecisionTuning(
+    tightStyle,
+    recentLoss,
+    "preflop|CO|facing-bet|marginal|mw|deep",
+  );
+
+  assert.deepEqual(lagRebuysOnly, lagBaseline);
+  assert.ok(lagTilt.aggressiveThreshold < lagBaseline.aggressiveThreshold);
+  assert.ok(lagTilt.aggressionChance > lagBaseline.aggressionChance);
+  assert.ok(tightTilt.passiveThreshold > tightBaseline.passiveThreshold);
+  assert.ok(tightTilt.continueChance < tightBaseline.continueChance);
+  assert.ok(Math.abs(lagTilt.aggressionChance - lagStyle.aggressionChance) < 0.03);
+});
+
+test("recent public pressure results make a bot wary of shown-down winners, not permanently afraid", () => {
+  const style = aiStyleForPlayerId(5);
+  const baselineMemory = defaultAILearningState();
+  baselineMemory.handsPlayed = 100;
+  const winnerMemory = structuredClone(baselineMemory);
+  winnerMemory.opponentReads[0] = read({ pressureWins: 4 });
+  const failedMemory = structuredClone(baselineMemory);
+  failedMemory.opponentReads[0] = read({ pressureFailures: 4 });
+  const opponents = { activeIds: [0], primaryId: 0 };
+
+  const baseline = getAIDecisionTuning(style, baselineMemory, "river|BTN|facing-bet|marginal|hu|deep", opponents);
+  const winner = getAIDecisionTuning(style, winnerMemory, "river|BTN|facing-bet|marginal|hu|deep", opponents);
+  const failed = getAIDecisionTuning(style, failedMemory, "river|BTN|facing-bet|marginal|hu|deep", opponents);
+
+  assert.ok(winner.continueChance < baseline.continueChance);
+  assert.ok(failed.continueChance > baseline.continueChance);
+  assert.ok(winner.passiveThreshold > failed.passiveThreshold);
+});
+
+test("a public high-equity showdown loss creates a bounded, decaying bad-beat signal", () => {
+  const game = createGame(919);
+  const bot = game.players[2];
+  bot.totalContribution = 100;
+  bot.chips -= 100;
+  game.result = {
+    title: "showdown",
+    detail: "",
+    winnerIds: [1],
+    payouts: { 1: 200 },
+    humanDelta: 0,
+    showdown: true,
+  };
+  game.actionLog = [{
+    id: "bot-call",
+    playerId: 2,
+    playerName: bot.name,
+    street: "river",
+    action: "call",
+    amount: 100,
+    label: "跟注",
+    aiDecision: {
+      contextKey: "river|BTN|facing-bet|strong|hu|deep",
+      strengthBucket: "strong",
+      actionKind: "passive",
+      usedExploration: false,
+      publicFactors: {
+        pressure: 0.4,
+        positionBonus: 0,
+        boardWetness: 0.2,
+        stackToPotRatio: 2,
+        activePlayerCount: 2,
+        hasInitiative: false,
+        estimatedEquity: 0.7,
+      },
+    },
+  }];
+
+  const learned = updateAILearningAfterHand(
+    game,
+    2,
+    aiStyleForPlayerId(2),
+    defaultAILearningState(),
+  );
+  assert.equal(learned.recentBadBeatPressure, 1);
+  assert.ok(learned.recentMomentum < 0);
+
+  const recoveryGame = structuredClone(game);
+  recoveryGame.result = {
+    ...game.result,
+    winnerIds: [2],
+    payouts: { 2: 200 },
+  };
+  recoveryGame.players[2].totalContribution = 100;
+  recoveryGame.players[2].chips = 1_900;
+  recoveryGame.actionLog = [];
+  const recovered = updateAILearningAfterHand(
+    recoveryGame,
+    2,
+    aiStyleForPlayerId(2),
+    learned,
+  );
+  assert.equal(recovered.recentBadBeatPressure, 0.7);
+  assert.ok(recovered.recentMomentum > learned.recentMomentum);
 });

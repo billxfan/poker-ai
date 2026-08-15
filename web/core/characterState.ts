@@ -1,4 +1,5 @@
 import type { PresentationEvent } from "./presentation.ts";
+import type { TableInteractionKind } from "./dialogueCatalogs.ts";
 
 export type PersonaEmotion =
   | "neutral"
@@ -32,6 +33,32 @@ export function defaultPersonaState(): PersonaState {
     monologueTopic: null,
     topicHandsLeft: 0,
     lastNet: 0,
+  };
+}
+
+/**
+ * Applies a visible table gesture to a character's social presentation only.
+ * It has no connection to private cards or the decision policy.
+ */
+export function reactToTableInteraction(
+  current: PersonaState,
+  kind: TableInteractionKind,
+): PersonaState {
+  if (kind === "flower") {
+    return {
+      ...current,
+      emotion: "confident",
+      arousal: clamp(current.arousal + 0.1),
+    };
+  }
+
+  const arousalDelta = kind === "slipper" ? 0.32 : 0.24;
+  return {
+    ...current,
+    emotion: "irritated",
+    arousal: clamp(current.arousal + arousalDelta),
+    monologueTopic: "rough-run",
+    topicHandsLeft: Math.max(1, current.topicHandsLeft),
   };
 }
 

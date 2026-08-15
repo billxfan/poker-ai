@@ -1,5 +1,4 @@
 import type {
-  AIActionKind,
   AIContextPolicy,
   AILearningState,
   AIStyle,
@@ -31,6 +30,8 @@ function emptyOpponentRead(): OpponentRead {
     pressureOpportunities: 0,
     foldsToAggression: 0,
     continuesVsAggression: 0,
+    pressureWins: 0,
+    pressureFailures: 0,
   };
 }
 
@@ -38,6 +39,13 @@ export function defaultAILearningState(): AILearningState {
   return {
     handsPlayed: 0,
     totalProfit: 0,
+    recentProfit: 0,
+    bustCount: 0,
+    rebuyCount: 0,
+    recentBustPressure: 0,
+    recentMomentum: 0,
+    recentBadBeatPressure: 0,
+    consecutiveLosses: 0,
     aggressionBias: 0,
     tightnessBias: 0,
     bluffBias: 0,
@@ -55,17 +63,21 @@ export function normalizeAILearningState(
   if (!value || typeof value !== "object") return fallback;
   const normalizeCount = (count: number | null | undefined) =>
     Number.isFinite(count) ? clamp(Math.floor(count!), 0, 1_000_000) : 0;
+  const normalizeMetric = (count: number | null | undefined) =>
+    Number.isFinite(count) ? clamp(count!, 0, 1_000_000) : 0;
   const normalizeRead = (read: OpponentRead | null | undefined): OpponentRead => {
     const candidate = { ...emptyOpponentRead(), ...(read ?? {}) };
     return {
-      handsObserved: normalizeCount(candidate.handsObserved),
-      vpipHands: normalizeCount(candidate.vpipHands),
-      pfrHands: normalizeCount(candidate.pfrHands),
-      aggressiveActions: normalizeCount(candidate.aggressiveActions),
-      totalActions: normalizeCount(candidate.totalActions),
-      pressureOpportunities: normalizeCount(candidate.pressureOpportunities),
-      foldsToAggression: normalizeCount(candidate.foldsToAggression),
-      continuesVsAggression: normalizeCount(candidate.continuesVsAggression),
+      handsObserved: normalizeMetric(candidate.handsObserved),
+      vpipHands: normalizeMetric(candidate.vpipHands),
+      pfrHands: normalizeMetric(candidate.pfrHands),
+      aggressiveActions: normalizeMetric(candidate.aggressiveActions),
+      totalActions: normalizeMetric(candidate.totalActions),
+      pressureOpportunities: normalizeMetric(candidate.pressureOpportunities),
+      foldsToAggression: normalizeMetric(candidate.foldsToAggression),
+      continuesVsAggression: normalizeMetric(candidate.continuesVsAggression),
+      pressureWins: normalizeMetric(candidate.pressureWins),
+      pressureFailures: normalizeMetric(candidate.pressureFailures),
     };
   };
   const storedReads =
@@ -119,6 +131,19 @@ export function normalizeAILearningState(
       ? Math.max(0, value.handsPlayed)
       : 0,
     totalProfit: Number.isFinite(value.totalProfit) ? value.totalProfit : 0,
+    recentProfit: Number.isFinite(value.recentProfit) ? value.recentProfit : 0,
+    bustCount: normalizeCount(value.bustCount),
+    rebuyCount: normalizeCount(value.rebuyCount),
+    recentBustPressure: Number.isFinite(value.recentBustPressure)
+      ? clamp(value.recentBustPressure, 0, 8)
+      : 0,
+    recentMomentum: Number.isFinite(value.recentMomentum)
+      ? clamp(value.recentMomentum, -4, 4)
+      : 0,
+    recentBadBeatPressure: Number.isFinite(value.recentBadBeatPressure)
+      ? clamp(value.recentBadBeatPressure, 0, 8)
+      : 0,
+    consecutiveLosses: normalizeCount(value.consecutiveLosses),
     aggressionBias: clamp(value.aggressionBias ?? 0, -1, 1),
     tightnessBias: clamp(value.tightnessBias ?? 0, -1, 1),
     bluffBias: clamp(value.bluffBias ?? 0, -1, 1),
@@ -167,34 +192,6 @@ export function currentAIExplorationRate(
   );
 }
 
-function policyAdjustment(
-  policy: AIContextPolicy | undefined,
-): Partial<AIDecisionTuning> {
-  if (!policy || policy.sampleCount <= 0) return {};
-  const confidence = clamp(policy.sampleCount / 8, 0, 1);
-  const aggressiveEdge =
-    (policy.aggressiveScore -
-      Math.max(policy.passiveScore, policy.foldScore)) *
-    confidence;
-  const foldEdge =
-    (policy.foldScore -
-      Math.max(policy.passiveScore, policy.aggressiveScore)) *
-    confidence;
-  const passiveEdge =
-    (policy.passiveScore -
-      Math.max(policy.foldScore, policy.aggressiveScore)) *
-    confidence;
-
-  return {
-    aggressiveThreshold: -aggressiveEdge * 0.14,
-    aggressionChance: aggressiveEdge * 0.18,
-    passiveThreshold: foldEdge * 0.12 - aggressiveEdge * 0.05,
-    continueChance: passiveEdge * 0.08 - foldEdge * 0.16,
-    bluffThreshold: -aggressiveEdge * 0.1,
-    bluffChance: aggressiveEdge * 0.2,
-  };
-}
-
 function opponentAdjustment(read: HumanOpponentRead): Partial<AIDecisionTuning> {
   if (read.handsObserved <= 0) return {};
   const confidence = clamp(read.handsObserved / 12, 0, 1);
@@ -210,6 +207,10 @@ function opponentAdjustment(read: HumanOpponentRead): Partial<AIDecisionTuning> 
     read.pressureOpportunities > 0
       ? read.continuesVsAggression / read.pressureOpportunities
       : 0;
+  const pressureEvidence = read.pressureWins + read.pressureFailures;
+  const pressureConfidence = clamp(pressureEvidence / 4, 0, 1) * confidence;
+  const pressureWinRate =
+    pressureEvidence > 0 ? read.pressureWins / pressureEvidence : 0;
 
   let aggressiveThreshold = 0;
   let passiveThreshold = 0;
@@ -250,6 +251,16 @@ function opponentAdjustment(read: HumanOpponentRead): Partial<AIDecisionTuning> 
     const strength = (pfrRate - 0.34) * 0.16 * confidence;
     passiveThreshold += strength * 0.3;
     continueChance -= strength * 0.55;
+  }
+  if (pressureWinRate > 0.64) {
+    const strength = (pressureWinRate - 0.64) * 0.16 * pressureConfidence;
+    passiveThreshold += strength;
+    continueChance -= strength * 0.7;
+  }
+  if (pressureEvidence > 0 && pressureWinRate < 0.36) {
+    const strength = (0.36 - pressureWinRate) * 0.16 * pressureConfidence;
+    passiveThreshold -= strength;
+    continueChance += strength * 0.55;
   }
 
   return {
@@ -311,24 +322,106 @@ export function getAIDecisionTuning(
     primaryId?: number | null;
   },
 ): AIDecisionTuning {
+  void contextKey;
   const state = normalizeAILearningState(learning);
   const confidence = aiLearningConfidence(style, state);
-  const cap = style.adjustmentCap * confidence;
-  const aggressionBias = state.aggressionBias * cap;
-  const tightnessBias = state.tightnessBias * cap;
-  const bluffBias = state.bluffBias * cap;
-  const contextual = policyAdjustment(state.contextPolicies[contextKey]);
+  const recentLossPressure = clamp(-state.recentProfit / 700, 0, 1);
+  const recentBustPressure = clamp(state.recentBustPressure / 1.8, 0, 1);
+  const recentBadBeatPressure = clamp(state.recentBadBeatPressure / 1.2, 0, 1);
+  const streakPressure = clamp((state.consecutiveLosses - 2) / 5, 0, 1);
+  const emotionStrength =
+    state.handsPlayed < 6
+      ? 0
+      : (recentLossPressure * 0.5 +
+          recentBustPressure * 0.3 +
+          recentBadBeatPressure * 0.15 +
+          streakPressure * 0.05) *
+        Math.min(0.025, Math.max(0.006, style.adjustmentCap * 0.12));
+  const confidenceStrength =
+    state.handsPlayed < 6
+      ? 0
+      : clamp(state.recentMomentum / 1.8, 0, 1) * 0.012;
   const opponent = opponentGroupAdjustment(
     state,
     opponents?.activeIds,
     opponents?.primaryId,
   );
+  const exploitCap = Math.min(0.08, style.adjustmentCap * 0.35) * confidence;
 
-  // Every learned contribution—not only the aggregate bias—must remain inside
-  // the persona envelope. This prevents long sessions from converging all five
-  // rivals toward the same exploit policy.
+  const emotionDirection: Record<
+    AIStyle["key"],
+    Partial<AIDecisionTuning>
+  > = {
+    "tight-aggressive": {
+      aggressiveThreshold: 0.5,
+      passiveThreshold: 0.4,
+      aggressionChance: -0.4,
+      continueChance: -0.25,
+      bluffThreshold: 0.4,
+      bluffChance: -0.5,
+    },
+    "loose-aggressive": {
+      aggressiveThreshold: -0.2,
+      passiveThreshold: -0.15,
+      aggressionChance: 0.5,
+      continueChance: 0.15,
+      bluffThreshold: -0.15,
+      bluffChance: 0.3,
+    },
+    "tight-weak": {
+      aggressiveThreshold: 0.45,
+      passiveThreshold: 0.5,
+      aggressionChance: -0.2,
+      continueChance: -0.3,
+      bluffThreshold: 0.25,
+      bluffChance: -0.2,
+    },
+    "loose-weak": {
+      passiveThreshold: -0.15,
+      continueChance: 0.3,
+      aggressionChance: 0.05,
+    },
+    balanced: {
+      aggressiveThreshold: 0.08,
+      passiveThreshold: 0.08,
+      aggressionChance: -0.05,
+      continueChance: -0.05,
+    },
+  };
+  const emotion = emotionDirection[style.key];
+  const confidenceDirection: Record<
+    AIStyle["key"],
+    Partial<AIDecisionTuning>
+  > = {
+    "tight-aggressive": {
+      aggressiveThreshold: -0.1,
+      aggressionChance: 0.22,
+      bluffChance: 0.08,
+    },
+    "loose-aggressive": {
+      aggressiveThreshold: -0.08,
+      aggressionChance: 0.3,
+      bluffChance: 0.18,
+    },
+    "tight-weak": {
+      passiveThreshold: -0.08,
+      continueChance: 0.1,
+    },
+    "loose-weak": {
+      continueChance: 0.15,
+      bluffChance: 0.04,
+    },
+    balanced: {
+      aggressiveThreshold: -0.04,
+      aggressionChance: 0.1,
+    },
+  };
+  const confidenceEmotion = confidenceDirection[style.key];
+
   const delta = (key: keyof AIDecisionTuning) =>
-    clamp((contextual[key] ?? 0) + (opponent[key] ?? 0), -cap, cap);
+    clamp(opponent[key] ?? 0, -exploitCap, exploitCap) +
+    (emotion[key] ?? 0) * emotionStrength +
+    (confidenceEmotion[key] ?? 0) * confidenceStrength;
 
   const withinPersona = (
     key: keyof AIDecisionTuning,
@@ -338,63 +431,44 @@ export function getAIDecisionTuning(
   ) =>
     clamp(
       value,
-      Math.max(hardMinimum, style[key] - cap),
-      Math.min(hardMaximum, style[key] + cap),
+      Math.max(hardMinimum, style[key] - style.adjustmentCap),
+      Math.min(hardMaximum, style[key] + style.adjustmentCap),
     );
 
   return {
     aggressiveThreshold: withinPersona(
       "aggressiveThreshold",
-      style.aggressiveThreshold -
-        aggressionBias * 0.6 +
-        tightnessBias * 0.9 +
-        delta("aggressiveThreshold"),
+      style.aggressiveThreshold + delta("aggressiveThreshold"),
       0.08,
       0.95,
     ),
     passiveThreshold: withinPersona(
       "passiveThreshold",
-      style.passiveThreshold -
-        aggressionBias * 0.25 +
-        tightnessBias * 0.7 +
-        delta("passiveThreshold"),
+      style.passiveThreshold + delta("passiveThreshold"),
       0.05,
       0.9,
     ),
     aggressionChance: withinPersona(
       "aggressionChance",
-      style.aggressionChance +
-        aggressionBias * 1.4 -
-        tightnessBias * 0.45 +
-        delta("aggressionChance"),
+      style.aggressionChance + delta("aggressionChance"),
       0.02,
       0.98,
     ),
     continueChance: withinPersona(
       "continueChance",
-      style.continueChance +
-        aggressionBias * 0.3 -
-        tightnessBias * 0.95 +
-        delta("continueChance"),
+      style.continueChance + delta("continueChance"),
       0.05,
       0.98,
     ),
     bluffThreshold: withinPersona(
       "bluffThreshold",
-      style.bluffThreshold -
-        bluffBias * 0.8 +
-        tightnessBias * 0.25 +
-        delta("bluffThreshold"),
+      style.bluffThreshold + delta("bluffThreshold"),
       0,
       0.75,
     ),
     bluffChance: withinPersona(
       "bluffChance",
-      style.bluffChance +
-        bluffBias * 1.4 +
-        aggressionBias * 0.25 -
-        tightnessBias * 0.4 +
-        delta("bluffChance"),
+      style.bluffChance + delta("bluffChance"),
       0,
       0.8,
     ),
@@ -414,6 +488,7 @@ function updateOpponentRead(
   opponentId: number,
   previous: OpponentRead,
 ): OpponentRead {
+  const decay = 0.965;
   const visible = visibleActionsForObserver(game, observerId);
   const opponentActions = visible.filter(
     (entry) => entry.playerId === opponentId && !entry.label.includes("盲"),
@@ -455,106 +530,36 @@ function updateOpponentRead(
       lastAggressor = entry.playerId;
     }
   });
+  const finalAggressor = [...visible]
+    .reverse()
+    .find(
+      (entry) =>
+        !entry.label.includes("盲") &&
+        ["raise", "all-in"].includes(entry.action),
+    )?.playerId;
+  const pressureWon =
+    finalAggressor === opponentId && game.result?.winnerIds.includes(opponentId);
+  const pressureFailed =
+    finalAggressor === opponentId &&
+    game.result?.showdown === true &&
+    !game.result.winnerIds.includes(opponentId);
 
   return {
-    handsObserved:
-      previous.handsObserved + (opponentActions.length > 0 ? 1 : 0),
-    vpipHands: previous.vpipHands + (voluntary ? 1 : 0),
-    pfrHands: previous.pfrHands + (raised ? 1 : 0),
-    aggressiveActions: previous.aggressiveActions + aggressiveActions,
-    totalActions: previous.totalActions + opponentActions.length,
+    handsObserved: previous.handsObserved * decay + 1,
+    vpipHands: previous.vpipHands * decay + (voluntary ? 1 : 0),
+    pfrHands: previous.pfrHands * decay + (raised ? 1 : 0),
+    aggressiveActions:
+      previous.aggressiveActions * decay + aggressiveActions,
+    totalActions: previous.totalActions * decay + opponentActions.length,
     pressureOpportunities:
-      previous.pressureOpportunities + pressureOpportunities,
-    foldsToAggression: previous.foldsToAggression + foldsToAggression,
+      previous.pressureOpportunities * decay + pressureOpportunities,
+    foldsToAggression:
+      previous.foldsToAggression * decay + foldsToAggression,
     continuesVsAggression:
-      previous.continuesVsAggression + continuesVsAggression,
-  };
-}
-
-function actionLearningWeight(style: AIStyle, kind: AIActionKind): number {
-  if (kind === "fold") return style.foldLearningWeight;
-  if (kind === "passive") return style.passiveLearningWeight;
-  return style.aggressiveLearningWeight;
-}
-
-function rewardForDecision(
-  kind: AIActionKind,
-  bucket: "weak" | "marginal" | "strong" | "premium",
-  signedOutcome: number,
-  didWin: boolean,
-): number {
-  if (kind === "fold") {
-    const bucketReward = {
-      weak: 0.18,
-      marginal: 0.08,
-      strong: -0.1,
-      premium: -0.24,
-    }[bucket];
-    return clamp(0.04 + bucketReward - signedOutcome * 0.12, -1, 1);
-  }
-  if (kind === "passive") {
-    const valueBonus =
-      didWin && (bucket === "strong" || bucket === "premium") ? 0.08 : 0;
-    return clamp(signedOutcome * 0.55 + valueBonus, -1, 1);
-  }
-  const bluffBonus =
-    didWin && (bucket === "weak" || bucket === "marginal") ? 0.1 : 0;
-  const premiumBonus = didWin && bucket === "premium" ? 0.05 : 0;
-  return clamp(signedOutcome + bluffBonus + premiumBonus, -1, 1);
-}
-
-function refreshBiases(contextPolicies: Record<string, AIContextPolicy>) {
-  const values = Object.entries(contextPolicies);
-  if (!values.length) {
-    return { aggressionBias: 0, tightnessBias: 0, bluffBias: 0 };
-  }
-
-  let aggressionTotal = 0;
-  let aggressionWeight = 0;
-  let tightnessTotal = 0;
-  let tightnessWeight = 0;
-  let bluffTotal = 0;
-  let bluffWeight = 0;
-
-  values.forEach(([key, policy]) => {
-    const weight = Math.max(1, policy.sampleCount);
-    const aggressiveEdge =
-      policy.aggressiveScore -
-      Math.max(policy.passiveScore, policy.foldScore);
-    const foldEdge =
-      policy.foldScore -
-      Math.max(policy.passiveScore, policy.aggressiveScore);
-    const [street, , , bucket] = key.split("|");
-
-    aggressionTotal += aggressiveEdge * weight;
-    aggressionWeight += weight;
-    tightnessTotal +=
-      (street === "preflop"
-        ? foldEdge - aggressiveEdge * 0.35
-        : foldEdge * 0.35) * weight;
-    tightnessWeight += weight;
-    if (street !== "preflop" && ["weak", "marginal"].includes(bucket)) {
-      bluffTotal += aggressiveEdge * weight;
-      bluffWeight += weight;
-    }
-  });
-
-  return {
-    aggressionBias: clamp(
-      aggressionWeight ? aggressionTotal / aggressionWeight : 0,
-      -1,
-      1,
-    ),
-    tightnessBias: clamp(
-      tightnessWeight ? tightnessTotal / tightnessWeight : 0,
-      -1,
-      1,
-    ),
-    bluffBias: clamp(
-      bluffWeight ? bluffTotal / bluffWeight : 0,
-      -1,
-      1,
-    ),
+      previous.continuesVsAggression * decay + continuesVsAggression,
+    pressureWins: previous.pressureWins * decay + (pressureWon ? 1 : 0),
+    pressureFailures:
+      previous.pressureFailures * decay + (pressureFailed ? 1 : 0),
   };
 }
 
@@ -568,62 +573,14 @@ export function updateAILearningAfterHand(
   const previous = normalizeAILearningState(previousLearning);
   const payout = game.result.payouts[playerId] ?? 0;
   const profit = payout - game.players[playerId].totalContribution;
-  const totalPot = game.players.reduce(
-    (sum, player) => sum + player.totalContribution,
-    0,
-  );
-  const normalizedProfit = clamp(profit / Math.max(totalPot, 80), -1, 1);
-  const signedOutcome =
-    profit > 0
-      ? Math.max(0.25, Math.abs(normalizedProfit))
-      : profit < 0
-        ? -Math.max(0.25, Math.abs(normalizedProfit))
-        : game.result.winnerIds.includes(playerId)
-          ? 0.1
-          : -0.1;
-  const didWin = game.result.winnerIds.includes(playerId);
-  const learningRate = currentAILearningRate(style, previous);
-  const contextPolicies = structuredClone(previous.contextPolicies);
-
-  const decisions = [...game.actionLog]
-    .reverse()
-    .filter(
-      (entry) => entry.playerId === playerId && entry.aiDecision !== undefined,
-    );
-  decisions.forEach((entry, index) => {
-      const decision = entry.aiDecision!;
-      const stepsFromOutcome = decisions.length - index - 1;
-      const temporalCredit = 0.7 + 0.3 * 0.86 ** stepsFromOutcome;
-      const reward =
-        rewardForDecision(
-          decision.actionKind,
-          decision.strengthBucket,
-          signedOutcome,
-          didWin,
-        ) *
-        actionLearningWeight(style, decision.actionKind) *
-        temporalCredit *
-        (decision.usedExploration ? 0.9 : 1);
-      const policy = contextPolicies[decision.contextKey] ?? {
-        foldScore: 0,
-        passiveScore: 0,
-        aggressiveScore: 0,
-        sampleCount: 0,
-      };
-      const key = `${decision.actionKind}Score` as
-        | "foldScore"
-        | "passiveScore"
-        | "aggressiveScore";
-      policy[key] += (clamp(reward, -1, 1) - policy[key]) * learningRate;
-      policy.sampleCount += 1;
-      contextPolicies[decision.contextKey] = policy;
-    });
-
-  const biases = refreshBiases(contextPolicies);
+  const busted = game.players[playerId].chips <= 0;
+  const latestDecision = game.actionLog.find(
+    (entry) => entry.playerId === playerId && entry.aiDecision !== undefined,
+  )?.aiDecision;
+  const estimatedEquity = latestDecision?.publicFactors?.estimatedEquity ?? 0;
+  const badBeat =
+    profit < 0 && game.result.showdown && estimatedEquity >= 0.62;
   const handsPlayed = previous.handsPlayed + 1;
-  const effectiveCap =
-    style.adjustmentCap *
-    clamp(handsPlayed / Math.max(1, style.memoryWindow), 0, 1);
   const opponentReads = { ...previous.opponentReads };
   game.players
     .filter((player) => player.id !== playerId)
@@ -639,18 +596,36 @@ export function updateAILearningAfterHand(
   const nextBase: AILearningState = {
     handsPlayed,
     totalProfit: previous.totalProfit + profit,
-    ...biases,
+    recentProfit: previous.recentProfit * 0.72 + profit,
+    bustCount: previous.bustCount + (busted ? 1 : 0),
+    rebuyCount: previous.rebuyCount + (busted ? 1 : 0),
+    recentBustPressure:
+      previous.recentBustPressure * 0.72 + (busted ? 1 : 0),
+    recentMomentum:
+      previous.recentMomentum * 0.68 + clamp(profit / 450, -1, 1),
+    recentBadBeatPressure:
+      previous.recentBadBeatPressure * 0.7 + (badBeat ? 1 : 0),
+    consecutiveLosses: profit < 0 ? previous.consecutiveLosses + 1 : 0,
+    aggressionBias: 0,
+    tightnessBias: 0,
+    bluffBias: 0,
     humanRead,
     opponentReads,
-    contextPolicies,
+    contextPolicies: {},
     snapshots: previous.snapshots,
   };
+  const adaptedToHuman = getAIDecisionTuning(
+    style,
+    nextBase,
+    "profile-summary",
+    { activeIds: [0], primaryId: 0 },
+  );
   const snapshot = {
     handIndex: handsPlayed,
     totalProfit: nextBase.totalProfit,
-    aggressionBias: biases.aggressionBias * effectiveCap,
-    tightnessBias: biases.tightnessBias * effectiveCap,
-    bluffBias: biases.bluffBias * effectiveCap,
+    aggressionBias: adaptedToHuman.aggressionChance - style.aggressionChance,
+    tightnessBias: adaptedToHuman.passiveThreshold - style.passiveThreshold,
+    bluffBias: adaptedToHuman.bluffChance - style.bluffChance,
     explorationRate: currentAIExplorationRate(style, nextBase),
   };
 

@@ -3,8 +3,8 @@ import {
   getAIDecisionTuning,
   type AIDecisionTuning,
 } from "./aiLearning.ts";
-import { evaluateBest } from "./evaluator.ts";
 import { buildBotObservation } from "./observation.ts";
+import { estimatePokerEquity } from "./pokerEquity.ts";
 import type {
   AIActionKind,
   AIArchetype,
@@ -21,6 +21,9 @@ const AI_POLICY_VERSION = "humanlike-core-v2";
 type DecisionContext = {
   observation: BotObservation;
   strength: number;
+  equity: number;
+  potOdds: number;
+  rangePressure: number;
   pressure: number;
   positionBonus: number;
   boardWetness: number;
@@ -65,67 +68,6 @@ function publicStateDigest(observation: BotObservation): string {
     hash = Math.imul(hash, 0x01000193);
   }
   return (hash >>> 0).toString(16).padStart(8, "0");
-}
-
-function preflopStrength(ranks: number[], paired: boolean, suited: boolean) {
-  const [high, low] = [...ranks].sort((a, b) => b - a);
-  let score = 0.08 + (high / 14) * 0.34 + (low / 14) * 0.18;
-  if (paired) score += 0.26 + high / 70;
-  if (suited) score += 0.06;
-  if (high - low <= 2) score += 0.04;
-  if (high >= 12 && low >= 10) score += 0.08;
-  if (high === 14) score += 0.04;
-  return Math.min(1, score);
-}
-
-function drawPotential(observation: BotObservation): number {
-  if (
-    observation.communityCards.length < 3 ||
-    observation.communityCards.length >= 5
-  ) {
-    return 0;
-  }
-  const cards = [
-    ...observation.self.holeCards,
-    ...observation.communityCards,
-  ];
-  const suitCounts = Object.values(
-    cards.reduce<Record<string, number>>((counts, card) => {
-      counts[card.suit] = (counts[card.suit] ?? 0) + 1;
-      return counts;
-    }, {}),
-  );
-  let bonus = suitCounts.some((count) => count === 4) ? 0.08 : 0;
-  const ranks = new Set(cards.map((card) => card.rank));
-  if (ranks.has(14)) ranks.add(1);
-  for (let start = 1; start <= 10; start += 1) {
-    const matched = Array.from({ length: 5 }, (_, index) => start + index)
-      .filter((rank) => ranks.has(rank))
-      .length;
-    if (matched === 4) bonus = Math.max(bonus, 0.07);
-  }
-  return bonus;
-}
-
-function handStrength(observation: BotObservation): number {
-  const player = observation.self;
-  if (observation.communityCards.length < 3) {
-    return preflopStrength(
-      player.holeCards.map((card) => card.rank),
-      player.holeCards[0]?.rank === player.holeCards[1]?.rank,
-      player.holeCards[0]?.suit === player.holeCards[1]?.suit,
-    );
-  }
-
-  const evaluated = evaluateBest([
-    ...player.holeCards,
-    ...observation.communityCards,
-  ]);
-  const kicker = (evaluated.values[0] ?? 2) / 80;
-  return Math.min(
-    1,
-    0.12 + evaluated.category * 0.115 + kicker + drawPotential(observation),
-  );
 }
 
 function boardWetness(observation: BotObservation): number {
@@ -258,20 +200,28 @@ function learningContextKey(
   ].join("|");
 }
 
+function preflopEntryBonus(
+  observation: BotObservation,
+  bonus: number,
+): number {
+  return observation.street === "preflop" ? bonus : 0;
+}
+
 function tightAggressivePolicy(context: DecisionContext): DecisionIntent {
   const { strength, pressure, tuning, random, observation } = context;
   const legal = observation.legalActions;
-  if (strength >= tuning.aggressiveThreshold) {
+  const decisionStrength = strength + preflopEntryBonus(observation, 0.17);
+  if (decisionStrength >= tuning.aggressiveThreshold) {
     return random() < tuning.aggressionChance ? "aggressive" : "passive";
   }
-  if (strength >= tuning.passiveThreshold + pressure * 0.18) {
+  if (decisionStrength >= tuning.passiveThreshold + pressure * 0.18) {
     return legal.canCheck || random() < tuning.continueChance
       ? "passive"
       : "fold";
   }
   if (
     legal.canCheck &&
-    strength >= tuning.bluffThreshold &&
+    decisionStrength >= tuning.bluffThreshold &&
     random() < tuning.bluffChance * 0.55
   ) {
     return "aggressive";
@@ -289,7 +239,10 @@ function looseAggressivePolicy(context: DecisionContext): DecisionIntent {
     observation,
   } = context;
   const legal = observation.legalActions;
-  const effectiveStrength = strength + Math.max(0, position) * 0.8;
+  const effectiveStrength =
+    strength +
+    Math.max(0, position) * 0.8 +
+    preflopEntryBonus(observation, 0.13);
   if (
     effectiveStrength >= tuning.aggressiveThreshold ||
     (effectiveStrength >= tuning.bluffThreshold &&
@@ -304,7 +257,9 @@ function looseAggressivePolicy(context: DecisionContext): DecisionIntent {
   ) {
     return "aggressive";
   }
-  return effectiveStrength + 0.18 >= pressure + 0.12
+  if (legal.canCheck) return "passive";
+  return effectiveStrength >= tuning.passiveThreshold + pressure * 0.4 &&
+    random() < tuning.continueChance
     ? "passive"
     : "fold";
 }
@@ -312,15 +267,16 @@ function looseAggressivePolicy(context: DecisionContext): DecisionIntent {
 function tightWeakPolicy(context: DecisionContext): DecisionIntent {
   const { strength, pressure, tuning, random, observation } = context;
   const legal = observation.legalActions;
+  const decisionStrength = strength + preflopEntryBonus(observation, 0.25);
   if (
-    strength >= Math.max(0.8, tuning.aggressiveThreshold) &&
+    decisionStrength >= Math.max(0.8, tuning.aggressiveThreshold) &&
     random() < tuning.aggressionChance
   ) {
     return "aggressive";
   }
   if (legal.canCheck) return "passive";
   if (
-    strength >= tuning.passiveThreshold + pressure * 0.3 &&
+    decisionStrength >= tuning.passiveThreshold + pressure * 0.3 &&
     random() < tuning.continueChance
   ) {
     return "passive";
@@ -331,16 +287,18 @@ function tightWeakPolicy(context: DecisionContext): DecisionIntent {
 function looseWeakPolicy(context: DecisionContext): DecisionIntent {
   const { strength, pressure, tuning, random, observation } = context;
   const legal = observation.legalActions;
+  const decisionStrength = strength + preflopEntryBonus(observation, 0.23);
   if (
-    strength >= Math.max(0.82, tuning.aggressiveThreshold) &&
+    decisionStrength >= Math.max(0.82, tuning.aggressiveThreshold) &&
     random() < Math.max(0.08, tuning.aggressionChance)
   ) {
     return "aggressive";
   }
   if (legal.canCheck) return "passive";
-  const priceLooksAcceptable = strength + 0.26 >= pressure + 0.08;
+  const priceLooksAcceptable =
+    decisionStrength >= tuning.passiveThreshold + pressure * 0.22;
   if (priceLooksAcceptable && random() < tuning.continueChance) return "passive";
-  return strength + 0.12 >= pressure ? "passive" : "fold";
+  return "fold";
 }
 
 function balancedPolicy(context: DecisionContext): DecisionIntent {
@@ -354,7 +312,8 @@ function balancedPolicy(context: DecisionContext): DecisionIntent {
     observation,
   } = context;
   const legal = observation.legalActions;
-  const positionalStrength = strength + position * 0.7;
+  const positionalStrength =
+    strength + position * 0.7 + preflopEntryBonus(observation, 0.13);
   const bluffPenalty = wetness > 0.6 ? (wetness - 0.6) * 0.25 : 0;
   if (positionalStrength >= tuning.aggressiveThreshold) {
     return random() < tuning.aggressionChance ? "aggressive" : "passive";
@@ -405,7 +364,7 @@ function betFraction(style: AIStyle, strength: number, random: () => number) {
   if (style.key === "tight-aggressive") {
     return strength > 0.8 ? 0.78 + random() * 0.22 : 0.55 + random() * 0.2;
   }
-  if (style.key === "loose-aggressive") return 0.42 + random() * 0.68;
+  if (style.key === "loose-aggressive") return 0.4 + random() * 0.5;
   if (style.key === "tight-weak") return 0.48 + random() * 0.18;
   if (style.key === "loose-weak") return 0.34 + random() * 0.18;
   const balancedSizes = [0.33, 0.5, 0.75, 1];
@@ -424,8 +383,8 @@ function actionForIntent(
   const legal = observation.legalActions;
   if (intent === "aggressive") {
     if (
-      strength >= 0.72 &&
-      stackToPotRatio <= 1.25 &&
+      strength >= 0.8 &&
+      stackToPotRatio <= 0.8 &&
       legal.canAllIn
     ) {
       return { playerId, type: "all-in" };
@@ -447,10 +406,8 @@ function actionForIntent(
       }
       return { playerId, type: "raise", amount: target };
     }
-    if (legal.canAllIn) {
-      return { playerId, type: "all-in" };
-    }
     if (legal.canCall) return { playerId, type: "call" };
+    if (legal.canAllIn) return { playerId, type: "all-in" };
   }
   if (intent === "passive") {
     if (legal.canCheck) return { playerId, type: "check" };
@@ -518,18 +475,26 @@ export function chooseAIActionFromObservation(
     };
   }
 
-  const strength = handStrength(observation);
+  const equityEstimate = estimatePokerEquity(observation);
+  const activePlayerCount = [observation.self, ...observation.opponents].filter(
+    (seat) => seat.status !== "folded" && seat.status !== "out",
+  ).length;
+  const potOdds = legal.toCall / Math.max(1, observation.pot + legal.toCall);
+  const fairShare = 1 / Math.max(2, activePlayerCount);
+  const strength = clamp(
+    0.18 +
+      (equityEstimate.adjustedEquity / fairShare) * 0.32 -
+      Math.max(0, potOdds - equityEstimate.adjustedEquity) * 0.75,
+  );
   const contextKey = learningContextKey(observation, strength);
   const stacks = stackMetrics(observation);
   const tuning = getAIDecisionTuning(style, learning, contextKey, {
     activeIds: stacks.activeOpponentIds,
     primaryId: latestAggressorId(observation),
   });
-  const potPressure =
-    legal.toCall / Math.max(1, observation.pot + legal.toCall);
+  const potPressure = potOdds;
   const stackPressure = legal.toCall / Math.max(1, player.chips);
   const pressure = Math.max(potPressure, stackPressure * 0.75);
-  const activePlayerCount = stacks.activeOpponentIds.length + 1;
   const shortStackFactor = clamp(1 - stacks.stackToPotRatio / 3);
   const shortOpponentCallRisk = clamp(
     1 - stacks.shortestOpponentStackToPotRatio / 1.5,
@@ -551,14 +516,14 @@ export function chooseAIActionFromObservation(
     ...tuning,
     aggressiveThreshold: clamp(
       tuning.aggressiveThreshold -
-        (legal.toCall === 0 ? shortStackFactor * 0.06 : 0) -
+        (legal.toCall === 0 ? shortStackFactor * 0.03 : 0) -
         initiativeFactor * 0.04,
       0.08,
       0.95,
     ),
     aggressionChance: clamp(
       tuning.aggressionChance +
-        (legal.toCall === 0 ? shortStackFactor * 0.08 : 0) +
+        (legal.toCall === 0 ? shortStackFactor * 0.04 : 0) +
         initiativeFactor * 0.08,
     ),
     passiveThreshold: clamp(
@@ -588,6 +553,9 @@ export function chooseAIActionFromObservation(
   const context: DecisionContext = {
     observation,
     strength,
+    equity: equityEstimate.adjustedEquity,
+    potOdds,
+    rangePressure: equityEstimate.rangePressure,
     pressure,
     positionBonus: positionBonus(player.position),
     boardWetness: wetness,
@@ -625,6 +593,9 @@ export function chooseAIActionFromObservation(
         stackToPotRatio: stacks.stackToPotRatio,
         activePlayerCount,
         hasInitiative: hasBettingInitiative(observation),
+        estimatedEquity: equityEstimate.adjustedEquity,
+        potOdds,
+        rangePressure: equityEstimate.rangePressure,
       },
       tuning: stackAwareTuning,
     },

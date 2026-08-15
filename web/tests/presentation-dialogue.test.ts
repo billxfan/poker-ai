@@ -6,14 +6,17 @@ import {
 } from "../app/gameAudio.ts";
 import { performancesForEvent } from "../app/characterPresentation.ts";
 import {
+  chooseInteractionDialogue,
   choosePersonaDialogue,
   dialogueCatalogSize,
   FORBIDDEN_LIVE_DIALOGUE_TERMS,
   type DialogueTrigger,
+  type TableInteractionKind,
 } from "../core/dialogue.ts";
 import {
   advancePersonaState,
   defaultPersonaState,
+  reactToTableInteraction,
 } from "../core/characterState.ts";
 import { applyAction, createGame } from "../core/engine.ts";
 import {
@@ -22,6 +25,7 @@ import {
   type PresentationEvent,
 } from "../core/presentation.ts";
 import type { AIArchetype, Card } from "../core/types.ts";
+import { automatedInteractionAfterResult } from "../core/tableSocial.ts";
 
 const PERSONAS: AIArchetype[] = [
   "tight-aggressive",
@@ -205,9 +209,107 @@ test("English dialogue mode keeps every persona response in English", () => {
         });
         assert.ok(choice);
         assert.equal(/\p{Script=Han}/u.test(choice.text), false);
+        ["range", "combos", "effective stack", "pot control", "betting line"].forEach(
+          (term) => assert.equal(choice.text.toLowerCase().includes(term), false),
+        );
       }
     }
   }
+});
+
+test("contextual dialogue adds street, heads-up, and short-stack vocabulary", () => {
+  const lines = new Set(
+    Array.from({ length: 300 }, (_, index) =>
+      choosePersonaDialogue({
+        archetype: "balanced",
+        trigger: "turn",
+        seed: index + 1,
+        allowSilence: false,
+        context: {
+          street: "river",
+          activePlayerCount: 2,
+          stackInBigBlinds: 14,
+        },
+      }),
+    ).flatMap((choice) => (choice ? [choice.text] : [])),
+  );
+
+  assert.ok(lines.has("河牌了，最后一次。"));
+  assert.ok(lines.has("就剩我们俩。"));
+  assert.ok(lines.has("我后面不多。"));
+});
+
+test("all four interactions have distinct bilingual sender and receiver lines", () => {
+  const kinds: TableInteractionKind[] = ["egg", "tomato", "flower", "slipper"];
+  for (const locale of ["zh-CN", "en"] as const) {
+    for (const persona of PERSONAS) {
+      for (const kind of kinds) {
+        const sender = new Set(
+          Array.from({ length: 40 }, (_, seed) =>
+            chooseInteractionDialogue({
+              archetype: persona,
+              kind,
+              role: "sender",
+              seed,
+              locale,
+            }).text,
+          ),
+        );
+        const receiver = new Set(
+          Array.from({ length: 40 }, (_, seed) =>
+            chooseInteractionDialogue({
+              archetype: persona,
+              kind,
+              role: "receiver",
+              seed,
+              locale,
+            }).text,
+          ),
+        );
+        assert.ok(sender.size >= 2);
+        assert.ok(receiver.size >= 2);
+        assert.equal([...sender].some((line) => receiver.has(line)), false);
+        if (locale === "en") {
+          assert.equal(
+            [...sender, ...receiver].some((line) => /\p{Script=Han}/u.test(line)),
+            false,
+          );
+        }
+      }
+    }
+  }
+});
+
+test("settlement interactions let bots target both the user and another bot", () => {
+  const players = createGame(407).players;
+  const findInteraction = (winnerId: number) => {
+    for (let index = 0; index < 500; index += 1) {
+      const event: Extract<PresentationEvent, { kind: "result" }> = {
+        id: `social-${winnerId}-${index}:result`,
+        kind: "result",
+        handId: `social-${index}`,
+        winnerIds: [winnerId],
+        netBySeat: Object.fromEntries(
+          players.map((player) => [player.id, player.id === winnerId ? 500 : -100]),
+        ),
+        showdown: true,
+        humanDelta: winnerId === 0 ? 500 : -100,
+      };
+      const interaction = automatedInteractionAfterResult(event, players);
+      if (interaction) return interaction;
+    }
+    return null;
+  };
+
+  const towardUser = findInteraction(0);
+  const towardBot = findInteraction(2);
+  assert.ok(towardUser);
+  assert.equal(towardUser.targetId, 0);
+  assert.notEqual(towardUser.sourceId, 0);
+  assert.ok(towardBot);
+  assert.equal(towardBot.targetId, 2);
+  assert.notEqual(towardBot.sourceId, 0);
+  assert.notEqual(towardBot.sourceId, towardBot.targetId);
 });
 
 test("public results create short-lived emotion and an ongoing mutter topic", () => {
@@ -250,6 +352,20 @@ test("public results create short-lived emotion and an ongoing mutter topic", ()
   state = advancePersonaState(state, nextDeal, 4);
   state = advancePersonaState(state, nextDeal, 4);
   assert.equal(state.monologueTopic, null);
+});
+
+test("table interactions change only a bot's short-lived social presentation", () => {
+  const neutral = defaultPersonaState();
+  const needled = reactToTableInteraction(neutral, "tomato");
+  assert.equal(needled.emotion, "irritated");
+  assert.equal(needled.monologueTopic, "rough-run");
+  assert.equal(needled.topicHandsLeft, 1);
+  assert.ok(needled.arousal > neutral.arousal);
+
+  const encouraged = reactToTableInteraction(needled, "flower");
+  assert.equal(encouraged.emotion, "confident");
+  assert.equal(encouraged.monologueTopic, "rough-run");
+  assert.ok(encouraged.arousal > needled.arousal);
 });
 
 test("dialogue selector respects recent phrase and semantic-family cooldowns", () => {

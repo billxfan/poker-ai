@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -32,13 +33,16 @@ import {
   type PresentationEvent,
 } from "../core/presentation";
 import {
+  chooseInteractionDialogue,
   choosePersonaDialogue,
   type DialogueChoice,
   type DialogueTrigger,
+  type TableInteractionKind,
 } from "../core/dialogue";
 import {
   advancePersonaState,
   defaultPersonaState,
+  reactToTableInteraction,
   type PersonaState,
 } from "../core/characterState";
 import { AVATAR_SOURCES } from "./characterAssets";
@@ -71,6 +75,7 @@ import {
   STREET_LABELS,
 } from "../core/engine";
 import { evaluateBest, type EvaluatedHand } from "../core/evaluator";
+import { automatedInteractionAfterResult } from "../core/tableSocial";
 import {
   claimDailySignIn,
   DAILY_FREE_CHIPS,
@@ -81,6 +86,7 @@ import {
   recordCompletedHand,
   refreshDailyBenefit,
   resetLearningData,
+  resetTrainingData,
   saveProfile,
   syncProfileChips,
   type AIProfileStats,
@@ -433,13 +439,35 @@ function currentHandCardArtSources(game: GameState): string[] {
     .filter((source): source is string => !!source);
 }
 
-type TableInteractionKind = "egg" | "tomato" | "flower" | "slipper";
-
 type TableInteraction = {
   eventId: number;
+  sourceId: number;
+  sourceName: string;
   targetId: number;
   kind: TableInteractionKind;
 };
+
+const TABLE_SEAT_COORDINATES: Record<number, readonly [number, number]> = {
+  0: [0, 1],
+  1: [-0.7, 0.15],
+  2: [-0.8, -0.45],
+  3: [0, -0.7],
+  4: [0.8, -0.45],
+  5: [0.7, 0.15],
+};
+
+function interactionSourceStyle(
+  interaction: TableInteraction | null,
+): CSSProperties | undefined {
+  if (!interaction) return undefined;
+  const source = TABLE_SEAT_COORDINATES[interaction.sourceId];
+  const target = TABLE_SEAT_COORDINATES[interaction.targetId];
+  if (!source || !target) return undefined;
+  return {
+    "--interaction-source-x": `${Math.round((source[0] - target[0]) * 220)}px`,
+    "--interaction-source-y": `${Math.round((source[1] - target[1]) * 225)}px`,
+  } as CSSProperties;
+}
 
 type TableOverlayState =
   | { kind: "interaction"; seatId: number }
@@ -1163,6 +1191,7 @@ function Seat({
       }`}
       data-persona={player.style?.key ?? "human"}
       data-interaction-seat={player.id}
+      style={interactionSourceStyle(interaction)}
       aria-label={
         locale === "en"
           ? `${localize(player.name, locale)}, ${player.position}, ${player.chips} chips`
@@ -1219,8 +1248,8 @@ function Seat({
       {interaction && interactionPresentation ? (
         <span className="sr-only" aria-live="polite">
           {locale === "en"
-            ? `You sent ${localize(interactionPresentation.label, locale)} to ${localize(player.name, locale)}`
-            : `你向${player.name}送出了${interactionPresentation.label}`}
+            ? `${interaction.sourceId === HUMAN_ID ? "You" : localize(interaction.sourceName, locale)} sent ${localize(interactionPresentation.label, locale)} to ${localize(player.name, locale)}`
+            : `${interaction.sourceId === HUMAN_ID ? "你" : interaction.sourceName}向${player.name}送出了${interactionPresentation.label}`}
         </span>
       ) : null}
       <div className="seat-identity">
@@ -2666,6 +2695,10 @@ function AIProfileCard({
           label={locale === "en" ? "Net Result" : "累计盈亏"}
           value={`${profile.totalProfit >= 0 ? "+" : ""}${profile.totalProfit}`}
         />
+        <Metric
+          label={locale === "en" ? "Buy-ins" : "累计买入"}
+          value={`${1 + profile.learning.rebuyCount}`}
+        />
       </div>
       <section className="profile-insight">
         <div className="learning-title">
@@ -2709,7 +2742,7 @@ function AIProfileCard({
           <span>
             <small>{locale === "en" ? "Hands Observed" : "观察你的行动"}</small>
             <b>
-              {profile.learning.humanRead.handsObserved}
+              {Math.round(profile.learning.humanRead.handsObserved)}
               {locale === "en" ? " hands" : " 手"}
             </b>
           </span>
@@ -3575,6 +3608,11 @@ function GameScreen({
       context: {
         personaState: personaStateBySeat[thinkingId],
         pressure: pendingAIAction?.aiDecision?.publicFactors?.pressure,
+        street: game.street,
+        activePlayerCount: game.players.filter(
+          (seat) => seat.status !== "folded" && seat.status !== "out",
+        ).length,
+        stackInBigBlinds: player.chips / BIG_BLIND,
       },
       locale,
     });
@@ -3610,12 +3648,16 @@ function GameScreen({
     thinkingId,
   ]);
   const thinkingLabel = thinkingId === null ? null : "思考中";
-  const rebuyNoticeText = game.rebuyPlayerIds.length
-    ? `${game.rebuyPlayerIds
-        .map((playerId) => game.players[playerId]?.name)
-        .filter(Boolean)
-        .join("、")} 补充了 ${STARTING_CHIPS.toLocaleString()} 小鱼干`
-    : null;
+  const reloadedNames = game.rebuyPlayerIds
+    .map((playerId) => game.players[playerId]?.name)
+    .filter((name): name is string => !!name)
+    .map((name) => localize(name, locale));
+  const rebuyNoticeText =
+    reloadedNames.length
+      ? locale === "en"
+        ? `${reloadedNames.join(", ")} reloaded ${STARTING_CHIPS.toLocaleString()} chips`
+        : `${reloadedNames.join("、")} 补充了 ${STARTING_CHIPS.toLocaleString()} 小鱼干`
+      : null;
   const rebuyNotice =
     rebuyNoticeText && dismissedRebuyHand !== game.handNumber
       ? rebuyNoticeText
@@ -3654,12 +3696,49 @@ function GameScreen({
     );
   }
 
-  function sendTableInteraction(
+  const showDialogueChoice = useCallback((seatId: number, choice: DialogueChoice) => {
+    setDialogueMemory((current) => {
+      const memory = current[seatId] ?? { ids: [], families: [] };
+      return {
+        ...current,
+        [seatId]: {
+          ids: [...memory.ids, choice.id].slice(-24),
+          families: [...memory.families, choice.family].slice(-8),
+        },
+      };
+    });
+    setDialogueBySeat((current) => ({ ...current, [seatId]: choice.text }));
+    const existing = dialogueTimersRef.current[seatId];
+    if (existing) window.clearTimeout(existing);
+    dialogueTimersRef.current[seatId] = window.setTimeout(() => {
+      setDialogueBySeat((current) => {
+        if (current[seatId] !== choice.text) return current;
+        const next = { ...current };
+        delete next[seatId];
+        return next;
+      });
+    }, 2_450);
+  }, []);
+
+  const presentTableInteraction = useCallback((
+    sourceId: number,
     targetId: number,
     kind: TableInteractionKind,
-  ) {
+  ) => {
+    const source = game.players[sourceId];
     const target = game.players[targetId];
-    if (!target || target.isHuman || target.status === "out") return;
+    if (!source || !target || sourceId === targetId) return;
+    if (target.status === "out" && targetId !== HUMAN_ID) return;
+
+    if (!target.isHuman) {
+      setPersonaStateBySeat((current) => ({
+        ...current,
+        [targetId]: reactToTableInteraction(
+          current[targetId] ?? defaultPersonaState(),
+          kind,
+        ),
+      }));
+    }
 
     setTableOverlay(null);
     unlockGameAudio(soundEnabled);
@@ -3667,9 +3746,41 @@ function GameScreen({
     interactionSequenceRef.current += 1;
     setTableInteraction({
       eventId: interactionSequenceRef.current,
+      sourceId,
+      sourceName: source.name,
       targetId,
       kind,
     });
+
+    const eventSeed = stableTextSeed(
+      `${game.handId}:${interactionSequenceRef.current}:${sourceId}:${targetId}:${kind}`,
+    );
+    if (!source.isHuman && source.style) {
+      showDialogueChoice(
+        sourceId,
+        chooseInteractionDialogue({
+          archetype: source.style.key,
+          kind,
+          role: "sender",
+          seed: eventSeed,
+          recentIds: dialogueMemory[sourceId]?.ids,
+          locale,
+        }),
+      );
+    }
+    if (!target.isHuman && target.style) {
+      showDialogueChoice(
+        targetId,
+        chooseInteractionDialogue({
+          archetype: target.style.key,
+          kind,
+          role: "receiver",
+          seed: eventSeed ^ 0x51f15e,
+          recentIds: dialogueMemory[targetId]?.ids,
+          locale,
+        }),
+      );
+    }
 
     if (interactionTimerRef.current) {
       window.clearTimeout(interactionTimerRef.current);
@@ -3687,6 +3798,12 @@ function GameScreen({
       );
       interactionTimerRef.current = null;
     }, 1_320);
+  }, [dialogueMemory, game, locale, showDialogueChoice, soundEnabled]);
+
+  function sendTableInteraction(targetId: number, kind: TableInteractionKind) {
+    const target = game.players[targetId];
+    if (!target || target.isHuman || target.status === "out") return;
+    presentTableInteraction(HUMAN_ID, targetId, kind);
   }
 
   function toggleSound() {
@@ -3855,6 +3972,11 @@ function GameScreen({
             eventId.includes(":result")
               ? 0
               : game.currentBet / Math.max(1, game.pot + game.currentBet),
+          street: game.street,
+          activePlayerCount: game.players.filter(
+            (seat) => seat.status !== "folded" && seat.status !== "out",
+          ).length,
+          stackInBigBlinds: player.chips / BIG_BLIND,
         },
         locale,
       });
@@ -3977,6 +4099,13 @@ function GameScreen({
       }
       const resultDelay = hasImmediateAllIn ? 420 : 0;
       present(event, resultDelay, personaStatesForEvent);
+      const social = automatedInteractionAfterResult(event, game.players);
+      if (social) {
+        schedulePresentation(
+          () => presentTableInteraction(social.sourceId, social.targetId, social.kind),
+          resultDelay + 720,
+        );
+      }
       if (event.showdown) {
         playGameEventSound(`${event.id}:showdown`, "showdown", soundEnabled);
       }
@@ -3997,7 +4126,14 @@ function GameScreen({
       );
     });
     setPersonaStateBySeat(nextPersonaStates);
-  }, [dialogueMemory, game, personaStateBySeat, soundEnabled]);
+  }, [
+    dialogueMemory,
+    game,
+    locale,
+    personaStateBySeat,
+    presentTableInteraction,
+    soundEnabled,
+  ]);
 
   useEffect(() => {
     function handleKey(event: KeyboardEvent) {
@@ -4181,6 +4317,9 @@ function GameScreen({
           dealSeatCount={dealSeatIds.length}
           performance={performanceBySeat[human.id] ?? null}
           reactionLabel={dialogueBySeat[human.id] ?? null}
+          interaction={
+            tableInteraction?.targetId === human.id ? tableInteraction : null
+          }
         />
 
         {game.phase === "playing" ? (
@@ -4441,8 +4580,9 @@ function PokerGameContent() {
     unlockGameAudio(soundEnabled);
     playDealSequence(12, soundEnabled);
     clearSession();
-    const startingChips = Math.max(STARTING_CHIPS, profile.chips);
-    const fundedProfile = syncProfileChips(profile, startingChips);
+    const resetProfile = resetTrainingData(profile);
+    const startingChips = Math.max(STARTING_CHIPS, resetProfile.chips);
+    const fundedProfile = syncProfileChips(resetProfile, startingChips);
     const fresh = createGame(Date.now(), startingChips);
     void warmImageCache(currentHandCardArtSources(fresh), {
       concurrency: 7,
@@ -4564,7 +4704,7 @@ function PokerGameContent() {
           title={hasArchive ? "重新开始训练？" : "开始第一局训练？"}
           description={
             hasArchive
-              ? "会覆盖当前牌局存档；历史统计和对手记忆都会保留。"
+              ? "会覆盖当前牌局，并清空历史统计和对手学习；现有小鱼干和福利记录会保留。"
               : "将发放训练小鱼干，并开始第一局。"
           }
           confirmLabel={hasArchive ? "重新开始" : "开始训练"}

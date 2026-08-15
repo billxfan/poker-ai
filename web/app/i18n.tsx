@@ -279,7 +279,7 @@ const EXACT: Record<string, string> = {
   "新训练": "New Training",
   "重新开始训练？": "Restart Training?",
   "开始第一局训练？": "Start Your First Training Hand?",
-  "会覆盖当前牌局存档；历史统计和对手记忆都会保留。": "This replaces the current table save. Stats and opponent memory will be kept.",
+  "会覆盖当前牌局，并清空历史统计和对手学习；现有小鱼干和福利记录会保留。": "This starts a fresh table and clears hand history, stats, and opponent learning. Your chips and benefit records will be kept.",
   "将发放训练小鱼干，并开始第一局。": "Training chips will be issued and your first hand will begin.",
   "重新开始": "Restart",
   "开始训练": "Start Training",

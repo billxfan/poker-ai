@@ -134,12 +134,21 @@ street, turn and settlement events by comparing snapshots. Event IDs use hand
 and action sequence identity, making React Strict Mode and repeated renders
 idempotent. It cannot represent deck, hole cards or decision traces.
 
-### `core/dialogue.ts` — persona language
+### `core/dialogue.ts` + `core/dialogueCatalogs.ts` — persona language
 
 Consumes a presentation event or safe turn context plus persona and explicit
-seed. Phrase catalogs are separated by persona and phase. Selection applies
-phrase-ID and semantic-family cooldowns; a missing candidate means silence.
-Dialogue has no dependency on `ai.ts` and cannot inspect a pending decision.
+seed. Chinese and English catalogs are authored independently and separated by
+persona, phase, table context and interaction role. Selection applies phrase-ID
+and semantic-family cooldowns; a missing candidate means silence. Dialogue has
+no dependency on `ai.ts` and cannot inspect a pending decision.
+
+### `core/tableSocial.ts` — autonomous table interaction
+
+Derives an optional Bot-to-player interaction from public settlement facts and
+a stable event ID. The losing Bot may send an egg, tomato, flower or slipper to
+the winning human or Bot according to its persona. This is a deterministic,
+presentation-only event: it cannot change chips, actions, learning rewards or
+the next hand.
 
 ### `app/characterPresentation.ts` — character controller
 
@@ -249,9 +258,32 @@ Storing them in the poker state would pollute deterministic saves, invite stale
 timers and couple rules to presentation. Stable derived IDs provide replay and
 deduplication without changing engine ownership.
 
+### ADR-008 — Continuous table, separate bankroll statistics from strategy
+
+Accepted. A busted Bot automatically reloads before the next hand so the user
+does not lose opponents or hit an artificial table-ending state. The reload is
+recorded in cumulative profile statistics, but lifetime reload count does not
+change the expected value of a strategically identical future decision.
+`GameState` stores only the transient reload notice. Recent losses and busts may
+create a small, quickly decaying, persona-specific emotion adjustment; they do
+not rewrite the durable base policy.
+
+### ADR-009 — Equity anchor, opponent-model overlay
+
+Accepted. The browser policy estimates preflop equity from card quality and
+opponent count, and estimates postflop equity by sampling only from a canonical
+unknown-card pool constructed from the acting Bot's cards and the public board.
+It never samples the authoritative deck or another seat's private cards.
+
+The base persona policy remains the strategic anchor. Persistent adaptation is
+limited to recency-weighted public opponent statistics with an explicit cap.
+Raw hand profit no longer rewards chosen actions or creates global aggression,
+tightness or bluff biases. This avoids confusing variance with decision quality
+and prevents winner-take-all feedback under continuous automatic rebuys.
+
 ## Explicitly deferred
 
-- CFR/GTO solving, neural-network training and WebGPU
+- Full CFR/GTO subgame solving, neural-network training and WebGPU
 - Cloud sync, accounts, remote inference and telemetry
 - IndexedDB hand-history warehouse and third-party imports
 - Multiplayer and server-authoritative anti-cheat

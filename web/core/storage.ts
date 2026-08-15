@@ -3,7 +3,8 @@ import { aiStyleForPlayerId } from "./aiProfiles.ts";
 import { handIdForSession } from "./engine.ts";
 
 const STORAGE_KEY = "poker-ai-web/session";
-const VERSION = 1;
+const VERSION = 2;
+const SUPPORTED_VERSIONS = new Set([1, VERSION]);
 
 type Snapshot = {
   version: number;
@@ -50,7 +51,7 @@ export function loadSession(): GameState | null {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const snapshot = JSON.parse(raw) as Snapshot;
-    if (snapshot.version !== VERSION || !isPlausibleState(snapshot.game)) {
+    if (!SUPPORTED_VERSIONS.has(snapshot.version) || !isPlausibleState(snapshot.game)) {
       window.localStorage.removeItem(STORAGE_KEY);
       return null;
     }
@@ -66,6 +67,10 @@ export function loadSession(): GameState | null {
       ...snapshot.game,
       sessionId,
       handId,
+      phase:
+        (snapshot.game.phase as string) === "table-complete"
+          ? "result"
+          : snapshot.game.phase,
       players: snapshot.game.players.map((player) => ({
         ...player,
         style: player.isHuman ? undefined : aiStyleForPlayerId(player.id),

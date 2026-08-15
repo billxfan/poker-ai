@@ -4,6 +4,7 @@ import { applyAction, createGame } from "../core/engine.ts";
 import {
   recordCompletedHand,
   resetLearningData,
+  resetTrainingData,
   type LocalProfile,
 } from "../core/profile.ts";
 import { loadSession } from "../core/storage.ts";
@@ -73,6 +74,49 @@ test("resetLearningData clears AI profiles but preserves completed-hand history"
   assert.equal(reset.chips, recorded.chips);
 });
 
+test("resetTrainingData clears history, Bot statistics, and learning but preserves account resources", () => {
+  let game = createGame(3051);
+  for (const playerId of [2, 3, 4, 5, 0]) {
+    game = applyAction(game, { playerId, type: "fold" });
+  }
+  const recorded = recordCompletedHand(
+    {
+      ...emptyProfile(),
+      chips: 4_250,
+      lastDailyGrant: "2026-08-15",
+      lastSignIn: "2026-08-15",
+    },
+    game,
+  );
+
+  const reset = resetTrainingData(recorded);
+
+  assert.deepEqual(reset.history, []);
+  assert.deepEqual(reset.aiProfiles, {});
+  assert.equal(reset.chips, recorded.chips);
+  assert.equal(reset.lastDailyGrant, "2026-08-15");
+  assert.equal(reset.lastSignIn, "2026-08-15");
+});
+
+test("Bot busts accumulate as persistent buy-ins and recent bankroll loss", () => {
+  const first = foldToBigBlindWin(306);
+  first.players[2].chips = 0;
+  first.players[2].totalContribution = 2_000;
+  const afterFirst = recordCompletedHand(emptyProfile(), first);
+
+  const second = foldToBigBlindWin(308);
+  second.players[2].chips = 0;
+  second.players[2].totalContribution = 2_000;
+  const afterSecond = recordCompletedHand(afterFirst, second);
+
+  const learning = afterSecond.aiProfiles[2].learning;
+  assert.equal(learning.bustCount, 2);
+  assert.equal(learning.rebuyCount, 2);
+  assert.equal(learning.consecutiveLosses, 2);
+  assert.ok(learning.totalProfit <= -4_000);
+  assert.ok(learning.recentProfit < 0);
+});
+
 function foldToBigBlindWin(seed: number) {
   let game = createGame(seed);
   for (const playerId of [2, 3, 4, 5, 0]) {
@@ -109,8 +153,9 @@ test("loadSession deterministically migrates legacy snapshots without identifier
     legacy as unknown as Record<string, unknown>,
     "handId",
   );
+  (legacy as unknown as Record<string, unknown>).phase = "table-complete";
   const snapshot = JSON.stringify({
-    version: 1,
+    version: 2,
     savedAt: "2026-08-02T00:00:00.000Z",
     game: legacy,
   });
@@ -134,6 +179,8 @@ test("loadSession deterministically migrates legacy snapshots without identifier
     assert.equal(first?.handId, second?.handId);
     assert.match(first?.sessionId ?? "", /^legacy-session-/);
     assert.match(first?.handId ?? "", /-hand-1$/);
+    assert.equal(first?.phase, "result");
+    assert.deepEqual(first?.rebuyPlayerIds, []);
   } finally {
     if (previousWindow === undefined) {
       Reflect.deleteProperty(globalThis, "window");

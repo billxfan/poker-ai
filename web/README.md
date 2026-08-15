@@ -9,7 +9,8 @@ against five local AI opponents without an account or backend.
 - Five local AI opponents
 - Fold, check/call, raise, and all-in actions
 - Hand settlement and action history
-- Staged AI turn pacing and automatic AI rebuys between hands
+- Equity-aware AI decisions with recency-weighted opponent modeling and bounded persona tilt
+- Continuous automatic Bot rebuys tracked as statistics rather than permanent strategy pressure
 - Local history, opponent profiles, and accessible poker-stat explanations
 - Offline game sounds with a persistent mute control
 - Device-local autosave
