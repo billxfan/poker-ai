@@ -266,8 +266,8 @@ test("all four interactions have distinct bilingual sender and receiver lines", 
             }).text,
           ),
         );
-        assert.ok(sender.size >= 2);
-        assert.ok(receiver.size >= 2);
+        assert.ok(sender.size >= 5);
+        assert.ok(receiver.size >= 5);
         assert.equal([...sender].some((line) => receiver.has(line)), false);
         if (locale === "en") {
           assert.equal(

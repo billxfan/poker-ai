@@ -2,6 +2,7 @@ import type { PersonaState } from "./characterState.ts";
 import {
   ACTION_VARIANTS,
   CONTEXT_LINES,
+  INTERACTION_ADLIBS,
   INTERACTION_LINES,
   type DialogueLocale,
   type DialogueTrigger,
@@ -374,7 +375,10 @@ export function chooseInteractionDialogue({
   recentIds?: readonly string[];
   locale?: DialogueLocale;
 }): DialogueChoice {
-  const phrases = INTERACTION_LINES[locale][archetype][kind][role];
+  const phrases = [
+    ...INTERACTION_LINES[locale][archetype][kind][role],
+    ...INTERACTION_ADLIBS[locale][kind][role],
+  ];
   const choices = phrases.map((text, index) => ({
     id: `${archetype}:interaction:${kind}:${role}:${index}`,
     family: `${archetype}:interaction:${kind}:${role}`,

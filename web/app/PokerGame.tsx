@@ -445,6 +445,9 @@ type TableInteraction = {
   sourceName: string;
   targetId: number;
   kind: TableInteractionKind;
+  /** Recipients react only after a projectile has visibly arrived. */
+  phase: "flying" | "landed";
+  hit: boolean;
 };
 
 const TABLE_SEAT_COORDINATES: Record<number, readonly [number, number]> = {
@@ -1187,7 +1190,13 @@ function Seat({
       } ${thinkingMode ? `is-thinking thinking-${thinkingMode}` : ""} ${
         performance ? `has-performance gesture-${performance.gesture}` : ""
       } ${interactionMenuOpen ? "has-interaction-menu" : ""} ${
-        interaction ? `is-interaction-hit interaction-${interaction.kind}` : ""
+        interaction?.phase === "landed" && interaction.hit
+          ? `is-interaction-hit interaction-${interaction.kind}`
+          : ""
+      } ${
+        interaction?.phase === "landed" && !interaction.hit
+          ? "is-interaction-miss"
+          : ""
       }`}
       data-persona={player.style?.key ?? "human"}
       data-interaction-seat={player.id}
@@ -1235,14 +1244,16 @@ function Seat({
           <span className="interaction-projectile">
             {interactionPresentation.projectile}
           </span>
-          <span className="interaction-impact">
-            <b>{interactionPresentation.impact}</b>
-            <i />
-            <i />
-            <i />
-            <i />
-            <i />
-          </span>
+          {interaction.phase === "landed" && interaction.hit ? (
+            <span className="interaction-impact">
+              <b>{interactionPresentation.impact}</b>
+              <i />
+              <i />
+              <i />
+              <i />
+              <i />
+            </span>
+          ) : null}
         </span>
       ) : null}
       {interaction && interactionPresentation ? (
@@ -3730,31 +3741,24 @@ function GameScreen({
     if (!source || !target || sourceId === targetId) return;
     if (target.status === "out" && targetId !== HUMAN_ID) return;
 
-    if (!target.isHuman) {
-      setPersonaStateBySeat((current) => ({
-        ...current,
-        [targetId]: reactToTableInteraction(
-          current[targetId] ?? defaultPersonaState(),
-          kind,
-        ),
-      }));
-    }
-
     setTableOverlay(null);
     unlockGameAudio(soundEnabled);
     playGameSound("deal", soundEnabled, targetId % 5);
     interactionSequenceRef.current += 1;
+    const eventId = interactionSequenceRef.current;
+    const eventSeed = stableTextSeed(
+      `${game.handId}:${eventId}:${sourceId}:${targetId}:${kind}`,
+    );
+    const hit = eventSeed % 100 < 78;
     setTableInteraction({
-      eventId: interactionSequenceRef.current,
+      eventId,
       sourceId,
       sourceName: source.name,
       targetId,
       kind,
+      phase: "flying",
+      hit,
     });
-
-    const eventSeed = stableTextSeed(
-      `${game.handId}:${interactionSequenceRef.current}:${sourceId}:${targetId}:${kind}`,
-    );
     if (!source.isHuman && source.style) {
       showDialogueChoice(
         sourceId,
@@ -3768,20 +3772,6 @@ function GameScreen({
         }),
       );
     }
-    if (!target.isHuman && target.style) {
-      showDialogueChoice(
-        targetId,
-        chooseInteractionDialogue({
-          archetype: target.style.key,
-          kind,
-          role: "receiver",
-          seed: eventSeed ^ 0x51f15e,
-          recentIds: dialogueMemory[targetId]?.ids,
-          locale,
-        }),
-      );
-    }
-
     if (interactionTimerRef.current) {
       window.clearTimeout(interactionTimerRef.current);
     }
@@ -3789,9 +3779,37 @@ function GameScreen({
       window.clearTimeout(interactionSoundTimerRef.current);
     }
     interactionSoundTimerRef.current = window.setTimeout(() => {
-      playGameSound(kind === "flower" ? "ui" : "check", soundEnabled, 3);
+      if (interactionSequenceRef.current !== eventId) return;
+      setTableInteraction((current) =>
+        current?.eventId === eventId ? { ...current, phase: "landed" } : current,
+      );
+      if (hit) {
+        playGameSound(kind === "flower" ? "ui" : "check", soundEnabled, 3);
+        if (!target.isHuman) {
+          setPersonaStateBySeat((current) => ({
+            ...current,
+            [targetId]: reactToTableInteraction(
+              current[targetId] ?? defaultPersonaState(),
+              kind,
+            ),
+          }));
+        }
+        if (!target.isHuman && target.style) {
+          showDialogueChoice(
+            targetId,
+            chooseInteractionDialogue({
+              archetype: target.style.key,
+              kind,
+              role: "receiver",
+              seed: eventSeed ^ 0x51f15e,
+              recentIds: dialogueMemory[targetId]?.ids,
+              locale,
+            }),
+          );
+        }
+      }
       interactionSoundTimerRef.current = null;
-    }, 520);
+    }, 680);
     interactionTimerRef.current = window.setTimeout(() => {
       setTableInteraction((current) =>
         current?.eventId === interactionSequenceRef.current ? null : current,

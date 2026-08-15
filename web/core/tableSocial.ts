@@ -33,9 +33,16 @@ export function automatedInteractionAfterResult(
     (player) => !player.isHuman && (event.netBySeat[player.id] ?? 0) < 0,
   );
   if (!losingBots.length) return null;
-  const source = losingBots[seed % losingBots.length];
-  const targetId =
-    event.winnerIds.find((playerId) => playerId !== source.id) ?? 0;
+  const winningBots = players.filter(
+    (player) => !player.isHuman && event.winnerIds.includes(player.id),
+  );
+  const celebrate = event.showdown && winningBots.length > 0 && seed % 5 === 0;
+  const source = celebrate
+    ? winningBots[Math.floor(seed / 7) % winningBots.length]
+    : losingBots[seed % losingBots.length];
+  const targetId = celebrate
+    ? losingBots[Math.floor(seed / 11) % losingBots.length].id
+    : event.winnerIds.find((playerId) => playerId !== source.id) ?? 0;
   const choices: Record<
     NonNullable<Player["style"]>["key"],
     TableInteractionKind[]
@@ -50,6 +57,6 @@ export function automatedInteractionAfterResult(
   return {
     sourceId: source.id,
     targetId,
-    kind: kinds[Math.floor(seed / 17) % kinds.length],
+    kind: celebrate ? "flower" : kinds[Math.floor(seed / 17) % kinds.length],
   };
 }
