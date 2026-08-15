@@ -94,22 +94,41 @@ import {
   saveSession,
 } from "../core/storage";
 import type { ActionType, Card, GameState, Player } from "../core/types";
+import {
+  LanguageProvider,
+  LanguageSwitch,
+  localize,
+  useLanguage,
+  type AppLocale,
+} from "./i18n";
 
 const HUMAN_ID = 0;
 const EMPTY_THINKING_STEPS: readonly string[] = [];
-const SUIT_NAMES: Record<Card["suit"], string> = {
-  spades: "黑桃",
-  hearts: "红桃",
-  diamonds: "方块",
-  clubs: "梅花",
+const SUIT_NAMES: Record<AppLocale, Record<Card["suit"], string>> = {
+  "zh-CN": {
+    spades: "黑桃",
+    hearts: "红桃",
+    diamonds: "方块",
+    clubs: "梅花",
+  },
+  en: {
+    spades: "Spades",
+    hearts: "Hearts",
+    diamonds: "Diamonds",
+    clubs: "Clubs",
+  },
 };
 
-function readableCardLabel(card: Card): string {
-  return `${SUIT_NAMES[card.suit]}${rankLabel(card.rank)}`;
+function readableCardLabel(card: Card, locale: AppLocale = "zh-CN"): string {
+  const separator = locale === "en" ? " " : "";
+  return `${SUIT_NAMES[locale][card.suit]}${separator}${rankLabel(card.rank)}`;
 }
 
-function readableCardsLabel(cards: Card[]): string {
-  return cards.map(readableCardLabel).join("、");
+function readableCardsLabel(
+  cards: Card[],
+  locale: AppLocale = "zh-CN",
+): string {
+  return cards.map((card) => readableCardLabel(card, locale)).join(locale === "en" ? ", " : "、");
 }
 
 type DialogInertLock = {
@@ -231,8 +250,34 @@ function useDialogFocus<T extends HTMLElement>(
   return rootRef;
 }
 
-function describeEvaluatedHand(hand: EvaluatedHand): string {
+function describeEvaluatedHand(
+  hand: EvaluatedHand,
+  locale: AppLocale = "zh-CN",
+): string {
   const [primary, secondary] = hand.values.map(rankLabel);
+
+  if (locale === "en") {
+    switch (hand.category) {
+      case 8:
+        return `${primary}-high straight flush`;
+      case 7:
+        return `Four of a kind, ${primary}s`;
+      case 6:
+        return `Full house, ${primary}s full of ${secondary}s`;
+      case 5:
+        return `${primary}-high flush`;
+      case 4:
+        return `${primary}-high straight`;
+      case 3:
+        return `Three of a kind, ${primary}s`;
+      case 2:
+        return `Two pair, ${primary}s and ${secondary}s`;
+      case 1:
+        return `One pair, ${primary}s`;
+      default:
+        return `${primary} high`;
+    }
+  }
 
   switch (hand.category) {
     case 8:
@@ -438,6 +483,11 @@ type GlossaryItem = {
   name: string;
   description: string;
   detail: string;
+  english: {
+    name: string;
+    description: string;
+    detail: string;
+  };
 };
 
 const POKER_GLOSSARY: Record<string, GlossaryItem> = {
@@ -446,26 +496,56 @@ const POKER_GLOSSARY: Record<string, GlossaryItem> = {
     name: "主动入池率",
     description: "翻牌前自愿投入小鱼干的手数占比。",
     detail: "跟注、加注或全下会计入；强制投入的小盲和大盲本身不计入。",
+    english: {
+      name: "Hands Played Preflop",
+      description: "How often this opponent chooses to put chips in before the flop.",
+      detail: "Calls, raises, and all-ins count. Posting the blinds does not.",
+    },
   },
   PFR: {
     term: "PFR",
     name: "翻前加注率",
     description: "翻牌前至少加注一次的手数占比。",
     detail: "包含首次加注、再加注和翻前全下，通常会低于或等于 VPIP。",
+    english: {
+      name: "Preflop Raises",
+      description: "How often this opponent raises before the flop.",
+      detail: "Open-raises, re-raises, and preflop all-ins all count.",
+    },
   },
   "3Bet": {
-    term: "3Bet",
+    term: "3-Bet",
     name: "翻前再加注率",
     description: "面对一次翻前加注后再次加注的频率。",
     detail: "当前训练器按全部记录手数显示占比，样本少时波动会比较明显。",
+    english: {
+      name: "Preflop Re-raises",
+      description: "How often this opponent re-raises after another player has already raised preflop.",
+      detail: "A higher number means it fights back more often. Small samples can swing a lot.",
+    },
   },
   AF: {
     term: "AF",
     name: "进攻系数",
     description: "加注与全下次数，相对于跟注次数的比值。",
     detail: "数值越高通常代表行动越主动；它不是胜率，也不直接代表水平。",
+    english: {
+      name: "Aggression Level",
+      description: "Compares aggressive actions with calls.",
+      detail: "A higher number means it attacks more instead of just calling. This is not win rate.",
+    },
   },
 };
+
+function glossaryCopy(item: GlossaryItem, locale: AppLocale) {
+  return locale === "en"
+    ? item.english
+    : {
+        name: item.name,
+        description: item.description,
+        detail: item.detail,
+      };
+}
 
 function BackIcon() {
   return (
@@ -619,6 +699,7 @@ function PlayingCard({
   motion?: "none" | "deal" | "reveal";
   motionIndex?: number;
 }) {
+  const { locale } = useLanguage();
   const openPreview = useContext(CardPreviewContext);
   const [artLoaded, setArtLoaded] = useState(false);
   const motionClass = motion === "none" ? "" : `card-motion card-${motion}`;
@@ -678,7 +759,10 @@ function PlayingCard({
   const suit = SUIT_SYMBOLS[card.suit];
   const catArtSource = catCardArtSource(card);
   const canPreview = previewable && !!catArtSource && !!openPreview;
-  const accessibleLabel = catCardAccessibleLabel(card);
+  const accessibleLabel =
+    locale === "en"
+      ? `${readableCardLabel(card, locale)} illustrated playing card`
+      : catCardAccessibleLabel(card);
   return (
     <span
       className={`playing-card card-face card-${card.suit} ${
@@ -761,9 +845,10 @@ function CardPreviewModal({
   card: Card;
   onClose: () => void;
 }) {
+  const { locale } = useLanguage();
   const dialogRef = useDialogFocus<HTMLElement>(true, onClose);
   const source = catCardArtSource(card);
-  const label = catCardAccessibleLabel(card);
+  const label = localize(catCardAccessibleLabel(card), locale);
 
   if (!source) return null;
 
@@ -777,21 +862,25 @@ function CardPreviewModal({
         className="card-preview-modal"
         role="dialog"
         aria-modal="true"
-        aria-label={`${label}大图`}
+        aria-label={locale === "en" ? `${label} enlarged` : `${label}大图`}
         tabIndex={-1}
         onClick={(event) => event.stopPropagation()}
       >
         <button
           type="button"
           className="card-preview-close"
-          aria-label="关闭牌面大图"
+          aria-label={locale === "en" ? "Close card preview" : "关闭牌面大图"}
           onClick={onClose}
         >
           ×
         </button>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={source} alt={label} draggable={false} />
-        <small className="card-preview-hint">点击深色区域返回牌桌</small>
+        <small className="card-preview-hint">
+          {locale === "en"
+            ? "Click outside the card to return to the table"
+            : "点击深色区域返回牌桌"}
+        </small>
       </section>
     </div>
   );
@@ -812,8 +901,10 @@ function ConfirmDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const { locale } = useLanguage();
   const dialogRef = useDialogFocus<HTMLElement>(true, onCancel);
-  const titleId = `confirm-${title.replace(/\W/g, "")}`;
+  const localizedTitle = localize(title, locale);
+  const titleId = `confirm-${localizedTitle.replace(/\W/g, "")}`;
 
   return (
     <div className="modal-backdrop" onClick={onCancel}>
@@ -826,21 +917,21 @@ function ConfirmDialog({
         tabIndex={-1}
         onClick={(event) => event.stopPropagation()}
       >
-        <small>{eyebrow}</small>
+        <small>{localize(eyebrow, locale)}</small>
         <button
           type="button"
           className="modal-close-button"
-          aria-label="关闭"
+          aria-label={locale === "en" ? "Close" : "关闭"}
           onClick={onCancel}
         >
           ×
         </button>
-        <h2 id={titleId}>{title}</h2>
-        <p>{description}</p>
+        <h2 id={titleId}>{localizedTitle}</h2>
+        <p>{localize(description, locale)}</p>
         <div className="result-actions">
-          <button onClick={onCancel}>取消</button>
+          <button onClick={onCancel}>{locale === "en" ? "Cancel" : "取消"}</button>
           <button className="primary" onClick={onConfirm}>
-            {confirmLabel}
+            {localize(confirmLabel, locale)}
           </button>
         </div>
       </section>
@@ -1026,6 +1117,7 @@ function Seat({
   interaction?: TableInteraction | null;
   onToggleInteractionMenu?: (seatId: number) => void;
 }) {
+  const { locale } = useLanguage();
   const hiddenCards = !player.isHuman && !reveal;
   const character =
     CAT_CHARACTER_PROFILES[player.id] ?? CAT_CHARACTER_PROFILES[0];
@@ -1033,16 +1125,26 @@ function Seat({
   const blindAction = systemActionLabel?.match(/^(?:小盲|大盲)\s*(\d[\d,]*)$/);
   const mobileActionLabel = systemActionLabel
     ? blindAction
-      ? `投入 ${blindAction[1]}`
+      ? locale === "en"
+        ? `Bet ${blindAction[1]}`
+        : `投入 ${blindAction[1]}`
       : systemActionLabel === "弃牌"
-      ? "已弃牌"
-      : systemActionLabel === "过牌"
-        ? "已过牌"
-        : systemActionLabel
+        ? locale === "en"
+          ? "Folded"
+          : "已弃牌"
+        : systemActionLabel === "过牌"
+          ? locale === "en"
+            ? "Checked"
+            : "已过牌"
+          : localize(systemActionLabel, locale)
     : player.bet > 0
-      ? `已投入 ${player.bet.toLocaleString()}`
+      ? locale === "en"
+        ? `Bet ${player.bet.toLocaleString()}`
+        : `已投入 ${player.bet.toLocaleString()}`
       : active
-        ? "行动中"
+        ? locale === "en"
+          ? "Acting"
+          : "行动中"
         : "";
   const canInteract = !player.isHuman && player.status !== "out";
   const interactionPresentation = interaction
@@ -1061,19 +1163,33 @@ function Seat({
       }`}
       data-persona={player.style?.key ?? "human"}
       data-interaction-seat={player.id}
-      aria-label={`${player.name}，${player.position}，${player.chips} 小鱼干`}
+      aria-label={
+        locale === "en"
+          ? `${localize(player.name, locale)}, ${player.position}, ${player.chips} chips`
+          : `${player.name}，${player.position}，${player.chips} 小鱼干`
+      }
     >
       <button
         className="seat-character-button"
         aria-label={
-          canInteract ? `与${player.name}互动` : `查看${player.name}的猫咪角色`
+          locale === "en"
+            ? canInteract
+              ? `Interact with ${localize(player.name, locale)}`
+              : `View ${localize(player.name, locale)}'s character`
+            : canInteract
+              ? `与${player.name}互动`
+              : `查看${player.name}的猫咪角色`
         }
         aria-expanded={canInteract ? interactionMenuOpen : undefined}
         aria-haspopup={canInteract ? "dialog" : undefined}
         title={
-          canInteract
-            ? `与${player.name}互动 · ${character.breed}`
-            : `${character.breed} · ${character.persona}`
+          locale === "en"
+            ? canInteract
+              ? `Interact with ${localize(player.name, locale)} · ${localize(character.breed, locale)}`
+              : `${localize(character.breed, locale)} · ${localize(character.persona, locale)}`
+            : canInteract
+              ? `与${player.name}互动 · ${character.breed}`
+              : `${character.breed} · ${character.persona}`
         }
         onClick={() => {
           if (canInteract) onToggleInteractionMenu?.(player.id);
@@ -1102,20 +1218,38 @@ function Seat({
       ) : null}
       {interaction && interactionPresentation ? (
         <span className="sr-only" aria-live="polite">
-          你向{player.name}送出了{interactionPresentation.label}
+          {locale === "en"
+            ? `You sent ${localize(interactionPresentation.label, locale)} to ${localize(player.name, locale)}`
+            : `你向${player.name}送出了${interactionPresentation.label}`}
         </span>
       ) : null}
       <div className="seat-identity">
         <SeatPositionBadges player={player} dealer={dealer} />
-        <strong className="seat-player-name">{player.name}</strong>
-        <span className="seat-stack" aria-label={`${player.chips} 小鱼干`}>
+        <strong className="seat-player-name">
+          {localize(player.name, locale)}
+        </strong>
+        <span
+          className="seat-stack"
+          aria-label={
+            locale === "en" ? `${player.chips} chips` : `${player.chips} 小鱼干`
+          }
+        >
           <DriedFishIcon />
           <b key={player.chips} className="food-stack-value">
             {player.chips.toLocaleString()}
           </b>
         </span>
       </div>
-      <div className="seat-cards" aria-label={`${player.name}的手牌`}>
+      <div
+        className="seat-cards"
+        aria-label={
+          locale === "en"
+            ? player.isHuman
+              ? "Your hole cards"
+              : `${localize(player.name, locale)}'s hole cards`
+            : `${player.name}的手牌`
+        }
+      >
         {player.status === "out" ? (
           <span className="out-label">离桌</span>
         ) : (
@@ -1139,13 +1273,18 @@ function Seat({
           <DriedFishWager
             amount={player.totalContribution}
             compact
-            label={`本局已投入 ${player.totalContribution} 小鱼干`}
+            label={
+              locale === "en"
+                ? `${player.totalContribution} chips committed this hand`
+                : `本局已投入 ${player.totalContribution} 小鱼干`
+            }
           />
         ) : null}
       </span>
       {mobileActionLabel ? (
         <span
           className={`seat-mobile-status ${player.status === "folded" ? "is-muted" : ""}`}
+          data-kind="decision"
           aria-hidden="true"
         >
           <span>{mobileActionLabel}</span>
@@ -1164,21 +1303,25 @@ function Seat({
               <i />
             </span>
           ) : null}
-          {reactionLabel ?? thinkingLabel}
+          <span className="thought-copy">
+            {reactionLabel ?? thinkingLabel}
+          </span>
         </span>
       ) : null}
       {mobileActionLabel ? (
         <span
           key={`${performance?.eventId ?? "state"}:${mobileActionLabel}`}
           className="last-action"
+          data-kind="decision"
         >
           {mobileActionLabel}
         </span>
       ) : null}
       {performance ? (
         <span className="sr-only" aria-live="polite">
-          {player.name}
-          {characterGestureLabel(performance.gesture)}
+          {localize(player.name, locale)}
+          {locale === "en" ? " " : ""}
+          {localize(characterGestureLabel(performance.gesture), locale)}
         </span>
       ) : null}
     </article>
@@ -1194,9 +1337,13 @@ function TableInteractionMenu({
   onClose: () => void;
   onSend: (kind: TableInteractionKind) => void;
 }) {
+  const { locale } = useLanguage();
   const character =
     CAT_CHARACTER_PROFILES[player.id] ?? CAT_CHARACTER_PROFILES[0];
   const dialogRef = useDialogFocus<HTMLDivElement>(true, onClose);
+  const playerName = localize(player.name, locale);
+  const dialogLabel =
+    locale === "en" ? `Interact with ${playerName}` : `与${playerName}互动`;
 
   if (typeof document === "undefined") return null;
 
@@ -1210,7 +1357,7 @@ function TableInteractionMenu({
         type="button"
         className="seat-interaction-backdrop"
         data-overlay-dismiss="true"
-        aria-label="关闭互动面板"
+        aria-label={locale === "en" ? "Close interaction menu" : "关闭互动面板"}
         tabIndex={-1}
         onClick={onClose}
       />
@@ -1220,22 +1367,22 @@ function TableInteractionMenu({
         data-component="table-interaction-sheet"
         role="dialog"
         aria-modal="true"
-        aria-label={`与${player.name}互动`}
+        aria-label={dialogLabel}
         tabIndex={-1}
       >
         <header>
           <PlayerAvatar player={player} size="small" />
           <span>
-            <strong>与{player.name}互动</strong>
+            <strong>{dialogLabel}</strong>
             <small>
-              {character.breed} · {character.persona}
+              {localize(character.breed, locale)} · {localize(character.persona, locale)}
             </small>
           </span>
           <button
             type="button"
             className="seat-interaction-close"
             data-autofocus="true"
-            aria-label="关闭互动面板"
+            aria-label={locale === "en" ? "Close interaction menu" : "关闭互动面板"}
             onClick={onClose}
           >
             ×
@@ -1247,11 +1394,15 @@ function TableInteractionMenu({
               key={item.kind}
               type="button"
               data-interaction-kind={item.kind}
-              aria-label={`向${player.name}送出${item.label}`}
+              aria-label={
+                locale === "en"
+                  ? `Send ${localize(item.label, locale)} to ${playerName}`
+                  : `向${playerName}送出${item.label}`
+              }
               onClick={() => onSend(item.kind)}
             >
               <span aria-hidden="true">{item.projectile}</span>
-              <small>{item.label}</small>
+              <small>{localize(item.label, locale)}</small>
             </button>
           ))}
         </div>
@@ -1296,12 +1447,14 @@ function HomeScreen({
   onWelfare: () => void;
   onStatistics: () => void;
 }) {
+  const { locale } = useLanguage();
   const dailyClaimed = hasDailyBenefit(profile);
 
   return (
     <main className="app-page home-page">
       <header className="app-masthead">
         <h1>德扑 AI 训练器</h1>
+        <LanguageSwitch />
       </header>
 
       <section className="balance-card" aria-label="训练小鱼干余额">
@@ -1324,18 +1477,26 @@ function HomeScreen({
             <AppIcon name="calendar" />
           </span>
           <span>
-            <strong>每日补给 {DAILY_FREE_CHIPS.toLocaleString()} 小鱼干</strong>
-            <small>每天 10:00 自动补充</small>
+            <strong>
+              {locale === "en"
+                ? `Daily bonus: ${DAILY_FREE_CHIPS.toLocaleString()} chips`
+                : `每日补给 ${DAILY_FREE_CHIPS.toLocaleString()} 小鱼干`}
+            </strong>
+            <small>
+              {locale === "en"
+                ? "Added automatically at 10:00 each day"
+                : "每天 10:00 自动补充"}
+            </small>
           </span>
         </div>
         <span className={dailyClaimed ? "daily-success" : "daily-pending"}>
           {dailyClaimed ? (
             <>
               <AppIcon name="check" />
-              今日已到账
+              {locale === "en" ? "Today's bonus claimed" : "今日已到账"}
             </>
           ) : (
-            "10:00 后到账"
+            locale === "en" ? "Available after 10:00" : "10:00 后到账"
           )}
         </span>
         <i className={dailyClaimed ? "is-complete" : ""} />
@@ -1375,7 +1536,6 @@ function PageHeader({ title, onBack }: { title: string; onBack: () => void }) {
         <BackIcon />
       </button>
       <h1>{title}</h1>
-      <span />
     </header>
   );
 }
@@ -1389,6 +1549,7 @@ function WelfareScreen({
   onProfileChange: (profile: LocalProfile) => void;
   onBack: () => void;
 }) {
+  const { locale } = useLanguage();
   const signedIn = hasSignedIn(profile);
   const dailyClaimed = hasDailyBenefit(profile);
 
@@ -1416,7 +1577,11 @@ function WelfareScreen({
         <div className="benefit-icon benefit-red"><AppIcon name="check" /></div>
         <div>
           <h2>每日签到</h2>
-          <p>签到 +{DAILY_SIGN_IN_BONUS.toLocaleString()} 小鱼干</p>
+          <p>
+            {locale === "en"
+              ? `Check in +${DAILY_SIGN_IN_BONUS.toLocaleString()} chips`
+              : `签到 +${DAILY_SIGN_IN_BONUS.toLocaleString()} 小鱼干`}
+          </p>
           <small>每天可领取一次</small>
         </div>
         <button disabled={signedIn} onClick={signIn}>
@@ -1429,7 +1594,11 @@ function WelfareScreen({
         <div className="benefit-icon benefit-green"><AppIcon name="calendar" /></div>
         <div>
           <h2>每日自动补给</h2>
-          <p>{DAILY_FREE_CHIPS.toLocaleString()} 小鱼干</p>
+          <p>
+            {locale === "en"
+              ? `${DAILY_FREE_CHIPS.toLocaleString()} chips`
+              : `${DAILY_FREE_CHIPS.toLocaleString()} 小鱼干`}
+          </p>
           <small>每天 10:00 自动到账</small>
         </div>
         <b className="benefit-state">
@@ -1462,6 +1631,7 @@ function StatisticsScreen({
   onContinueTraining: () => void;
   onStartTraining: () => void;
 }) {
+  const { locale } = useLanguage();
   const [tab, setTab] = useState<StatisticsTab>("overview");
   const [selectedAI, setSelectedAI] = useState(1);
   const [glossaryToast, setGlossaryToast] = useState<GlossaryItem | null>(null);
@@ -1635,8 +1805,9 @@ function StatisticsScreen({
                 <p>把盈亏拆成趋势和波动，避免只看最终总数。</p>
               </div>
               <strong className={recentFiveNet >= 0 ? "positive" : "negative"}>
-                近 {recentFive.length || 0} 手{" "}
-                {formatSignedChips(recentFiveNet)}
+                {locale === "en"
+                  ? `Last ${recentFive.length || 0} ${recentFive.length === 1 ? "hand" : "hands"}: ${formatSignedChips(recentFiveNet)}`
+                  : `近 ${recentFive.length || 0} 手 ${formatSignedChips(recentFiveNet)}`}
               </strong>
             </header>
             <div className="reflection-metrics">
@@ -1667,8 +1838,12 @@ function StatisticsScreen({
               >
                 <span>
                   <small>优先复盘</small>
-                  <strong>第 {largestLoss.handNumber} 手 · 最大单手亏损</strong>
-                  <p>{largestLoss.detail}</p>
+                  <strong>
+                    {locale === "en"
+                      ? `Hand ${largestLoss.handNumber} · Largest loss`
+                      : `第 ${largestLoss.handNumber} 手 · 最大单手亏损`}
+                  </strong>
+                  <p>{localize(largestLoss.detail, locale)}</p>
                 </span>
                 <b className="negative">
                   {formatSignedChips(largestLoss.humanDelta)}
@@ -1686,13 +1861,18 @@ function StatisticsScreen({
               <section className="learning-summary">
             <h2>训练进度</h2>
             <p>
-              数据来自当前浏览器已完成的牌局。随着手数增加，AI 画像中的
-              VPIP、PFR、3Bet 与 AF 会逐步稳定。
+              {locale === "en"
+                ? "These playing-style stats become more reliable as more hands are recorded. Select any ? for a plain-English explanation."
+                : "数据来自当前浏览器已完成的牌局。随着手数增加，AI 画像中的 VPIP、PFR、3Bet 与 AF 会逐步稳定。"}
             </p>
             <div className="progress-track">
               <i style={{ width: `${Math.min(100, totalHands * 3.33)}%` }} />
             </div>
-            <small>{totalHands} / 30 手基础样本</small>
+            <small>
+              {locale === "en"
+                ? `${totalHands} / 30 hands for a baseline sample`
+                : `${totalHands} / 30 手基础样本`}
+            </small>
               </section>
             </>
           )}
@@ -1712,7 +1892,9 @@ function StatisticsScreen({
                   onClick={() => setSelectedAI(item.playerId)}
                 >
                   <PlayerAvatar player={player} size="small" />
-                  <span className="profile-selector-label">{item.name}</span>
+                  <span className="profile-selector-label">
+                    {localize(item.name, locale)}
+                  </span>
                 </button>
               );
             })}
@@ -1723,11 +1905,19 @@ function StatisticsScreen({
                 player={players[activeProfile.playerId]}
                 size="normal"
               />
-              <h2>还在认识{activeProfile.name}</h2>
+              <h2>
+                {locale === "en"
+                  ? `Still learning ${localize(activeProfile.name, locale)}`
+                  : `还在认识${activeProfile.name}`}
+              </h2>
               <p>
                 完成至少 8 手后，再展示打法指标和对你的针对性调整，避免用零样本制造结论。
               </p>
-              <span>{activeProfile.handsPlayed} / 8 手</span>
+              <span>
+                {locale === "en"
+                  ? `${activeProfile.handsPlayed} / 8 hands`
+                  : `${activeProfile.handsPlayed} / 8 手`}
+              </span>
               <TrainingEntryButton
                 canContinue={canContinue}
                 onContinue={onContinueTraining}
@@ -1771,27 +1961,44 @@ function StatisticsScreen({
                   key={record.id}
                   className="history-record"
                   onClick={() => setSelectedHistory(record)}
-                  aria-label={`查看第 ${record.handNumber} 手明细`}
+                  aria-label={
+                    locale === "en"
+                      ? `View hand ${record.handNumber} details`
+                      : `查看第 ${record.handNumber} 手明细`
+                  }
                 >
                   <div>
-                    <small>第 {record.handNumber} 手</small>
-                    <strong>{record.title}</strong>
-                    <p>{record.detail}</p>
+                    <small>
+                      {locale === "en"
+                        ? `Hand ${record.handNumber}`
+                        : `第 ${record.handNumber} 手`}
+                    </small>
+                    <strong>{localize(record.title, locale)}</strong>
+                    <p>{localize(record.detail, locale)}</p>
                     <p className="history-readable-cards">
-                      手牌：{readableCardsLabel(record.holeCards)}
+                      {locale === "en" ? "Hole cards: " : "手牌："}
+                      {readableCardsLabel(record.holeCards, locale)}
                     </p>
                     <p className="history-readable-board">
-                      公共牌：
+                      {locale === "en" ? "Board: " : "公共牌："}
                       {record.communityCards.length
-                        ? readableCardsLabel(record.communityCards)
-                        : "未发公共牌"}
+                        ? readableCardsLabel(record.communityCards, locale)
+                        : locale === "en"
+                          ? "No board"
+                          : "未发公共牌"}
                     </p>
                     <p className="history-readable-result">
                       {humanHand
-                        ? `${describeEvaluatedHand(humanHand)} · 最佳五张：${readableCardsLabel(humanHand.cards)}`
+                        ? locale === "en"
+                          ? `${describeEvaluatedHand(humanHand, locale)} · Best five: ${readableCardsLabel(humanHand.cards, locale)}`
+                          : `${describeEvaluatedHand(humanHand)} · 最佳五张：${readableCardsLabel(humanHand.cards)}`
                         : humanParticipant?.status === "folded"
-                          ? "本手已弃牌，未形成五张牌型"
-                          : "未进入完整牌面"}
+                          ? locale === "en"
+                            ? "Folded before making a five-card hand"
+                            : "本手已弃牌，未形成五张牌型"
+                          : locale === "en"
+                            ? "No complete five-card hand"
+                            : "未进入完整牌面"}
                     </p>
                   </div>
                   <div className="history-cards">
@@ -1812,7 +2019,7 @@ function StatisticsScreen({
                   </b>
                   <span className="history-detail-cue">
                     <AppIcon name="detail" />
-                    明细
+                    {locale === "en" ? "Details" : "明细"}
                   </span>
                 </button>
               );
@@ -1840,15 +2047,15 @@ function StatisticsScreen({
           <span aria-hidden="true">?</span>
           <div>
             <small>{glossaryToast.term}</small>
-            <strong>{glossaryToast.name}</strong>
+            <strong>{glossaryCopy(glossaryToast, locale).name}</strong>
             <p>
-              {glossaryToast.description}
+              {glossaryCopy(glossaryToast, locale).description}
               <br />
-              {glossaryToast.detail}
+              {glossaryCopy(glossaryToast, locale).detail}
             </p>
           </div>
           <button
-            aria-label="关闭术语解释"
+            aria-label={locale === "en" ? "Close explanation" : "关闭术语解释"}
             onClick={() => setGlossaryToast(null)}
           >
             ×
@@ -1889,6 +2096,7 @@ function HistoryDetailModal({
   players: Player[];
   onClose: () => void;
 }) {
+  const { locale } = useLanguage();
   const dialogRef = useDialogFocus<HTMLElement>(true, onClose);
 
   const settlementParticipants = players
@@ -1919,12 +2127,18 @@ function HistoryDetailModal({
     const factors = entry.aiDecision?.publicFactors;
     if (!factors) return null;
     const cues: string[] = [];
-    if (factors.pressure >= 0.2) cues.push("跟注价格带来压力");
-    if (factors.positionBonus >= 0.05) cues.push("处在有利位置");
-    if (factors.stackToPotRatio <= 1.5) cues.push("可用小鱼干已经不多");
-    if (factors.boardWetness >= 0.62) cues.push("公共牌连接较强");
-    if (factors.hasInitiative) cues.push("延续了前街主动权");
-    if (!cues.length) cues.push("当前公开行动线较简单");
+    if (factors.pressure >= 0.2)
+      cues.push(locale === "en" ? "Facing a meaningful price" : "跟注价格带来压力");
+    if (factors.positionBonus >= 0.05)
+      cues.push(locale === "en" ? "In position" : "处在有利位置");
+    if (factors.stackToPotRatio <= 1.5)
+      cues.push(locale === "en" ? "Low SPR" : "可用小鱼干已经不多");
+    if (factors.boardWetness >= 0.62)
+      cues.push(locale === "en" ? "Dynamic board" : "公共牌连接较强");
+    if (factors.hasInitiative)
+      cues.push(locale === "en" ? "Retains the betting lead" : "延续了前街主动权");
+    if (!cues.length)
+      cues.push(locale === "en" ? "Straightforward action" : "当前公开行动线较简单");
     return cues.slice(0, 2).join(" · ");
   }
 
@@ -1940,9 +2154,13 @@ function HistoryDetailModal({
       >
         <header>
           <div>
-            <small>第 {record.handNumber} 手</small>
-            <h2 id="history-detail-title">{record.title}</h2>
-            <p>{record.detail}</p>
+            <small>
+              {locale === "en"
+                ? `Hand ${record.handNumber}`
+                : `第 ${record.handNumber} 手`}
+            </small>
+            <h2 id="history-detail-title">{localize(record.title, locale)}</h2>
+            <p>{localize(record.detail, locale)}</p>
           </div>
           <b className={record.humanDelta >= 0 ? "positive" : "negative"}>
             {record.humanDelta >= 0 ? "+" : ""}
@@ -1965,7 +2183,7 @@ function HistoryDetailModal({
                 />
               ))}
             </b>
-            <em>{readableCardsLabel(record.holeCards)}</em>
+            <em>{readableCardsLabel(record.holeCards, locale)}</em>
           </span>
           <span>
             <small>公共牌</small>
@@ -1982,7 +2200,17 @@ function HistoryDetailModal({
             </b>
             <em>
               {record.communityCards.length
-                ? `翻牌：${readableCardsLabel(record.communityCards.slice(0, 3))}${
+                ? locale === "en"
+                  ? `Flop: ${readableCardsLabel(record.communityCards.slice(0, 3), locale)}${
+                    record.communityCards[3]
+                      ? ` · Turn: ${readableCardLabel(record.communityCards[3], locale)}`
+                      : ""
+                  }${
+                    record.communityCards[4]
+                      ? ` · River: ${readableCardLabel(record.communityCards[4], locale)}`
+                      : ""
+                  }`
+                  : `翻牌：${readableCardsLabel(record.communityCards.slice(0, 3))}${
                     record.communityCards[3]
                       ? ` · 转牌：${readableCardLabel(record.communityCards[3])}`
                       : ""
@@ -2019,8 +2247,8 @@ function HistoryDetailModal({
                       )}
                       <div>
                         <strong>
-                          {participant.name}
-                          {participant.isHuman ? "（你）" : ""}
+                          {localize(participant.name, locale)}
+                          {participant.isHuman && locale !== "en" ? "（你）" : ""}
                         </strong>
                         <span>
                           {participant.holeCards.length ? (
@@ -2038,41 +2266,45 @@ function HistoryDetailModal({
                                 ))}
                               </span>
                               <small className="history-hole-card-text">
-                                手牌：
-                                {readableCardsLabel(participant.holeCards)}
+                                {locale === "en" ? "Hole cards: " : "手牌："}
+                                {readableCardsLabel(participant.holeCards, locale)}
                               </small>
                             </>
                           ) : participant.contribution === 0 ? (
-                            "未参与"
+                            locale === "en" ? "Did not participate" : "未参与"
                           ) : participant.status === "folded" ? (
-                            "已弃牌"
+                            locale === "en" ? "Folded" : "已弃牌"
                           ) : (
-                            "未亮牌"
+                            locale === "en" ? "Cards not shown" : "未亮牌"
                           )}
                         </span>
                       </div>
                       <p>
                         <strong>
                           {participantHand
-                            ? describeEvaluatedHand(participantHand)
-                            : (participant.handName ??
+                            ? describeEvaluatedHand(participantHand, locale)
+                            : (participant.handName
+                              ? localize(participant.handName, locale)
+                              :
                               (participant.isWinner
-                                ? "未摊牌获胜"
+                                ? locale === "en" ? "Won without showdown" : "未摊牌获胜"
                                 : participant.contribution === 0
-                                  ? "未参与底池"
+                                  ? locale === "en" ? "Not in the pot" : "未参与底池"
                                   : participant.status === "folded"
-                                    ? "已弃牌"
-                                    : "未亮牌"))}
+                                    ? locale === "en" ? "Folded" : "已弃牌"
+                                    : locale === "en" ? "Cards not shown" : "未亮牌"))}
                         </strong>
                         {participantHand ? (
                           <small className="history-best-five">
-                            最佳五张：
-                            {readableCardsLabel(participantHand.cards)}
+                            {locale === "en" ? "Best five: " : "最佳五张："}
+                            {readableCardsLabel(participantHand.cards, locale)}
                           </small>
                         ) : null}
                         <small>
-                          投喂 {participant.contribution.toLocaleString()} ·
-                          收回 {participant.payout.toLocaleString()}
+                          {locale === "en" ? "Contributed" : "投喂"}{" "}
+                          {participant.contribution.toLocaleString()} ·{" "}
+                          {locale === "en" ? "Payout" : "收回"}{" "}
+                          {participant.payout.toLocaleString()}
                         </small>
                       </p>
                       <b
@@ -2102,11 +2334,14 @@ function HistoryDetailModal({
                   const publicSummary = publicDecisionSummary(entry);
                   return (
                     <li key={entry.id}>
-                      <small>{STREET_LABELS[entry.street]}</small>
-                      <strong>{entry.playerName}</strong>
-                      <span>{entry.label}</span>
+                      <small>{localize(STREET_LABELS[entry.street], locale)}</small>
+                      <strong>{localize(entry.playerName, locale)}</strong>
+                      <span>{localize(entry.label, locale)}</span>
                       {publicSummary ? (
-                        <em>公开线索：{publicSummary}</em>
+                        <em>
+                          {locale === "en" ? "Visible factors: " : "公开线索："}
+                          {publicSummary}
+                        </em>
                       ) : null}
                     </li>
                   );
@@ -2135,18 +2370,27 @@ function Metric({
   glossary?: GlossaryItem;
   onExplain?: (item: GlossaryItem) => void;
 }) {
+  const { locale } = useLanguage();
   if (glossary && onExplain) {
+    const copy = glossaryCopy(glossary, locale);
     return (
       <button
         className="metric metric-explainable"
         type="button"
-        aria-label={`${glossary.term} ${glossary.name}，点击查看解释`}
-        data-tooltip={`${glossary.name}：${glossary.description}`}
+        aria-label={
+          locale === "en"
+            ? `${glossary.term}, ${copy.name}. Open a plain-English explanation.`
+            : `${glossary.term} ${copy.name}，点击查看解释`
+        }
+        data-tooltip={`${copy.name}: ${copy.description}`}
         onClick={() => onExplain(glossary)}
       >
         <small>
-          {label}
-          <i aria-hidden="true">?</i>
+          <span className="metric-term">
+            {label}
+            <i aria-hidden="true">?</i>
+          </span>
+          <em className="metric-plain-label">{copy.name}</em>
         </small>
         <strong>{value}</strong>
       </button>
@@ -2162,6 +2406,7 @@ function Metric({
 }
 
 function ProfitTrendChart({ records }: { records: HandHistoryRecord[] }) {
+  const { locale } = useLanguage();
   const width = 960;
   const height = 250;
   const padding = { top: 22, right: 22, bottom: 34, left: 68 };
@@ -2197,7 +2442,11 @@ function ProfitTrendChart({ records }: { records: HandHistoryRecord[] }) {
       <header>
         <div>
           <h2>累计盈亏曲线</h2>
-          <p>按完成顺序展示最近 {records.length} 手，零线以上代表累计盈利。</p>
+          <p>
+            {locale === "en"
+              ? `Showing the latest ${records.length} ${records.length === 1 ? "hand" : "hands"} in completion order; values above zero are profitable.`
+              : `按完成顺序展示最近 ${records.length} 手，零线以上代表累计盈利。`}
+          </p>
         </div>
         <strong
           className={(cumulative.at(-1) ?? 0) >= 0 ? "positive" : "negative"}
@@ -2212,7 +2461,11 @@ function ProfitTrendChart({ records }: { records: HandHistoryRecord[] }) {
               className="profit-chart"
               viewBox={`0 0 ${width} ${height}`}
               role="img"
-              aria-label={`最近 ${records.length} 手累计盈亏曲线，当前 ${formatSignedChips(cumulative.at(-1) ?? 0)}`}
+              aria-label={
+                locale === "en"
+                  ? `Cumulative profit over the last ${records.length} ${records.length === 1 ? "hand" : "hands"}, now ${formatSignedChips(cumulative.at(-1) ?? 0)}`
+                  : `最近 ${records.length} 手累计盈亏曲线，当前 ${formatSignedChips(cumulative.at(-1) ?? 0)}`
+              }
             >
               <defs>
                 <linearGradient
@@ -2258,9 +2511,9 @@ function ProfitTrendChart({ records }: { records: HandHistoryRecord[] }) {
                   className="profit-point"
                 >
                   <title>
-                    第 {records[index].handNumber} 手：本手{" "}
-                    {formatSignedChips(records[index].humanDelta)}，累计{" "}
-                    {formatSignedChips(point.value)}
+                    {locale === "en"
+                      ? `Hand ${records[index].handNumber}: ${formatSignedChips(records[index].humanDelta)} this hand, ${formatSignedChips(point.value)} cumulative`
+                      : `第 ${records[index].handNumber} 手：本手 ${formatSignedChips(records[index].humanDelta)}，累计 ${formatSignedChips(point.value)}`}
                   </title>
                 </circle>
               ))}
@@ -2268,7 +2521,9 @@ function ProfitTrendChart({ records }: { records: HandHistoryRecord[] }) {
                 开始
               </text>
               <text x={width - padding.right} y={height - 9} textAnchor="end">
-                第 {records.at(-1)?.handNumber} 手
+                {locale === "en"
+                  ? `Hand ${records.at(-1)?.handNumber}`
+                  : `第 ${records.at(-1)?.handNumber} 手`}
               </text>
             </svg>
           </div>
@@ -2277,9 +2532,19 @@ function ProfitTrendChart({ records }: { records: HandHistoryRecord[] }) {
             <ol>
               {records.map((record, index) => (
                 <li key={record.id}>
-                  <span>第 {record.handNumber} 手</span>
-                  <span>本手 {formatSignedChips(record.humanDelta)}</span>
-                  <b>累计 {formatSignedChips(cumulative[index + 1])}</b>
+                  <span>
+                    {locale === "en"
+                      ? `Hand ${record.handNumber}`
+                      : `第 ${record.handNumber} 手`}
+                  </span>
+                  <span>
+                    {locale === "en" ? "Hand result " : "本手 "}
+                    {formatSignedChips(record.humanDelta)}
+                  </span>
+                  <b>
+                    {locale === "en" ? "Running total " : "累计 "}
+                    {formatSignedChips(cumulative[index + 1])}
+                  </b>
                 </li>
               ))}
             </ol>
@@ -2301,6 +2566,7 @@ function AIProfileCard({
   player: Player;
   onExplain: (item: GlossaryItem) => void;
 }) {
+  const { locale } = useLanguage();
   const style = player.style;
   const af =
     profile.callActions === 0
@@ -2356,11 +2622,17 @@ function AIProfileCard({
       <header className="profile-identity">
         <PlayerAvatar player={player} />
         <div>
-          <h2>{profile.name}</h2>
-          <span className="profile-style-tag">{profile.styleName}</span>
+          <h2>{localize(profile.name, locale)}</h2>
+          <span className="profile-style-tag">
+            {localize(profile.styleName, locale)}
+          </span>
           <p>
-            {sampleLabel} · {style ? AI_ENGINE_NAMES[style.key] : "自适应引擎"}{" "}
-            · 样本 {profile.handsPlayed} 手
+            {locale === "en"
+              ? `${localize(sampleLabel, locale)} · ${localize(
+                  style ? AI_ENGINE_NAMES[style.key] : "自适应引擎",
+                  locale,
+                )} · ${profile.handsPlayed}-hand sample`
+              : `${sampleLabel} · ${style ? AI_ENGINE_NAMES[style.key] : "自适应引擎"} · 样本 ${profile.handsPlayed} 手`}
           </p>
         </div>
       </header>
@@ -2379,7 +2651,7 @@ function AIProfileCard({
           onExplain={onExplain}
         />
         <Metric
-          label="3Bet"
+          label="3-Bet"
           value={percentage(profile.threeBetHands, profile.handsPlayed)}
           glossary={POKER_GLOSSARY["3Bet"]}
           onExplain={onExplain}
@@ -2391,7 +2663,7 @@ function AIProfileCard({
           onExplain={onExplain}
         />
         <Metric
-          label="累计盈亏"
+          label={locale === "en" ? "Net Result" : "累计盈亏"}
           value={`${profile.totalProfit >= 0 ? "+" : ""}${profile.totalProfit}`}
         />
       </div>
@@ -2399,37 +2671,47 @@ function AIProfileCard({
         <div className="learning-title">
           <div>
             <h3>最近学到的调整</h3>
-            <p>相对“{profile.styleName}”原始性格，看看它最近有没有改变打法</p>
+            <p>
+            {locale === "en"
+              ? `See how its recent play differs from its usual “${localize(profile.styleName, locale)}” style.`
+              : `相对“${profile.styleName}”原始性格，看看它最近有没有改变打法`}
+            </p>
           </div>
           <span className="learning-confidence">
             <small>样本进度</small>
             <strong>
               {style
-                ? `${Math.min(profile.handsPlayed, style.memoryWindow)}/${style.memoryWindow} 手`
-                : `${profile.handsPlayed} 手`}
+                ? `${Math.min(profile.handsPlayed, style.memoryWindow)}/${style.memoryWindow}${locale === "en" ? " hands" : " 手"}`
+                : `${profile.handsPlayed}${locale === "en" ? " hands" : " 手"}`}
             </strong>
           </span>
         </div>
         <LearningSparkline profile={profile} />
         <div className="learning-facts">
           <span>
-            <small>尝试新打法</small>
+            <small>{locale === "en" ? "Tries a New Play" : "尝试新打法"}</small>
             <b>
               {Math.round(
                 (style
                   ? currentAIExplorationRate(style, profile.learning)
                   : 0) * 100,
               )}
-              % 概率
+              {locale === "en" ? "% chance" : "% 概率"}
             </b>
           </span>
           <span>
-            <small>学习曲线记录</small>
-            <b>{profile.learning.snapshots.length} 手</b>
+            <small>{locale === "en" ? "Learning History" : "学习曲线记录"}</small>
+            <b>
+              {profile.learning.snapshots.length}
+              {locale === "en" ? " hands" : " 手"}
+            </b>
           </span>
           <span>
-            <small>观察你的行动</small>
-            <b>{profile.learning.humanRead.handsObserved} 手</b>
+            <small>{locale === "en" ? "Hands Observed" : "观察你的行动"}</small>
+            <b>
+              {profile.learning.humanRead.handsObserved}
+              {locale === "en" ? " hands" : " 手"}
+            </b>
           </span>
           <span>
             <small>最近一手结果</small>
@@ -2442,25 +2724,38 @@ function AIProfileCard({
           <header>
             <div>
               <h3>它目前怎样看你</h3>
-              <p>{describeHumanRead(read).replace("对你的判断：", "")}</p>
+              <p>
+                {localize(
+                  describeHumanRead(read).replace("对你的判断：", ""),
+                  locale,
+                )}
+              </p>
             </div>
             <span>{read.handsObserved < 8 ? "初步判断" : "持续更新"}</span>
           </header>
           <div className="opponent-model-metrics">
             <span>
-              <small>你的入池率</small>
+              <small>
+                {locale === "en" ? "Hands You Play (VPIP)" : "你的入池率"}
+              </small>
               <b>{readRate(read.vpipHands, read.handsObserved)}</b>
             </span>
             <span>
-              <small>你的翻前加注率</small>
+              <small>
+                {locale === "en" ? "Your Preflop Raises (PFR)" : "你的翻前加注率"}
+              </small>
               <b>{readRate(read.pfrHands, read.handsObserved)}</b>
             </span>
             <span>
-              <small>你的行动主动率</small>
+              <small>
+                {locale === "en" ? "Your Aggressive Actions" : "你的行动主动率"}
+              </small>
               <b>{humanAggression}</b>
             </span>
             <span>
-              <small>面对压力弃牌</small>
+              <small>
+                {locale === "en" ? "Folds When Facing a Bet" : "面对压力弃牌"}
+              </small>
               <b>{foldToPressure}</b>
             </span>
           </div>
@@ -2472,11 +2767,17 @@ function AIProfileCard({
               ))}
             </ul>
             <p>
-              判断依据：观察 {read.handsObserved} 手、{read.totalActions} 次行动
-              {read.pressureOpportunities
-                ? `、${read.pressureOpportunities} 次面对下注压力`
-                : ""}
-              。样本增加后会继续修正。
+              {locale === "en"
+                ? `Based on ${read.handsObserved} hands and ${read.totalActions} decisions${
+                    read.pressureOpportunities
+                      ? `, including ${read.pressureOpportunities} spots facing a bet`
+                      : ""
+                  }. This read will adjust as the sample grows.`
+                : `判断依据：观察 ${read.handsObserved} 手、${read.totalActions} 次行动${
+                    read.pressureOpportunities
+                      ? `、${read.pressureOpportunities} 次面对下注压力`
+                      : ""
+                  }。样本增加后会继续修正。`}
             </p>
           </div>
         </section>
@@ -2498,6 +2799,7 @@ function LearningChangeChart({
 }: {
   snapshots: AIProfileStats["learning"]["snapshots"];
 }) {
+  const { locale } = useLanguage();
   const source = snapshots.slice(-30);
   const width = 900;
   const height = 210;
@@ -2520,15 +2822,19 @@ function LearningChangeChart({
   const series = [
     {
       key: "aggressionBias" as const,
-      label: "主动进攻",
+      label: locale === "en" ? "Aggression" : "主动进攻",
       className: "aggression",
     },
     {
       key: "tightnessBias" as const,
-      label: "起手牌范围",
+      label: locale === "en" ? "Preflop range" : "起手牌范围",
       className: "tightness",
     },
-    { key: "bluffBias" as const, label: "诈唬倾向", className: "bluff" },
+    {
+      key: "bluffBias" as const,
+      label: locale === "en" ? "Bluff frequency" : "诈唬倾向",
+      className: "bluff",
+    },
   ];
 
   return (
@@ -2540,6 +2846,11 @@ function LearningChangeChart({
             曲线展示最近 {source.length}{" "}
             手相对原始性格的变化，零线表示原始打法。
           </p>
+          {locale === "en" ? (
+            <p className="chart-term-help">
+              Aggression = betting and raising · Preflop range = starting hands played · Bluff frequency = betting with weak hands
+            </p>
+          ) : null}
         </div>
         <div className="learning-chart-legend" aria-label="曲线图例">
           {series.map((item) => (
@@ -2608,10 +2919,14 @@ function LearningChangeChart({
             );
           })}
           <text x={padding.left} y={height - 8}>
-            第 {source[0]?.handIndex} 手
+            {locale === "en"
+              ? `Hand ${source[0]?.handIndex}`
+              : `第 ${source[0]?.handIndex} 手`}
           </text>
           <text x={width - padding.right} y={height - 8} textAnchor="end">
-            第 {source.at(-1)?.handIndex} 手
+            {locale === "en"
+              ? `Hand ${source.at(-1)?.handIndex}`
+              : `第 ${source.at(-1)?.handIndex} 手`}
           </text>
         </svg>
       </div>
@@ -2620,6 +2935,7 @@ function LearningChangeChart({
 }
 
 function LearningSparkline({ profile }: { profile: AIProfileStats }) {
+  const { locale } = useLanguage();
   const source = profile.learning.snapshots.slice(-30);
   const baselineTarget = 8;
 
@@ -2628,7 +2944,11 @@ function LearningSparkline({ profile }: { profile: AIProfileStats }) {
       <div className="learning-baseline" role="status">
         <div>
           <strong>正在建立行为基线</strong>
-          <span>再观察 {baselineTarget - source.length} 手后生成可靠趋势</span>
+          <span>
+            {locale === "en"
+              ? `${baselineTarget - source.length} more hands needed for a reliable trend`
+              : `再观察 ${baselineTarget - source.length} 手后生成可靠趋势`}
+          </span>
         </div>
         <div
           className="learning-baseline-progress"
@@ -2642,7 +2962,7 @@ function LearningSparkline({ profile }: { profile: AIProfileStats }) {
           ))}
         </div>
         <small>
-          {source.length} / {baselineTarget} 手
+          {source.length} / {baselineTarget} {locale === "en" ? "hands" : "手"}
         </small>
       </div>
     );
@@ -2651,32 +2971,41 @@ function LearningSparkline({ profile }: { profile: AIProfileStats }) {
   const tracks = [
     {
       key: "aggressionBias" as const,
-      label: "主动进攻",
-      negativeEnd: "更克制",
-      positiveEnd: "更主动",
-      negativeText: "比原来的进攻节奏更克制",
-      positiveText: "比原来更愿意下注和加注",
-      neutralText: "保持原来的进攻节奏",
+      label: locale === "en" ? "Aggression" : "主动进攻",
+      negativeEnd: locale === "en" ? "More passive" : "更克制",
+      positiveEnd: locale === "en" ? "More aggressive" : "更主动",
+      negativeText:
+        locale === "en" ? "Taking fewer aggressive lines" : "比原来的进攻节奏更克制",
+      positiveText:
+        locale === "en" ? "Betting and raising more often" : "比原来更愿意下注和加注",
+      neutralText:
+        locale === "en" ? "Aggression is near its baseline" : "保持原来的进攻节奏",
       className: "aggression",
     },
     {
       key: "tightnessBias" as const,
-      label: "起手牌范围",
-      negativeEnd: "打得更宽",
-      positiveEnd: "选牌更紧",
-      negativeText: "比原来愿意多打一些起手牌",
-      positiveText: "比原来少打一些边缘起手牌",
-      neutralText: "起手牌选择基本没变",
+      label: locale === "en" ? "Preflop range" : "起手牌范围",
+      negativeEnd: locale === "en" ? "Wider" : "打得更宽",
+      positiveEnd: locale === "en" ? "Tighter" : "选牌更紧",
+      negativeText:
+        locale === "en" ? "Entering pots with a wider range" : "比原来愿意多打一些起手牌",
+      positiveText:
+        locale === "en" ? "Folding more marginal starting hands" : "比原来少打一些边缘起手牌",
+      neutralText:
+        locale === "en" ? "Preflop range is near its baseline" : "起手牌选择基本没变",
       className: "tightness",
     },
     {
       key: "bluffBias" as const,
-      label: "诈唬频率",
-      negativeEnd: "更少",
-      positiveEnd: "更多",
-      negativeText: "比原来减少了诈唬尝试",
-      positiveText: "比原来增加了诈唬尝试",
-      neutralText: "诈唬频率基本没变",
+      label: locale === "en" ? "Bluff frequency" : "诈唬频率",
+      negativeEnd: locale === "en" ? "Lower" : "更少",
+      positiveEnd: locale === "en" ? "Higher" : "更多",
+      negativeText:
+        locale === "en" ? "Bluffing less often" : "比原来减少了诈唬尝试",
+      positiveText:
+        locale === "en" ? "Bluffing more often" : "比原来增加了诈唬尝试",
+      neutralText:
+        locale === "en" ? "Bluff frequency is near its baseline" : "诈唬频率基本没变",
       className: "bluff",
     },
   ];
@@ -2689,12 +3018,16 @@ function LearningSparkline({ profile }: { profile: AIProfileStats }) {
           const current = source[source.length - 1][track.key];
           const isNeutral = Math.abs(current) < 0.0005;
           const status = isNeutral
-            ? "当前持平"
+            ? locale === "en"
+              ? "At baseline"
+              : "当前持平"
             : current > 0
               ? track.positiveEnd
               : track.negativeEnd;
           const description = isNeutral
-            ? `多局信号暂时相互抵消，${track.neutralText}`
+            ? locale === "en"
+              ? track.neutralText
+              : `多局信号暂时相互抵消，${track.neutralText}`
             : current > 0
               ? track.positiveText
               : track.negativeText;
@@ -2730,7 +3063,8 @@ function LearningSparkline({ profile }: { profile: AIProfileStats }) {
                 <small>{track.positiveEnd}</small>
               </div>
               <span className="learning-delta">
-                当前相对原始性格 {formatLearningDelta(current)}
+                {locale === "en" ? "Change from baseline " : "当前相对原始性格 "}
+                {formatLearningDelta(current)}
               </span>
             </div>
           );
@@ -2757,6 +3091,7 @@ function QuickBetPanel({
   onSelect: (amount: number) => void;
   onCancel: () => void;
 }) {
+  const { locale } = useLanguage();
   const panelRef = useDialogFocus<HTMLDivElement>(true, onCancel);
   const options = [
     ["1/3", 0.33],
@@ -2773,15 +3108,18 @@ function QuickBetPanel({
       className="quick-bet-panel"
       role="dialog"
       aria-modal="true"
-      aria-label="快捷加注尺度"
+      aria-label={locale === "en" ? "Quick raise sizes" : "快捷加注尺度"}
       tabIndex={-1}
     >
       <header>
         <div>
           <small>QUICK RAISE</small>
-          <strong>选择加注尺度</strong>
+          <strong>{locale === "en" ? "Choose a raise size" : "选择加注尺度"}</strong>
         </div>
-        <button onClick={onCancel} aria-label="关闭快捷加注">
+        <button
+          onClick={onCancel}
+          aria-label={locale === "en" ? "Close quick raise" : "关闭快捷加注"}
+        >
           ×
         </button>
       </header>
@@ -2799,7 +3137,7 @@ function QuickBetPanel({
               disabled={amount <= human.bet}
               onClick={() => onSelect(amount)}
             >
-              <span>{label} 底池</span>
+              <span>{locale === "en" ? `${label} pot` : `${label} 底池`}</span>
               <b>{amount.toLocaleString()}</b>
             </button>
           );
@@ -2816,6 +3154,7 @@ function ActionDrawer({
   game: GameState;
   onClose: () => void;
 }) {
+  const { locale } = useLanguage();
   const drawerRef = useDialogFocus<HTMLElement>(true, onClose);
   return (
     <div className="drawer-backdrop" onClick={onClose}>
@@ -2824,15 +3163,22 @@ function ActionDrawer({
         className="action-drawer"
         role="dialog"
         aria-modal="true"
-        aria-label="本局行动记录"
+        aria-label={locale === "en" ? "Hand action log" : "本局行动记录"}
         onClick={(event) => event.stopPropagation()}
       >
         <header>
           <div>
-            <small>第 {game.handNumber} 局 · 最新行动在前</small>
-            <h2>本局行动记录</h2>
+            <small>
+              {locale === "en"
+                ? `Hand ${game.handNumber} · Newest actions first`
+                : `第 ${game.handNumber} 局 · 最新行动在前`}
+            </small>
+            <h2>{locale === "en" ? "Hand Action Log" : "本局行动记录"}</h2>
           </div>
-          <button onClick={onClose} aria-label="关闭行动记录">
+          <button
+            onClick={onClose}
+            aria-label={locale === "en" ? "Close action log" : "关闭行动记录"}
+          >
             ×
           </button>
         </header>
@@ -2857,15 +3203,17 @@ function ActionDrawer({
                 <li key={entry.id}>
                   <PlayerAvatar player={player} size="small" />
                   <span>
-                    <strong>{entry.playerName}</strong>
-                    <small>{STREET_LABELS[entry.street]}</small>
+                    <strong>{localize(entry.playerName, locale)}</strong>
+                    <small>{localize(STREET_LABELS[entry.street], locale)}</small>
                   </span>
-                  <b>{entry.label}</b>
+                  <b>{localize(entry.label, locale)}</b>
                 </li>
               );
             })
           ) : (
-            <li className="empty-drawer">本手还没有行动记录</li>
+            <li className="empty-drawer">
+              {locale === "en" ? "No actions recorded yet" : "本手还没有行动记录"}
+            </li>
           )}
         </ol>
       </aside>
@@ -2884,6 +3232,7 @@ function HandResultModal({
   onNextHand: () => void;
   onRebuy: () => void;
 }) {
+  const { locale } = useLanguage();
   const resultRef = useDialogFocus<HTMLElement>(true, onExit);
   const result = game.result!;
   const human = game.players[HUMAN_ID];
@@ -2896,8 +3245,12 @@ function HandResultModal({
       playerId === HUMAN_ID ? "你" : game.players[playerId]?.name,
     )
     .filter(Boolean)
-    .join("、");
-  const headline = `${winnerNames} 赢得 ${potTotal.toLocaleString()}`;
+    .map((name) => localize(name!, locale))
+    .join(locale === "en" ? ", " : "、");
+  const headline =
+    locale === "en"
+      ? `${winnerNames} wins ${potTotal.toLocaleString()} chips`
+      : `${winnerNames} 赢得 ${potTotal.toLocaleString()}`;
   const firstWinner = game.players[result.winnerIds[0]];
   const winningHand =
     result.showdown &&
@@ -2906,8 +3259,12 @@ function HandResultModal({
       ? evaluateBest([...firstWinner.holeCards, ...game.communityCards])
       : null;
   const outcomeDetail = result.showdown
-    ? `${winningHand ? describeEvaluatedHand(winningHand) : "最佳牌型"} · 摊牌胜出`
-    : "其他玩家均已弃牌";
+    ? locale === "en"
+      ? `${winningHand ? describeEvaluatedHand(winningHand, locale) : "Best hand"} · Won at showdown`
+      : `${winningHand ? describeEvaluatedHand(winningHand) : "最佳牌型"} · 摊牌胜出`
+    : locale === "en"
+      ? "Won uncontested"
+      : "其他玩家均已弃牌";
   const boardStreets = [
     { label: "翻牌", cards: game.communityCards.slice(0, 3) },
     { label: "转牌", cards: game.communityCards.slice(3, 4) },
@@ -2929,7 +3286,9 @@ function HandResultModal({
         aria-labelledby="hand-result-title"
       >
         <header className="result-heading">
-          <small>第 {game.handNumber} 手</small>
+          <small>
+            {locale === "en" ? `Hand ${game.handNumber}` : `第 ${game.handNumber} 手`}
+          </small>
           <h2 id="hand-result-title">{headline}</h2>
           <p>{outcomeDetail}</p>
         </header>
@@ -2977,7 +3336,7 @@ function HandResultModal({
               {boardStreets.map((street) => (
                 <div className="result-board-street" key={street.label}>
                   <small>{street.label}</small>
-                  <strong>{readableCardsLabel(street.cards)}</strong>
+                  <strong>{readableCardsLabel(street.cards, locale)}</strong>
                 </div>
               ))}
             </div>
@@ -3020,8 +3379,8 @@ function HandResultModal({
                   <PlayerAvatar player={player} size="small" />
                   <div className="result-player-identity">
                     <strong>
-                      {player.name}
-                      {player.isHuman ? "（你）" : ""}
+                      {localize(player.name, locale)}
+                      {player.isHuman && locale !== "en" ? "（你）" : ""}
                     </strong>
                     {revealCards ? (
                       <>
@@ -3035,38 +3394,42 @@ function HandResultModal({
                           ))}
                         </span>
                         <small className="result-hole-label">
-                          手牌：{readableCardsLabel(player.holeCards)}
+                          {locale === "en" ? "Hole cards: " : "手牌："}
+                          {readableCardsLabel(player.holeCards, locale)}
                         </small>
                       </>
                     ) : (
                       <span>
                         {player.totalContribution === 0
-                          ? "未参与"
+                          ? locale === "en" ? "Did not participate" : "未参与"
                           : player.status === "folded"
-                            ? "已弃牌"
-                            : "未摊牌"}
+                            ? locale === "en" ? "Folded" : "已弃牌"
+                            : locale === "en" ? "Cards not shown" : "未摊牌"}
                       </span>
                     )}
                   </div>
                   <div className="result-player-hand">
                     <strong>
                       {hand
-                        ? describeEvaluatedHand(hand)
+                        ? describeEvaluatedHand(hand, locale)
                         : isWinner
-                          ? "未摊牌获胜"
+                          ? locale === "en" ? "Won without showdown" : "未摊牌获胜"
                           : player.totalContribution === 0
-                            ? "未参与底池"
+                            ? locale === "en" ? "Not in the pot" : "未参与底池"
                             : player.status === "folded"
-                              ? "已弃牌"
-                              : "未亮牌"}
+                              ? locale === "en" ? "Folded" : "已弃牌"
+                              : locale === "en" ? "Cards not shown" : "未亮牌"}
                     </strong>
                     {hand ? (
                       <small className="result-best-five">
-                        最佳五张：{readableCardsLabel(hand.cards)}
+                        {locale === "en" ? "Best five: " : "最佳五张："}
+                        {readableCardsLabel(hand.cards, locale)}
                       </small>
                     ) : null}
                     <small>
-                      投喂 {player.totalContribution.toLocaleString()} · 收回{" "}
+                      {locale === "en" ? "Contributed" : "投喂"}{" "}
+                      {player.totalContribution.toLocaleString()} ·{" "}
+                      {locale === "en" ? "Payout" : "收回"}{" "}
                       {payout.toLocaleString()}
                     </small>
                   </div>
@@ -3123,6 +3486,7 @@ function GameScreen({
   onExit: () => void;
   onSoundToggle: (enabled: boolean) => void;
 }) {
+  const { locale } = useLanguage();
   const [tableOverlay, setTableOverlay] = useState<TableOverlayState>(null);
   const [recentThinkingSteps, setRecentThinkingSteps] = useState<
     Record<number, string[]>
@@ -3212,6 +3576,7 @@ function GameScreen({
         personaState: personaStateBySeat[thinkingId],
         pressure: pendingAIAction?.aiDecision?.publicFactors?.pressure,
       },
+      locale,
     });
     return choice ? [choice] : [];
   }, [
@@ -3220,6 +3585,7 @@ function GameScreen({
     pendingAIAction,
     personaStateBySeat,
     thinkingId,
+    locale,
   ]);
   const thinkingPlan: AIThinkingPlan | null = useMemo(() => {
     if (thinkingId === null || !pendingAIAction) return null;
@@ -3490,6 +3856,7 @@ function GameScreen({
               ? 0
               : game.currentBet / Math.max(1, game.pot + game.currentBet),
         },
+        locale,
       });
       if (choice) rememberChoice(seatId, choice);
       return choice?.text ?? null;
@@ -3661,7 +4028,9 @@ function GameScreen({
           返回
         </button>
         <div className="game-round-meta">
-          <strong>第 {game.handNumber} 局</strong>
+          <strong>
+            {locale === "en" ? `Hand ${game.handNumber}` : `第 ${game.handNumber} 局`}
+          </strong>
           <small>
             {game.phase === "playing"
               ? thinkingId !== null
@@ -3819,10 +4188,16 @@ function GameScreen({
             <div className="human-decision-status" role="status" aria-live="polite">
               <strong>
                 {isHumanTurn
-                  ? `轮到你 ·${legal.canCheck ? " 可以过牌" : ` 跟注 ${legal.callAmount}`}`
+                  ? locale === "en"
+                    ? `Your turn · ${legal.canCheck ? "Check available" : `Call ${legal.callAmount}`}`
+                    : `轮到你 ·${legal.canCheck ? " 可以过牌" : ` 跟注 ${legal.callAmount}`}`
                   : thinkingId !== null
-                    ? `${game.players[thinkingId].name}正在思考`
-                    : "等待下一步行动"}
+                    ? locale === "en"
+                      ? `${localize(game.players[thinkingId].name, locale)} is thinking`
+                      : `${game.players[thinkingId].name}正在思考`
+                    : locale === "en"
+                      ? "Waiting for the next action"
+                      : "等待下一步行动"}
               </strong>
             </div>
             <div
@@ -4205,14 +4580,16 @@ export function PokerGame() {
   const [previewCard, setPreviewCard] = useState<Card | null>(null);
 
   return (
-    <CardPreviewContext.Provider value={(card) => setPreviewCard(card)}>
-      <PokerGameContent />
-      {previewCard ? (
-        <CardPreviewModal
-          card={previewCard}
-          onClose={() => setPreviewCard(null)}
-        />
-      ) : null}
-    </CardPreviewContext.Provider>
+    <LanguageProvider>
+      <CardPreviewContext.Provider value={(card) => setPreviewCard(card)}>
+        <PokerGameContent />
+        {previewCard ? (
+          <CardPreviewModal
+            card={previewCard}
+            onClose={() => setPreviewCard(null)}
+          />
+        ) : null}
+      </CardPreviewContext.Provider>
+    </LanguageProvider>
   );
 }

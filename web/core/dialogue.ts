@@ -18,6 +18,8 @@ export type DialogueContext = {
 
 type PersonaDialogue = Record<DialogueTrigger, readonly string[]>;
 
+type DialogueLocale = "zh-CN" | "en";
+
 // Shared language is deliberate. Real players reuse the same small procedural
 // vocabulary; individuality comes from frequency, syntax, catchphrases and mood.
 const CATALOG: Record<AIArchetype, PersonaDialogue> = {
@@ -73,6 +75,59 @@ const CATALOG: Record<AIArchetype, PersonaDialogue> = {
   },
 };
 
+const EN_CATALOG: Record<AIArchetype, PersonaDialogue> = {
+  "tight-aggressive": {
+    turn: ["One moment.", "Let me count.", "My turn?", "No rush.", "Hmm…"],
+    check: ["Check.", "Your move.", "I'll check.", "Nothing yet."],
+    call: ["Call.", "I'm in.", "Fair price.", "Matched."],
+    raise: ["Raise.", "A little more.", "I'll make it this much.", "Try this number."],
+    "all-in": ["All-in.", "That's all of it.", "No more counting.", "Let's go."],
+    fold: ["I'm out.", "You can have it.", "Not this hand.", "Fold."],
+    win: ["Good.", "I'll take it.", "Next hand.", "That works."],
+    lose: ["Noted.", "You had it.", "Next hand.", "Well played."],
+  },
+  "loose-aggressive": {
+    turn: ["Let's go.", "My turn?", "Here we go.", "This is interesting."],
+    check: ["Check—your chance.", "You first.", "Free card.", "I can check too."],
+    call: ["I'll call.", "Have to see it.", "Still here.", "Called."],
+    raise: ["More, more.", "Another round.", "Too cheap.", "Let's make it bigger."],
+    "all-in": ["All-in—come on!", "No more waiting.", "Everything goes in.", "Call me?"],
+    fold: ["Fine, take this one.", "Not paying you off.", "You got me.", "Next time."],
+    win: ["There it is.", "Thank you.", "Lovely.", "Deal another."],
+    lose: ["You got me.", "Okay, okay.", "Again.", "Just you wait."],
+  },
+  "tight-weak": {
+    turn: ["Wait a second.", "Let me look again.", "How much was it?", "Let me think."],
+    check: ["Check.", "I'll check.", "Let's see.", "No bet."],
+    call: ["I guess I call.", "One more card.", "Should be okay.", "I'll match."],
+    raise: ["A small raise.", "I'll raise.", "Only this much.", "Let's try it."],
+    "all-in": ["A-all-in.", "That's everything.", "I'm all-in.", "No changing it."],
+    fold: ["Never mind.", "Too expensive.", "You play.", "I fold."],
+    win: ["Whew…", "That was close.", "Finally.", "Keep it safe."],
+    lose: ["I knew it.", "Should've known.", "Gone again.", "Give me a moment."],
+  },
+  "loose-weak": {
+    turn: ["My turn?", "How much?", "Let me see.", "Can I still call?"],
+    check: ["Check, check.", "Free card.", "You first.", "No bet."],
+    call: ["I'll call.", "Not too pricey.", "I'm coming too.", "One more card."],
+    raise: ["I'll add some.", "Hey, I raise.", "Just a tiny raise.", "Let's try."],
+    "all-in": ["What? All-in!", "I'll show you everything.", "Nothing left behind."],
+    fold: ["That's too much.", "Then I won't look.", "Why raise again?", "I'm out."],
+    win: ["It actually hit!", "Good thing I stayed.", "Nice profit.", "One more hand."],
+    lose: ["The river again.", "So close.", "Oh no.", "Maybe next time."],
+  },
+  balanced: {
+    turn: ["One moment.", "How much?", "Let me think.", "My turn.", "Okay…"],
+    check: ["Check.", "Your move.", "Take a card.", "No bet."],
+    call: ["Call.", "I'll see it.", "Fair price.", "Matched."],
+    raise: ["I raise.", "A little higher.", "Let's change the number.", "Your decision."],
+    "all-in": ["All-in.", "No room left.", "Now or never.", "Your decision."],
+    fold: ["It's yours.", "Not this hand.", "I fold.", "Next time."],
+    win: ["Got it.", "Next hand.", "Good run.", "Thanks."],
+    lose: ["Nice hand.", "You caught me.", "All good.", "Well played."],
+  },
+};
+
 const TOPIC_LINES: Record<
   AIArchetype,
   Record<"running-hot" | "rough-run", readonly string[]>
@@ -99,12 +154,43 @@ const TOPIC_LINES: Record<
   },
 };
 
+const EN_TOPIC_LINES: typeof TOPIC_LINES = {
+  "tight-aggressive": {
+    "running-hot": ["Cards are running well.", "Stay steady.", "That last pot was enough."],
+    "rough-run": ["Tough table today.", "One hand at a time.", "Settle the pace."],
+  },
+  "loose-aggressive": {
+    "running-hot": ["I've won plenty today.", "Still running hot.", "Deal again."],
+    "rough-run": ["I don't believe this.", "Again?", "I'm still here."],
+  },
+  "tight-weak": {
+    "running-hot": ["Going well today.", "Don't get wild.", "A little profit is enough."],
+    "rough-run": ["Why every time?", "Not my day.", "I should slow down."],
+  },
+  "loose-weak": {
+    "running-hot": ["Everything is hitting today.", "Lucky me.", "Deal, deal."],
+    "rough-run": ["I've lost so many.", "Where are my cards?", "One last hand."],
+  },
+  balanced: {
+    "running-hot": ["Feeling good today.", "The last few went well.", "Keep playing normally."],
+    "rough-run": ["Rough stretch.", "The last few were off.", "Reset."],
+  },
+};
+
 const PRESSURE_LINES: Record<AIArchetype, readonly string[]> = {
   "tight-aggressive": ["多少？", "你后面还有多少？", "我再数一次。"],
   "loose-aggressive": ["这么大？", "你真有啊？", "弃了你给看吗？"],
   "tight-weak": ["这么多啊……", "你这是全下吗？", "我后面还剩多少？"],
   "loose-weak": ["要补多少？", "这么贵还看不看呀。", "你又来。"],
   balanced: ["多少？", "你后面多少？", "让我数清楚。"],
+};
+
+const EN_PRESSURE_LINES: typeof PRESSURE_LINES = {
+  "tight-aggressive": ["How much?", "What do you have behind?", "Let me count again."],
+  "loose-aggressive": ["That big?", "You really have it?", "Will you show if I fold?"],
+  "tight-weak": ["That much…?", "Is that all-in?", "How much do I have left?"],
+  "loose-weak": ["How much to call?", "Is it worth seeing?", "You again."],
+  balanced: ["How much?", "What do you have behind?", "Let me count."],
 };
 
 const SILENCE_RATE: Record<AIArchetype, number> = {
@@ -144,6 +230,7 @@ export function choosePersonaDialogue({
   recentFamilies = [],
   context,
   allowSilence = true,
+  locale = "zh-CN",
 }: {
   archetype: AIArchetype;
   trigger: DialogueTrigger;
@@ -152,7 +239,11 @@ export function choosePersonaDialogue({
   recentFamilies?: readonly string[];
   context?: DialogueContext;
   allowSilence?: boolean;
+  locale?: DialogueLocale;
 }): DialogueChoice | null {
+  const catalog = locale === "en" ? EN_CATALOG : CATALOG;
+  const topicLines = locale === "en" ? EN_TOPIC_LINES : TOPIC_LINES;
+  const pressureLines = locale === "en" ? EN_PRESSURE_LINES : PRESSURE_LINES;
   const state = context?.personaState;
   const emotionTalkBoost =
     state?.emotion === "irritated" || state?.emotion === "excited" ? 0.14 : 0;
@@ -175,12 +266,12 @@ export function choosePersonaDialogue({
       ? [
           {
             key: state.monologueTopic,
-            phrases: TOPIC_LINES[archetype][state.monologueTopic],
+            phrases: topicLines[archetype][state.monologueTopic],
           },
         ]
-      : [{ key: trigger, phrases: CATALOG[archetype][trigger] }];
+      : [{ key: trigger, phrases: catalog[archetype][trigger] }];
   if (trigger === "turn" && (context?.pressure ?? 0) >= 0.32) {
-    sources.push({ key: "pressure", phrases: PRESSURE_LINES[archetype] });
+    sources.push({ key: "pressure", phrases: pressureLines[archetype] });
   }
   if (
     !preferOngoingMutter &&
@@ -189,7 +280,7 @@ export function choosePersonaDialogue({
   ) {
     sources.push({
       key: state.monologueTopic,
-      phrases: TOPIC_LINES[archetype][state.monologueTopic],
+      phrases: topicLines[archetype][state.monologueTopic],
     });
   }
 

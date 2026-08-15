@@ -192,6 +192,24 @@ test("quiet and chatty personas have deterministic but different silence rates",
   assert.ok(oldK > 100 && littleFish < 450);
 });
 
+test("English dialogue mode keeps every persona response in English", () => {
+  for (const persona of PERSONAS) {
+    for (const trigger of TRIGGERS) {
+      for (let seed = 1; seed <= 40; seed += 1) {
+        const choice = choosePersonaDialogue({
+          archetype: persona,
+          trigger,
+          seed,
+          locale: "en",
+          allowSilence: false,
+        });
+        assert.ok(choice);
+        assert.equal(/\p{Script=Han}/u.test(choice.text), false);
+      }
+    }
+  }
+});
+
 test("public results create short-lived emotion and an ongoing mutter topic", () => {
   const largeLoss: PresentationEvent = {
     id: "hand:result",
