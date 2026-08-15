@@ -239,6 +239,35 @@ test("contextual dialogue adds street, heads-up, and short-stack vocabulary", ()
   assert.ok(lines.has("我后面不多。"));
 });
 
+test("action dialogue adds natural lines for public pressure and late-street contexts", () => {
+  const collect = (trigger: DialogueTrigger, context: Parameters<typeof choosePersonaDialogue>[0]["context"]) =>
+    new Set(
+      Array.from({ length: 320 }, (_, index) =>
+        choosePersonaDialogue({
+          archetype: "balanced",
+          trigger,
+          seed: index + 901,
+          allowSilence: false,
+          context,
+        })?.text,
+      ).filter((line): line is string => !!line),
+    );
+
+  assert.ok(
+    collect("call", { pressure: 0.7 }).has("这个价，得看一眼。"),
+  );
+  const late = collect("fold", {
+    pressure: 0.7,
+    street: "river",
+    activePlayerCount: 2,
+    stackInBigBlinds: 12,
+  });
+  assert.ok(late.has("这次不替你买单。"));
+  assert.ok(late.has("河牌的账，河牌算。"));
+  assert.ok(late.has("就咱俩，别绕圈子。"));
+  assert.ok(late.has("这点筹码也有脾气。"));
+});
+
 test("all four interactions have distinct bilingual sender and receiver lines", () => {
   const kinds: TableInteractionKind[] = ["egg", "tomato", "flower", "slipper"];
   for (const locale of ["zh-CN", "en"] as const) {

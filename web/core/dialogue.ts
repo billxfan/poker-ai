@@ -4,6 +4,7 @@ import {
   CONTEXT_LINES,
   INTERACTION_ADLIBS,
   INTERACTION_LINES,
+  SITUATION_LINES,
   type DialogueLocale,
   type DialogueTrigger,
   type InteractionRole,
@@ -315,6 +316,22 @@ export function choosePersonaDialogue({
       key: state.monologueTopic,
       phrases: topicLines[archetype][state.monologueTopic],
     });
+  }
+  const isAction = trigger !== "turn" && trigger !== "win" && trigger !== "lose";
+  if (isAction && trigger === "call" && (context?.pressure ?? 0) >= 0.32) {
+    sources.push({ key: "pressure-call", phrases: SITUATION_LINES[locale]["pressure-call"] });
+  }
+  if (isAction && trigger === "fold" && (context?.pressure ?? 0) >= 0.32) {
+    sources.push({ key: "pressure-fold", phrases: SITUATION_LINES[locale]["pressure-fold"] });
+  }
+  if (isAction && context?.street === "river") {
+    sources.push({ key: "river-action", phrases: SITUATION_LINES[locale]["river-action"] });
+  }
+  if (isAction && context?.activePlayerCount === 2) {
+    sources.push({ key: "heads-up-action", phrases: SITUATION_LINES[locale]["heads-up-action"] });
+  }
+  if (isAction && (context?.stackInBigBlinds ?? Infinity) <= 20) {
+    sources.push({ key: "short-stack-action", phrases: SITUATION_LINES[locale]["short-stack-action"] });
   }
   if (trigger === "turn" && context?.activePlayerCount === 2) {
     sources.push({

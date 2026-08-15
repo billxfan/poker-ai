@@ -3,6 +3,12 @@ import type { AIArchetype, ActionType } from "./types.ts";
 export type DialogueLocale = "zh-CN" | "en";
 export type DialogueTrigger = "turn" | ActionType | "win" | "lose";
 export type DialogueContextKey = "heads-up" | "river" | "short-stack";
+export type DialogueSituationKey =
+  | "pressure-call"
+  | "pressure-fold"
+  | "river-action"
+  | "heads-up-action"
+  | "short-stack-action";
 export type TableInteractionKind = "egg" | "tomato" | "flower" | "slipper";
 export type InteractionRole = "sender" | "receiver";
 
@@ -12,6 +18,76 @@ type InteractionCatalog = Record<
   TableInteractionKind,
   Record<InteractionRole, readonly string[]>
 >;
+
+export const SITUATION_LINES: Record<
+  DialogueLocale,
+  Record<DialogueSituationKey, readonly string[]>
+> = {
+  "zh-CN": {
+    "pressure-call": [
+      "这个价，得看一眼。",
+      "行，别让我白等。",
+      "跟了，别藏太深。",
+      "这一枪挺响。",
+    ],
+    "pressure-fold": [
+      "这次不替你买单。",
+      "你先收着，别得意。",
+      "算了，留点给下一手。",
+      "这价有点不讲理。",
+    ],
+    "river-action": [
+      "最后一张，别演太久。",
+      "河牌的账，河牌算。",
+      "都到这儿了。",
+      "最后一次问价。",
+    ],
+    "heads-up-action": [
+      "就咱俩，别绕圈子。",
+      "单挑还挺安静。",
+      "现在没人帮你挡了。",
+      "剩咱们了，说吧。",
+    ],
+    "short-stack-action": [
+      "后手不多，话得算数。",
+      "这点筹码也有脾气。",
+      "我这儿就剩这些。",
+      "小码也得有排面。",
+    ],
+  },
+  en: {
+    "pressure-call": [
+      "At that price, I have to look.",
+      "Fine. Don't make me wait for nothing.",
+      "Call. Don't hide too deep.",
+      "That's a loud bet.",
+    ],
+    "pressure-fold": [
+      "I'm not paying that bill today.",
+      "Keep it. Don't get used to it.",
+      "Saving a little for the next one.",
+      "That price is rude.",
+    ],
+    "river-action": [
+      "Last card. Don't act forever.",
+      "River bills get paid on the river.",
+      "We're this far in now.",
+      "Last price check.",
+    ],
+    "heads-up-action": [
+      "Just us. No laps around it.",
+      "Heads-up got quiet.",
+      "No one left to hide behind.",
+      "Just us now. Your move.",
+    ],
+    "short-stack-action": [
+      "Not much behind, so make it count.",
+      "Short stack still has feelings.",
+      "This is all I've got behind.",
+      "Small stack, full table manners.",
+    ],
+  },
+};
 
 export const ACTION_VARIANTS: Record<
   DialogueLocale,
